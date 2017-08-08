@@ -1,0 +1,6 @@
+[submodule "sadx-mod-loader"]
+	path = sadx-mod-loader
+	url = https://github.com/sonicretro/sadx-mod-loader.git
+[submodule "DirectXTK"]
+	path = DirectXTK
+	url = https://github.com/Microsoft/DirectXTK.git

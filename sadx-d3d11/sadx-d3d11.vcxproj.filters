@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="d3d8wrapper">
+      <UniqueIdentifier>{b96e4119-bea6-4ad7-a5f9-40fed2942e2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external">
+      <UniqueIdentifier>{ae01d236-8557-4c0f-857f-cf19fc622e9c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="typedefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="safe_release.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8types.hpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9.hpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="lookup_table.hpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="Unknown.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_base.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_device.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_resource.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_texture.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_surface.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_vertex_buffer.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="d3d8to9_index_buffer.h">
+      <Filter>d3d8wrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="dirty_t.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PolyBuff11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h">
+      <Filter>external</Filter>
+    </ClInclude>
+    <ClInclude Include="int_multiple.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sadx-d3d11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_index_buffer.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_surface.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_swap_chain.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_texture.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_vertex_buffer.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_volume.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8types.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_base.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d8to9_device.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="lookup_table.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="Uknown.cpp">
+      <Filter>d3d8wrapper</Filter>
+    </ClCompile>
+    <ClCompile Include="PolyBuff11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp">
+      <Filter>external</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader.hlsl">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>
