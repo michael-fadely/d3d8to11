@@ -82,11 +82,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 #ifdef FVF_TEX1
 	#ifdef TCI_CAMERASPACENORMAL
-		// don't actually need to transpose (T) because of the
-		// multiplication order, but leaving T here for reasons.
-		matrix wvMatrixInvT = mul(worldMatrix, viewMatrix);
-		result.tex = (float2)mul(float4(input.normal, 1), wvMatrixInvT);
-		result.tex = (float2)mul(textureTransform, float4(result.tex, 0, 1));
+		// this is kinda gross but the preshader should handle it
+		// also this is producing incorrect output when the object rotates
+		matrix wvMatrixInvT = mul(transpose(worldMatrix), transpose(viewMatrix));
+		result.tex = (float2)mul(wvMatrixInvT, float4(input.normal, 1));
+		result.tex = (float2)mul(float4(result.tex, 0, 1), textureTransform);
 	#else
 		result.tex = input.tex;
 	#endif
