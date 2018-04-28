@@ -15,6 +15,7 @@ void Direct3DTexture8::create_native()
 
 	if (!Levels)
 	{
+		++Levels;
 		auto width  = Width;
 		auto height = Height;
 
@@ -251,12 +252,14 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3DSurface8 **ppSurfaceLevel)
 {
-	if (Level >= desc.MipLevels)
+	if (!ppSurfaceLevel)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (!ppSurfaceLevel)
+	*ppSurfaceLevel = nullptr;
+
+	if (Level >= desc.MipLevels)
 	{
 		return D3DERR_INVALIDCALL;
 	}
