@@ -1,4 +1,25 @@
 
+#define D3DLIGHT_POINT 1
+#define D3DLIGHT_SPOT 2
+#define D3DLIGHT_DIRECTIONAL 3
+
+struct Light
+{
+	uint   Type;         /* Type of light source */
+	float4 Diffuse;      /* Diffuse color of light */
+	float4 Specular;     /* Specular color of light */
+	float4 Ambient;      /* Ambient color of light */
+	float3 Position;     /* Position in world space */
+	float3 Direction;    /* Direction in world space */
+	float  Range;        /* Cutoff range */
+	float  Falloff;      /* Falloff */
+	float  Attenuation0; /* Constant attenuation */
+	float  Attenuation1; /* Linear attenuation */
+	float  Attenuation2; /* Quadratic attenuation */
+	float  Theta;        /* Inner angle of spotlight cone */
+	float  Phi;          /* Outer angle of spotlight cone */
+};
+
 struct VS_INPUT
 {
 #ifdef FVF_RHW
@@ -12,7 +33,7 @@ struct VS_INPUT
 #endif
 
 #ifdef FVF_DIFFUSE
-	float4 vcolor   : COLOR;
+	float4 diffuse   : COLOR;
 #endif
 
 #ifdef FVF_TEX1
@@ -25,7 +46,7 @@ struct VS_OUTPUT
 	float4 position : SV_POSITION;
 
 #ifdef FVF_DIFFUSE
-	float4 vcolor   : COLOR;
+	float4 diffuse   : COLOR;
 #endif
 
 #ifdef FVF_TEX1
@@ -50,6 +71,7 @@ cbuffer PerSceneBuffer : register(b0)
 cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
+	Light light;
 };
 
 Texture2D<float4> DiffuseMap : register(t0);
@@ -77,7 +99,20 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #ifdef FVF_DIFFUSE
-	result.vcolor = input.vcolor;
+	result.diffuse = input.diffuse;
+#else
+	result.diffuse = float4(1, 1, 1, 1);
+#endif
+
+#if defined(FVF_NORMAL) && !defined(FVF_RHW)
+	float4 diff = result.diffuse;
+	float3 n = mul((float3x3)worldMatrix, input.normal);
+	float d = saturate(dot(normalize(light.Direction), n));
+
+	diff.rgb *= saturate((d * light.Diffuse) + light.Ambient);
+	diff.rgb = saturate(diff.rgb);
+
+	result.diffuse = diff;
 #endif
 
 #ifdef FVF_TEX1
@@ -106,7 +141,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef FVF_DIFFUSE
-	result *= input.vcolor;
+	result *= input.diffuse;
 #endif
 
 	return result;

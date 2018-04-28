@@ -15,6 +15,42 @@
 
 using namespace Microsoft::WRL;
 
+#pragma pack(push, 16)
+struct d3d8_light
+{
+	uint32_t     Type;            /* Type of light source */
+	float _, __, ___;
+	float        Diffuse[4];         /* Diffuse color of light */
+	float        Specular[4];        /* Specular color of light */
+	float        Ambient[4];         /* Ambient color of light */
+	float        Position[3];         /* Position in world space */
+	float        Direction[3];        /* Direction in world space */
+	float        Range;            /* Cutoff range */
+	float        Falloff;          /* Falloff */
+	float        Attenuation0;     /* Constant attenuation */
+	float        Attenuation1;     /* Linear attenuation */
+	float        Attenuation2;     /* Quadratic attenuation */
+	float        Theta;            /* Inner angle of spotlight cone */
+	float        Phi;              /* Outer angle of spotlight cone */
+
+	d3d8_light& operator=(const D3DLIGHT8& rhs);
+};
+
+struct per_scene_raw
+{
+	DirectX::XMMATRIX viewMatrix, projectionMatrix;
+	float screenDimensions[2];
+};
+
+struct per_model_raw
+{
+	DirectX::XMMATRIX worldMatrix;
+	d3d8_light light;
+	// TODO: materials
+};
+
+#pragma pack(pop)
+
 static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 {
 	D3D_FEATURE_LEVEL_11_1,
@@ -80,6 +116,38 @@ bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs)
 bool operator!=(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs)
 {
 	return !(lhs == rhs);
+}
+
+d3d8_light& d3d8_light::operator=(const D3DLIGHT8& rhs)
+{
+	this->Type            = rhs.Type;
+	this->Diffuse[0]      = rhs.Diffuse.r;
+	this->Diffuse[1]      = rhs.Diffuse.g;
+	this->Diffuse[2]      = rhs.Diffuse.b;
+	this->Diffuse[3]      = rhs.Diffuse.a;
+	this->Specular[0]     = rhs.Specular.r;
+	this->Specular[1]     = rhs.Specular.g;
+	this->Specular[2]     = rhs.Specular.b;
+	this->Specular[3]     = rhs.Specular.a;
+	this->Ambient[0]      = rhs.Ambient.r;
+	this->Ambient[1]      = rhs.Ambient.g;
+	this->Ambient[2]      = rhs.Ambient.b;
+	this->Ambient[3]      = rhs.Ambient.a;
+	this->Position[0]     = rhs.Position.x;
+	this->Position[1]     = rhs.Position.y;
+	this->Position[2]     = rhs.Position.z;
+	this->Direction[0]    = rhs.Direction.x;
+	this->Direction[1]    = rhs.Direction.y;
+	this->Direction[2]    = rhs.Direction.z;
+	this->Range           = rhs.Range;
+	this->Falloff         = rhs.Falloff;
+	this->Attenuation0    = rhs.Attenuation0;
+	this->Attenuation1    = rhs.Attenuation1;
+	this->Attenuation2    = rhs.Attenuation2;
+	this->Theta           = rhs.Theta;
+	this->Phi             = rhs.Phi;
+
+	return *this;
 }
 
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
@@ -334,11 +402,11 @@ void Direct3DDevice8::create_native()
 
 	D3D11_BUFFER_DESC cbuf_desc {};
 
-	cbuf_desc.ByteWidth           = int_multiple(((sizeof(float) * 4 * 4) * 2) + (sizeof(float) * 2), 16);
+	cbuf_desc.ByteWidth           = int_multiple(sizeof(per_scene_raw), 16);
 	cbuf_desc.Usage               = D3D11_USAGE_DYNAMIC;
 	cbuf_desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
 	cbuf_desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-	cbuf_desc.StructureByteStride = ((sizeof(float) * 4 * 4) * 2) + (sizeof(float) * 2);
+	cbuf_desc.StructureByteStride = sizeof(per_scene_raw);
 
 	auto hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_scene_cbuf);
 	if (FAILED(hr))
@@ -346,8 +414,8 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth           = sizeof(float) * 4 * 4;
-	cbuf_desc.StructureByteStride = sizeof(float) * 4 * 4;
+	cbuf_desc.ByteWidth           = int_multiple(sizeof(per_model_raw), 16);
+	cbuf_desc.StructureByteStride = sizeof(per_model_raw);
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
 	if (FAILED(hr))
@@ -2538,7 +2606,7 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_per_model()
 {
-	if (!t_world.dirty())
+	if (!t_world.dirty() && !lights[0].dirty())
 	{
 		return;
 	}
@@ -2546,11 +2614,13 @@ void Direct3DDevice8::commit_per_model()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_model_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto ptr = reinterpret_cast<DirectX::XMMATRIX*>(mapped.pData);
+	auto ptr = reinterpret_cast<per_model_raw*>(mapped.pData);
 
-	ptr[0] = t_world.data();
+	ptr->worldMatrix = t_world.data();
+	ptr->light = lights[0].data();
+	
 	t_world.clear();
-
+	lights[0].clear();
 	context->Unmap(per_model_cbuf.Get(), 0);
 }
 
@@ -2564,15 +2634,13 @@ void Direct3DDevice8::commit_per_scene()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_scene_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto ptr = reinterpret_cast<DirectX::XMMATRIX*>(mapped.pData);
+	auto ptr = reinterpret_cast<per_scene_raw*>(mapped.pData);
 
-	ptr[0] = t_view.data();
-	ptr[1] = t_projection.data();
+	ptr->viewMatrix = t_view.data();
+	ptr->projectionMatrix = t_projection.data();
 
-	auto thing = reinterpret_cast<float*>(mapped.pData);
-
-	thing[(2 * 4 * 4) + 0] = viewport.Width;
-	thing[(2 * 4 * 4) + 1] = viewport.Height;
+	ptr->screenDimensions[0] = viewport.Width;
+	ptr->screenDimensions[1] = viewport.Height;
 
 	t_view.clear();
 	t_projection.clear();
@@ -2682,8 +2750,24 @@ void Direct3DDevice8::update_shaders()
 		tci.clear();
 	}
 
-	auto vs = get_vs(shader_flags);
-	auto ps = get_ps(shader_flags);
+	VertexShader vs;
+	PixelShader ps;
+
+	int result = IDCANCEL;
+
+	do
+	{
+		try
+		{
+			vs = get_vs(shader_flags);
+			ps = get_ps(shader_flags);
+		}
+		catch (std::exception& ex)
+		{
+			free_shaders();
+			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+		}
+	} while (result == IDRETRY);
 
 	context->VSSetShader(vs.shader.Get(), nullptr, 0);
 	context->PSSetShader(ps.shader.Get(), nullptr, 0);
