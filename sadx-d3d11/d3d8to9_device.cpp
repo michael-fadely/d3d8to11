@@ -16,34 +16,48 @@
 
 using namespace Microsoft::WRL;
 
-#pragma pack(push, 4)
+static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
+{
+	D3D_FEATURE_LEVEL_11_1,
+	D3D_FEATURE_LEVEL_11_0
+};
+
+
+#pragma pack(push, 16)
 
 struct Material
 {
-	D3DCOLORVALUE Diffuse;        /* Diffuse color RGBA */
-	D3DCOLORVALUE Ambient;        /* Ambient color RGB */
-	D3DCOLORVALUE Specular;       /* Specular 'shininess' */
-	D3DCOLORVALUE Emissive;       /* Emissive color RGB */
-	float         Power;          /* Sharpness if specular highlight */
+	D3DCOLORVALUE Diffuse  = {};   /* Diffuse color RGBA */
+	D3DCOLORVALUE Ambient  = {};   /* Ambient color RGB */
+	D3DCOLORVALUE Specular = {};   /* Specular 'shininess' */
+	D3DCOLORVALUE Emissive = {};   /* Emissive color RGB */
+	float         Power    = 0.0f; /* Sharpness if specular highlight */
 
-	Material& operator=(const D3DMATERIAL8& rhs)
+	Material() = default;
+
+	explicit Material(const D3DMATERIAL8& rhs)
 	{
 		Diffuse  = rhs.Diffuse;
 		Ambient  = rhs.Ambient;
 		Specular = rhs.Specular;
 		Emissive = rhs.Emissive;
 		Power    = rhs.Power;
+	}
+
+	Material& operator=(const D3DMATERIAL8& rhs)
+	{
+		*this = Material(rhs);
 		return *this;
 	}
 };
 
-struct per_scene_raw
+struct PerSceneRaw
 {
 	DirectX::XMMATRIX viewMatrix, projectionMatrix;
 	float screenDimensions[2];
 };
 
-struct per_model_raw
+struct __declspec(align(16)) PerModelRaw
 {
 	DirectX::XMMATRIX worldMatrix;
 	Light lights[LIGHT_COUNT];
@@ -51,12 +65,6 @@ struct per_model_raw
 };
 
 #pragma pack(pop)
-
-static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
-{
-	D3D_FEATURE_LEVEL_11_1,
-	D3D_FEATURE_LEVEL_11_0
-};
 
 bool operator==(const D3DCOLORVALUE& lhs, const D3DCOLORVALUE& rhs)
 {
@@ -164,6 +172,47 @@ bool Light::operator!=(const Light& rhs) const
 	return !(*this == rhs);
 }
 
+CBufferWriter& operator<<(CBufferWriter& writer, const D3DCOLORVALUE& color)
+{
+	const float data[] = { color.r, color.g, color.b, color.a };
+	return writer << data;
+}
+
+CBufferWriter& operator<<(CBufferWriter& writer, const D3DVECTOR& d)
+{
+	const float data[] = { d.x, d.y, d.z };
+	return writer << data;
+}
+
+CBufferWriter& operator<<(CBufferWriter& writer, const Light& l)
+{
+	return writer
+		   << l.Enabled
+		   << l.Type
+		   << l.Diffuse
+		   << l.Specular
+		   << l.Ambient
+		   << l.Position
+		   << l.Direction
+		   << l.Range
+		   << l.Falloff
+		   << l.Attenuation0
+		   << l.Attenuation1
+		   << l.Attenuation2
+		   << l.Theta
+		   << l.Phi;
+}
+
+CBufferWriter& operator<<(CBufferWriter& writer, const Material& material)
+{
+	return writer
+		   << material.Diffuse
+		   << material.Ambient
+		   << material.Specular
+		   << material.Emissive
+		   << material.Power;
+}
+
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 {
 	std::vector<D3D_SHADER_MACRO> result;
@@ -196,6 +245,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 	if (flags & ShaderFlags::rs_lighting)
 	{
 		result.push_back({ "RS_LIGHTING", "1" });
+	}
+
+	if (flags & ShaderFlags::rs_specular)
+	{
+		result.push_back({ "RS_SPECULAR", "1" });
 	}
 
 	result.push_back({});
@@ -421,11 +475,11 @@ void Direct3DDevice8::create_native()
 
 	D3D11_BUFFER_DESC cbuf_desc {};
 
-	cbuf_desc.ByteWidth           = int_multiple(sizeof(per_scene_raw), 16);
+	cbuf_desc.ByteWidth           = int_multiple(sizeof(PerSceneRaw), 64);
 	cbuf_desc.Usage               = D3D11_USAGE_DYNAMIC;
 	cbuf_desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
 	cbuf_desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-	cbuf_desc.StructureByteStride = sizeof(per_scene_raw);
+	cbuf_desc.StructureByteStride = sizeof(PerSceneRaw);
 
 	auto hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_scene_cbuf);
 	if (FAILED(hr))
@@ -433,8 +487,8 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth           = int_multiple(sizeof(per_model_raw), 16);
-	cbuf_desc.StructureByteStride = sizeof(per_model_raw);
+	cbuf_desc.ByteWidth           = int_multiple(sizeof(PerModelRaw), 256);
+	cbuf_desc.StructureByteStride = cbuf_desc.ByteWidth;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
 	if (FAILED(hr))
@@ -2661,34 +2715,18 @@ void Direct3DDevice8::commit_per_model()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_model_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto ptr = reinterpret_cast<per_model_raw*>(mapped.pData);
-
-	ptr->worldMatrix = t_world.data();
-
-	auto temp = CBufferWriter(reinterpret_cast<uint8_t*>(&ptr->lights[0]));
+	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	writer << t_world.data();
 
 	for (const auto& light : lights)
 	{
-		const Light l = light.data();
-
-		temp
-			<< l.Enabled
-			<< l.Type
-			<< gsl::span<const float>(l.Diffuse)
-			<< gsl::span<const float>(l.Specular)
-			<< gsl::span<const float>(l.Ambient)
-			<< gsl::span<const float>(l.Position)
-			<< gsl::span<const float>(l.Direction)
-			<< l.Range
-			<< l.Falloff
-			<< l.Attenuation0
-			<< l.Attenuation1
-			<< l.Attenuation2
-			<< l.Theta
-			<< l.Phi;
+		writer.start_new();
+		writer << light.data();
+		writer.start_new();
 	}
 
-	ptr->material = material.data();
+	writer.start_new(); // pads out the end of the last light structure
+	writer << Material(material.data());
 
 	material.clear();
 	t_world.clear();
@@ -2711,7 +2749,7 @@ void Direct3DDevice8::commit_per_scene()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_scene_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto ptr = reinterpret_cast<per_scene_raw*>(mapped.pData);
+	auto ptr = reinterpret_cast<PerSceneRaw*>(mapped.pData);
 
 	ptr->viewMatrix = t_view.data();
 	ptr->projectionMatrix = t_projection.data();
@@ -2841,6 +2879,22 @@ void Direct3DDevice8::update_shaders()
 		}
 
 		lighting.clear();
+	}
+
+	auto& specular = render_state_values[D3DRS_SPECULARENABLE];
+
+	if (specular.dirty())
+	{
+		if (specular.data() != 1)
+		{
+			shader_flags &= ~ShaderFlags::rs_specular;
+		}
+		else
+		{
+			shader_flags |= ShaderFlags::rs_specular;
+		}
+
+		specular.clear();
 	}
 
 	VertexShader vs;

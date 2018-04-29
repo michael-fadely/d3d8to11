@@ -69,15 +69,20 @@ struct ShaderFlags
 		fvf_tex1    = 0b00001000,
 		tci_envmap  = 0b00010000,
 		rs_lighting = 0b00100000,
+		rs_specular = 0b01000000,
 
 		fvf_mask    = 0b00001111,
-		mask        = 0b00111111,
+		mask        = 0b01111111,
 
 		count
 	};
 
-	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting;
+#ifdef PER_PIXEL
+	// TODO
+#else
+	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
 	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1;
+#endif
 };
 
 struct SamplerFlags
