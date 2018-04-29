@@ -60,7 +60,11 @@ struct VS_OUTPUT
 	float4 position : SV_POSITION;
 
 #ifdef FVF_DIFFUSE
-	float4 diffuse   : COLOR;
+	float4 diffuse   : COLOR0;
+#endif
+
+#ifdef RS_SPECULAR
+	float4 specular : COLOR1;
 #endif
 
 #ifdef FVF_TEX1
@@ -80,6 +84,7 @@ cbuffer PerSceneBuffer : register(b0)
 	matrix viewMatrix;
 	matrix projectionMatrix;
 	float2 screenDimensions;
+	float3 viewPosition;
 };
 
 cbuffer PerModelBuffer : register(b1)
@@ -127,12 +132,13 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	float4 Cd = result.diffuse;
 	float3 N  = mul((float3x3)worldMatrix, input.normal);
 
-#ifdef RS_SPECULAR
-	float4 Cs = material.Specular;
-	float P   = material.Power;
+	#ifdef RS_SPECULAR
+		float4 Cs = material.Specular;
+		float P   = material.Power;
 
-	float4 worldPosition = mul(worldMatrix, input.position);
-#endif
+		float4 worldPosition = mul(worldMatrix, input.position);
+		worldPosition = mul(viewMatrix, worldPosition);
+	#endif
 
 	for (uint i = 0; i < LIGHT_COUNT; ++i)
 	{
@@ -146,32 +152,33 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		float NdotLdir = saturate(dot(N, Ldir));
 
 		ambient += lights[i].Ambient;
-		diffuse += (Cd * Ld * NdotLdir); // TODO: apply source diffuse after lighting calc!
+		diffuse += (/*Cd * */Ld * NdotLdir); // applying Cd after the fact for better vertex color
 
-	#ifdef RS_SPECULAR
-		float4 Ls = lights[i].Specular;
-		float3 H = normalize(normalize(worldPosition - viewMatrix[1].xyz) + Ldir); // TODO: fix
-		specular += Ls * pow(saturate(dot(N, H)), P);
-	#endif
+		#ifdef RS_SPECULAR
+			float4 Ls = lights[i].Specular;
+			float3 H = normalize(normalize(viewPosition - worldPosition) + Ldir); // I think this is fine???
+			specular += Ls * pow(saturate(dot(N, H)), P);
+		#endif
 	}
 
-#ifdef RS_SPECULAR
-	specular *= Cs;
-#endif
+	#ifdef RS_SPECULAR
+		specular *= Cs;
+		result.specular = specular;
+	#endif
 
-	result.diffuse.rgb = saturate(diffuse.rgb + ambient.rgb) + specular;
+	result.diffuse.rgb = Cd.rgb * saturate(saturate(diffuse.rgb) + ambient.rgb);
 #endif
 
 #ifdef FVF_TEX1
-#ifdef TCI_CAMERASPACENORMAL
-	// this is kinda gross but the preshader should handle it
-	// also this is producing incorrect output when the object rotates
-	matrix wvMatrixInvT = mul(transpose(worldMatrix), transpose(viewMatrix));
-	result.tex = (float2)mul(wvMatrixInvT, float4(input.normal, 1));
-	result.tex = (float2)mul(float4(result.tex, 0, 1), textureTransform);
-#else
-	result.tex = input.tex;
-#endif
+	#ifdef TCI_CAMERASPACENORMAL
+		// this is kinda gross but the preshader should handle it
+		// also this is producing incorrect output when the object rotates
+		matrix wvMatrixInvT = mul(transpose(worldMatrix), transpose(viewMatrix));
+		result.tex = (float2)mul(wvMatrixInvT, float4(input.normal, 1));
+		result.tex = (float2)mul(float4(result.tex, 0, 1), textureTransform);
+	#else
+		result.tex = input.tex;
+	#endif
 #endif
 
 	return result;
@@ -189,6 +196,10 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 #ifdef FVF_DIFFUSE
 	result *= input.diffuse;
+#endif
+
+#ifdef RS_SPECULAR
+	result += input.specular;
 #endif
 
 	return result;

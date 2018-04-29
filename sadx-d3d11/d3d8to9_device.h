@@ -81,7 +81,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
-	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1;
+	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1 | rs_specular;
 #endif
 };
 

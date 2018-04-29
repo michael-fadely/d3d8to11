@@ -55,6 +55,7 @@ struct PerSceneRaw
 {
 	DirectX::XMMATRIX viewMatrix, projectionMatrix;
 	float screenDimensions[2];
+	float viewPosition[3];
 };
 
 struct __declspec(align(16)) PerModelRaw
@@ -2749,13 +2750,15 @@ void Direct3DDevice8::commit_per_scene()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_scene_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto ptr = reinterpret_cast<PerSceneRaw*>(mapped.pData);
+	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 
-	ptr->viewMatrix = t_view.data();
-	ptr->projectionMatrix = t_projection.data();
+	writer << t_view.data() << t_projection.data();
 
-	ptr->screenDimensions[0] = viewport.Width;
-	ptr->screenDimensions[1] = viewport.Height;
+	float vp_dimensions[] = { viewport.Width, viewport.Height };
+	writer << vp_dimensions;
+
+	auto translation = t_view.data().Translation();
+	writer << translation;
 
 	t_view.clear();
 	t_projection.clear();

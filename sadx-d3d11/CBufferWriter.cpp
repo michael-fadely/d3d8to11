@@ -76,6 +76,27 @@ CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Matrix& data
 }
 
 template <>
+CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector2& data)
+{
+	const float array[] = { data.x, data.y };
+	return *this << array;
+}
+
+template <>
+CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector3& data)
+{
+	const float array[] = { data.x, data.y, data.z };
+	return *this << array;
+}
+
+template <>
+CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector4& data)
+{
+	const float array[] = { data.x, data.y, data.z, data.w };
+	return *this << array;
+}
+
+template <>
 CBufferWriter& CBufferWriter::operator<<(const gsl::span<float>& data)
 {
 	write(&data[0], data.size_bytes());
