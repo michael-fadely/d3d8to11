@@ -26,16 +26,37 @@ using Direct3DVolumeTexture8 = void;
 using Matrix = DirectX::SimpleMath::Matrix;
 using Microsoft::WRL::ComPtr;
 
-struct D3DLIGHT8EX : D3DLIGHT8
-{
-	D3DLIGHT8EX(const D3DLIGHT8& rhs);
-
-	bool Enabled;
-};
-
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs);
 bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
-bool operator==(const D3DLIGHT8EX& lhs, const D3DLIGHT8EX& rhs);
+
+#pragma pack(push, 4)
+
+struct Light
+{
+	bool  Enabled      = false;
+	int   Type         = 0;    /* Type of light source */
+	float Diffuse[4]   = {};   /* Diffuse color of light */
+	float Specular[4]  = {};   /* Specular color of light */
+	float Ambient[4]   = {};   /* Ambient color of light */
+	float Position[3]  = {};   /* Position in world space */
+	float Direction[3] = {};   /* Direction in world space */
+	float Range        = 0.0f; /* Cutoff range */
+	float Falloff      = 0.0f; /* Falloff */
+	float Attenuation0 = 0.0f; /* Constant attenuation */
+	float Attenuation1 = 0.0f; /* Linear attenuation */
+	float Attenuation2 = 0.0f; /* Quadratic attenuation */
+	float Theta        = 0.0f; /* Inner angle of spotlight cone */
+	float Phi          = 0.0f; /* Outer angle of spotlight cone */
+
+	Light() = default;
+	explicit Light(const D3DLIGHT8& rhs);
+
+	Light& operator=(const D3DLIGHT8& rhs);
+	bool operator==(const Light& rhs) const;
+	bool operator!=(const Light& rhs) const;
+};
+
+#pragma pack(pop)
 
 struct ShaderFlags
 {
@@ -318,5 +339,5 @@ protected:
 
 	dirty_t<D3DMATERIAL8> material {};
 
-	std::array<dirty_t<D3DLIGHT8EX>, LIGHT_COUNT> lights {};
+	std::array<dirty_t<Light>, LIGHT_COUNT> lights {};
 };

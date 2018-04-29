@@ -16,64 +16,6 @@
 
 using namespace Microsoft::WRL;
 
-struct Light
-{
-	bool                 Enabled;
-	int                  Type;         /* Type of light source */
-	std::array<float, 4> Diffuse {};   /* Diffuse color of light */
-	std::array<float, 4> Specular {};  /* Specular color of light */
-	std::array<float, 4> Ambient {};   /* Ambient color of light */
-	std::array<float, 3> Position {};  /* Position in world space */
-	std::array<float, 3> Direction {}; /* Direction in world space */
-	float                Range;        /* Cutoff range */
-	float                Falloff;      /* Falloff */
-	float                Attenuation0; /* Constant attenuation */
-	float                Attenuation1; /* Linear attenuation */
-	float                Attenuation2; /* Quadratic attenuation */
-	float                Theta;        /* Inner angle of spotlight cone */
-	float                Phi;          /* Outer angle of spotlight cone */
-
-	Light() = default;
-
-	// ReSharper disable once CppNonExplicitConvertingConstructor
-	Light(const D3DLIGHT8EX& rhs)
-	{
-		this->Enabled      = rhs.Enabled;
-		this->Type         = rhs.Type;
-		this->Diffuse[0]   = rhs.Diffuse.r;
-		this->Diffuse[1]   = rhs.Diffuse.g;
-		this->Diffuse[2]   = rhs.Diffuse.b;
-		this->Diffuse[3]   = rhs.Diffuse.a;
-		this->Specular[0]  = rhs.Specular.r;
-		this->Specular[1]  = rhs.Specular.g;
-		this->Specular[2]  = rhs.Specular.b;
-		this->Specular[3]  = rhs.Specular.a;
-		this->Ambient[0]   = rhs.Ambient.r;
-		this->Ambient[1]   = rhs.Ambient.g;
-		this->Ambient[2]   = rhs.Ambient.b;
-		this->Ambient[3]   = rhs.Ambient.a;
-		this->Position[0]  = rhs.Position.x;
-		this->Position[1]  = rhs.Position.y;
-		this->Position[2]  = rhs.Position.z;
-		this->Direction[0] = rhs.Direction.x;
-		this->Direction[1] = rhs.Direction.y;
-		this->Direction[2] = rhs.Direction.z;
-		this->Range        = rhs.Range;
-		this->Falloff      = rhs.Falloff;
-		this->Attenuation0 = rhs.Attenuation0;
-		this->Attenuation1 = rhs.Attenuation1;
-		this->Attenuation2 = rhs.Attenuation2;
-		this->Theta        = rhs.Theta;
-		this->Phi          = rhs.Phi;
-	}
-
-	Light& operator=(const D3DLIGHT8EX& rhs)
-	{
-		*this = Light(rhs);
-		return *this;
-	}
-};
-
 #pragma pack(push, 4)
 
 struct Material
@@ -124,18 +66,6 @@ bool operator==(const D3DCOLORVALUE& lhs, const D3DCOLORVALUE& rhs)
 		   lhs.a == rhs.a;
 }
 
-D3DLIGHT8EX::D3DLIGHT8EX(const D3DLIGHT8& rhs)
-{
-	*dynamic_cast<D3DLIGHT8*>(this) = rhs;
-	Enabled = false;
-}
-
-template <typename T>
-bool operator!=(const T& lhs, const T& rhs)
-{
-	return !(lhs == rhs);
-}
-
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs)
 {
 	return lhs.Diffuse == rhs.Diffuse &&
@@ -169,9 +99,69 @@ bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs)
 		   lhs.Phi          == rhs.Phi;
 }
 
-bool operator==(const D3DLIGHT8EX& lhs, const D3DLIGHT8EX& rhs)
+template <typename T>
+bool operator!=(const T& lhs, const T& rhs)
 {
-	return static_cast<const D3DLIGHT8&>(lhs) == static_cast<const D3DLIGHT8&>(rhs) && lhs.Enabled == rhs.Enabled;
+	return !(lhs == rhs);
+}
+
+Light::Light(const D3DLIGHT8& rhs)
+{
+	this->Type         = rhs.Type;
+	this->Diffuse[0]   = rhs.Diffuse.r;
+	this->Diffuse[1]   = rhs.Diffuse.g;
+	this->Diffuse[2]   = rhs.Diffuse.b;
+	this->Diffuse[3]   = rhs.Diffuse.a;
+	this->Specular[0]  = rhs.Specular.r;
+	this->Specular[1]  = rhs.Specular.g;
+	this->Specular[2]  = rhs.Specular.b;
+	this->Specular[3]  = rhs.Specular.a;
+	this->Ambient[0]   = rhs.Ambient.r;
+	this->Ambient[1]   = rhs.Ambient.g;
+	this->Ambient[2]   = rhs.Ambient.b;
+	this->Ambient[3]   = rhs.Ambient.a;
+	this->Position[0]  = rhs.Position.x;
+	this->Position[1]  = rhs.Position.y;
+	this->Position[2]  = rhs.Position.z;
+	this->Direction[0] = rhs.Direction.x;
+	this->Direction[1] = rhs.Direction.y;
+	this->Direction[2] = rhs.Direction.z;
+	this->Range        = rhs.Range;
+	this->Falloff      = rhs.Falloff;
+	this->Attenuation0 = rhs.Attenuation0;
+	this->Attenuation1 = rhs.Attenuation1;
+	this->Attenuation2 = rhs.Attenuation2;
+	this->Theta        = rhs.Theta;
+	this->Phi          = rhs.Phi;
+}
+
+Light& Light::operator=(const D3DLIGHT8& rhs)
+{
+	*this = Light(rhs);
+	return *this;
+}
+
+bool Light::operator==(const Light& rhs) const
+{
+	return Enabled      == rhs.Enabled &&
+		   Type         == rhs.Type &&
+		   Diffuse      == rhs.Diffuse &&
+		   Specular     == rhs.Specular &&
+		   Ambient      == rhs.Ambient &&
+		   Position     == rhs.Position &&
+		   Direction    == rhs.Direction &&
+		   Range        == rhs.Range &&
+		   Falloff      == rhs.Falloff &&
+		   Attenuation0 == rhs.Attenuation0 &&
+		   Attenuation1 == rhs.Attenuation1 &&
+		   Attenuation2 == rhs.Attenuation2 &&
+		   Theta        == rhs.Theta &&
+		   Phi          == rhs.Phi;
+}
+
+bool Light::operator!=(const Light& rhs) const
+{
+	return !(*this == rhs);
 }
 
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
@@ -1519,7 +1509,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetLight(DWORD Index, const D3DLIGHT8
 		return D3DERR_INVALIDCALL;
 	}
 
-	lights[Index] = D3DLIGHT8EX(*pLight);
+	lights[Index] = Light(*pLight);
 	return D3D_OK;
 }
 
@@ -1535,7 +1525,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8 *pLig
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pLight = static_cast<D3DLIGHT8>(lights[Index]);  // NOLINT(cppcoreguidelines-slicing)
+	const auto& light = lights[Index].data();
+
+	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.Type);
+	pLight->Diffuse      = { light.Diffuse[0], light.Diffuse[1], light.Diffuse[2], light.Diffuse[3] };
+	pLight->Specular     = { light.Diffuse[0], light.Diffuse[1], light.Diffuse[2], light.Diffuse[3] };
+	pLight->Ambient      = { light.Ambient[0], light.Ambient[1], light.Ambient[2], light.Ambient[3] };
+	pLight->Position     = { light.Position[0], light.Position[1], light.Position[2] };
+	pLight->Direction    = { light.Direction[0], light.Direction[1], light.Direction[2] };
+	pLight->Range        = light.Range;
+	pLight->Falloff      = light.Falloff;
+	pLight->Attenuation0 = light.Attenuation0;
+	pLight->Attenuation1 = light.Attenuation1;
+	pLight->Attenuation2 = light.Attenuation2;
+	pLight->Theta        = light.Theta;
+	pLight->Phi          = light.Phi;
+
 	return D3D_OK;
 }
 
@@ -1546,7 +1551,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::LightEnable(DWORD Index, BOOL Enable)
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto light = lights[Index].data();
+	Light light = lights[Index].data();
 	light.Enabled = Enable == TRUE;
 	lights[Index] = light;
 	return D3D_OK;
@@ -2630,13 +2635,6 @@ bool Direct3DDevice8::update_input_layout()
 	return true;
 }
 
-template <typename T>
-void buffer_write(uint8_t*& buffer, const T& value)
-{
-	reinterpret_cast<T*>(buffer) = value;
-	buffer += int_multiple(sizeof(T), 4);
-}
-
 void Direct3DDevice8::commit_per_model()
 {
 	bool light_dirty = false;
@@ -2835,7 +2833,6 @@ void Direct3DDevice8::update_shaders()
 		{
 			vs = get_vs(shader_flags);
 			ps = get_ps(shader_flags);
-			result = IDCANCEL;
 			break;
 		}
 		catch (std::exception& ex)
