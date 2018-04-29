@@ -119,7 +119,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.diffuse = float4(1, 1, 1, 1);
 #endif
 
-#if defined(FVF_NORMAL) && !defined(FVF_RHW)
+#if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
 	float4 diffuse = float4(0, 0, 0, 0);
 	float4 ambient = float4(0, 0, 0, 0);
 	float4 specular = float4(0, 0, 0, 0);
@@ -142,7 +142,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		diffuse += (Cd * Ld * NdotLdir);
 	}
 
-	result.diffuse.rgb = diffuse.rgb + ambient.rgb + specular.rgb;
+	result.diffuse.rgb = saturate(diffuse.rgb + ambient.rgb + specular.rgb);
 #endif
 
 #ifdef FVF_TEX1

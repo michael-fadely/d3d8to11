@@ -193,6 +193,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		}
 	}
 
+	if (flags & ShaderFlags::rs_lighting)
+	{
+		result.push_back({ "RS_LIGHTING", "1" });
+	}
+
 	result.push_back({});
 	return result;
 }
@@ -2820,6 +2825,22 @@ void Direct3DDevice8::update_shaders()
 		}
 
 		tci.clear();
+	}
+
+	auto& lighting = render_state_values[D3DRS_LIGHTING];
+
+	if (lighting.dirty())
+	{
+		if (lighting.data() != 1)
+		{
+			shader_flags &= ~ShaderFlags::rs_lighting;
+		}
+		else
+		{
+			shader_flags |= ShaderFlags::rs_lighting;
+		}
+
+		lighting.clear();
 	}
 
 	VertexShader vs;

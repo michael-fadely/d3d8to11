@@ -68,12 +68,15 @@ struct ShaderFlags
 		fvf_diffuse = 0b00000100,
 		fvf_tex1    = 0b00001000,
 		tci_envmap  = 0b00010000,
+		rs_lighting = 0b00100000,
+
 		fvf_mask    = 0b00001111,
-		mask        = 0b00011111,
+		mask        = 0b00111111,
+
 		count
 	};
 
-	static constexpr auto vs_mask = fvf_mask | tci_envmap;
+	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting;
 	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1;
 };
 
