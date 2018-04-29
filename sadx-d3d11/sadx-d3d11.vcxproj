@@ -59,7 +59,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;..\DirectXTK\Inc;..\sadx-mod-loader\libmodutils</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;..\DirectXTK\Inc;..\sadx-mod-loader\libmodutils;..\GSL\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
@@ -75,7 +75,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;NDEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;..\DirectXTK\Inc;..\sadx-mod-loader\libmodutils</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;..\DirectXTK\Inc;..\sadx-mod-loader\libmodutils;..\GSL\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
@@ -87,6 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h" />
+    <ClInclude Include="CBufferWriter.h" />
     <ClInclude Include="d3d8to9.hpp" />
     <ClInclude Include="d3d8to9_base.h" />
     <ClInclude Include="d3d8to9_device.h" />
@@ -107,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp" />
+    <ClCompile Include="CBufferWriter.cpp" />
     <ClCompile Include="d3d8to9.cpp" />
     <ClCompile Include="d3d8to9_base.cpp" />
     <ClCompile Include="d3d8to9_device.cpp" />

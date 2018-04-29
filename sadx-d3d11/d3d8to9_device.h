@@ -10,6 +10,8 @@
 #include "lookup_table.hpp"
 #include "dirty_t.h"
 
+constexpr auto LIGHT_COUNT = 4;
+
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
 class Direct3DTexture8;
@@ -24,10 +26,16 @@ using Direct3DVolumeTexture8 = void;
 using Matrix = DirectX::SimpleMath::Matrix;
 using Microsoft::WRL::ComPtr;
 
+struct D3DLIGHT8EX : D3DLIGHT8
+{
+	D3DLIGHT8EX(const D3DLIGHT8& rhs);
+
+	bool Enabled;
+};
+
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs);
-bool operator!=(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs);
 bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
-bool operator!=(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
+bool operator==(const D3DLIGHT8EX& lhs, const D3DLIGHT8EX& rhs);
 
 struct ShaderFlags
 {
@@ -310,6 +318,5 @@ protected:
 
 	dirty_t<D3DMATERIAL8> material {};
 
-	std::array<dirty_t<D3DLIGHT8>, 8> lights {};
-	std::array<dirty_t<bool>, 8> lights_enabled {};
+	std::array<dirty_t<D3DLIGHT8EX>, LIGHT_COUNT> lights {};
 };

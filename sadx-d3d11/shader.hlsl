@@ -3,8 +3,22 @@
 #define D3DLIGHT_SPOT 2
 #define D3DLIGHT_DIRECTIONAL 3
 
+#ifndef LIGHT_COUNT
+#define LIGHT_COUNT 4
+#endif
+
+struct Material
+{
+	float3   Diffuse;        /* Diffuse color RGBA */
+	float3   Ambient;        /* Ambient color RGB */
+	float3   Specular;       /* Specular 'shininess' */
+	float3   Emissive;       /* Emissive color RGB */
+	float    Power;          /* Sharpness if specular highlight */
+};
+
 struct Light
 {
+	bool   Enabled;
 	uint   Type;         /* Type of light source */
 	float4 Diffuse;      /* Diffuse color of light */
 	float4 Specular;     /* Specular color of light */
@@ -71,7 +85,8 @@ cbuffer PerSceneBuffer : register(b0)
 cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
-	Light light;
+	Light lights[LIGHT_COUNT];
+	Material material;
 };
 
 Texture2D<float4> DiffuseMap : register(t0);
@@ -105,14 +120,29 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if defined(FVF_NORMAL) && !defined(FVF_RHW)
-	float4 diff = result.diffuse;
-	float3 n = mul((float3x3)worldMatrix, input.normal);
-	float d = saturate(dot(normalize(light.Direction), n));
+	float4 diffuse = float4(0, 0, 0, 0);
+	float4 ambient = float4(0, 0, 0, 0);
+	float4 specular = float4(0, 0, 0, 0);
 
-	diff.rgb *= saturate((d * light.Diffuse) + light.Ambient);
-	diff.rgb = saturate(diff.rgb);
+	float4 Cd = result.diffuse;
+	float3 N = mul((float3x3)worldMatrix, input.normal);
 
-	result.diffuse = diff;
+	for (uint i = 0; i < LIGHT_COUNT; ++i)
+	{
+		if (lights[i].Enabled == false)
+		{
+			continue;
+		}
+
+		float4 Ld = lights[i].Diffuse;
+		float3 Ldir = normalize(-lights[i].Direction);
+		float NdotLdir = saturate(dot(N, Ldir));
+
+		ambient += lights[i].Ambient;
+		diffuse += (Cd * Ld * NdotLdir);
+	}
+
+	result.diffuse.rgb = diffuse.rgb + ambient.rgb + specular.rgb;
 #endif
 
 #ifdef FVF_TEX1

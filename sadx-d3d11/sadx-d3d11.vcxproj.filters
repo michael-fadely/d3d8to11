@@ -75,6 +75,9 @@
     <ClInclude Include="int_multiple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CBufferWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -124,6 +127,9 @@
     </ClCompile>
     <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp">
       <Filter>external</Filter>
+    </ClCompile>
+    <ClCompile Include="CBufferWriter.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
