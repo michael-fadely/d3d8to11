@@ -10,7 +10,6 @@
 Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_) :
 	Device(device), parent(parent_), level(level_)
 {
-	Device->address_table->SaveAddress(this, this);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void **ppvObj)

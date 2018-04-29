@@ -7,7 +7,6 @@
 #include <SimpleMath.h>
 
 #include "Unknown.h"
-#include "lookup_table.hpp"
 #include "dirty_t.h"
 
 constexpr auto LIGHT_COUNT = 4;
@@ -162,7 +161,7 @@ using VertexShader = Shader<ID3D11VertexShader>;
 using PixelShader = Shader<ID3D11PixelShader>;
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
-class Direct3DDevice8 : public Unknown, public AddressLookupTableObject
+class Direct3DDevice8 : public Unknown
 {
 public:
 	uint32_t shader_flags = ShaderFlags::none;
@@ -294,8 +293,6 @@ public:
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11RasterizerState> raster_state;
-
-	AddressLookupTable* address_table = nullptr;
 
 protected:
 	Direct3D8 *const d3d;

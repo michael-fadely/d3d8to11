@@ -29,8 +29,6 @@ void Direct3DIndexBuffer8::create_native()
 Direct3DIndexBuffer8::Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool) :
 	Device(Device)
 {
-	Device->address_table->SaveAddress(this, this);
-
 	desc8.Type   = D3DRTYPE_INDEXBUFFER;
 	desc8.Size   = Length;
 	desc8.Usage  = Usage;

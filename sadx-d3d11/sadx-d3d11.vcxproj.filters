@@ -36,9 +36,6 @@
     <ClInclude Include="d3d8to9.hpp">
       <Filter>d3d8wrapper</Filter>
     </ClInclude>
-    <ClInclude Include="lookup_table.hpp">
-      <Filter>d3d8wrapper</Filter>
-    </ClInclude>
     <ClInclude Include="Unknown.h">
       <Filter>d3d8wrapper</Filter>
     </ClInclude>
@@ -114,9 +111,6 @@
       <Filter>d3d8wrapper</Filter>
     </ClCompile>
     <ClCompile Include="d3d8to9_device.cpp">
-      <Filter>d3d8wrapper</Filter>
-    </ClCompile>
-    <ClCompile Include="lookup_table.cpp">
       <Filter>d3d8wrapper</Filter>
     </ClCompile>
     <ClCompile Include="Uknown.cpp">

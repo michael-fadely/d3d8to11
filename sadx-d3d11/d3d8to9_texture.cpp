@@ -75,8 +75,6 @@ Direct3DTexture8::Direct3DTexture8(Direct3DDevice8 *device_, UINT Width, UINT He
 	this->Usage  = Usage;
 	this->Format = Format;
 	this->Pool   = Pool;
-
-	Device->address_table->SaveAddress(this, this);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::QueryInterface(REFIID riid, void **ppvObj)

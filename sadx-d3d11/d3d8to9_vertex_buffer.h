@@ -1,12 +1,11 @@
 #pragma once
 
 #include "d3d8to9_resource.h"
-#include "lookup_table.hpp"
 
 class Direct3DDevice8;
 
 class __declspec(uuid("8AEEEAC7-05F9-44D4-B591-000B0DF1CB95")) Direct3DVertexBuffer8;
-class Direct3DVertexBuffer8 : public Direct3DResource8, public AddressLookupTableObject
+class Direct3DVertexBuffer8 : public Direct3DResource8
 {
 public:
 	Direct3DVertexBuffer8(const Direct3DVertexBuffer8 &) = delete;
@@ -40,11 +39,4 @@ public:
 private:
 	bool locked = false;
 	Direct3DDevice8 *const Device;
-};
-
-template <>
-struct AddressCacheIndex<Direct3DVertexBuffer8>
-{
-	static constexpr UINT CacheIndex = 5;
-	using Type9 = IUnknown;
 };

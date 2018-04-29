@@ -29,8 +29,6 @@ void Direct3DVertexBuffer8::create_native()
 Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8 *Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool) :
 	Device(Device)
 {
-	Device->address_table->SaveAddress(this, this);
-
 	desc8.Type  = D3DRTYPE_VERTEXBUFFER;
 	desc8.Size  = Length;
 	desc8.Usage = Usage;

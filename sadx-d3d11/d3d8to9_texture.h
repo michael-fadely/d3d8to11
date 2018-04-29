@@ -4,13 +4,12 @@
 #include <vector>
 #include "d3d8types.hpp"
 #include "d3d8to9_resource.h"
-#include "lookup_table.hpp"
 
 class Direct3DDevice8;
 class Direct3DSurface8;
 
 class __declspec(uuid("B4211CFA-51B9-4A9F-AB78-DB99B2BB678E")) Direct3DBaseTexture8;
-class Direct3DBaseTexture8 : public Direct3DResource8, public AddressLookupTableObject
+class Direct3DBaseTexture8 : public Direct3DResource8
 {
 public:
 	virtual DWORD STDMETHODCALLTYPE SetLOD(DWORD LODNew) = 0;
@@ -68,11 +67,4 @@ private:
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
 	std::unordered_map<UINT, std::vector<uint8_t>> texture_levels;
-};
-
-template <>
-struct AddressCacheIndex<Direct3DTexture8>
-{
-	static constexpr UINT CacheIndex = 1;
-	using Type9 = IUnknown;
 };

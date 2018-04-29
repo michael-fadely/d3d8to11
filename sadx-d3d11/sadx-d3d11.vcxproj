@@ -99,7 +99,6 @@
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="dirty_t.h" />
     <ClInclude Include="int_multiple.h" />
-    <ClInclude Include="lookup_table.hpp" />
     <ClInclude Include="PolyBuff11.h" />
     <ClInclude Include="safe_release.h" />
     <ClInclude Include="stdafx.h" />
@@ -119,7 +118,6 @@
     <ClCompile Include="d3d8to9_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to9_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
-    <ClCompile Include="lookup_table.cpp" />
     <ClCompile Include="PolyBuff11.cpp" />
     <ClCompile Include="sadx-d3d11.cpp" />
     <ClCompile Include="stdafx.cpp">
