@@ -101,6 +101,7 @@
     <ClInclude Include="int_multiple.h" />
     <ClInclude Include="PolyBuff11.h" />
     <ClInclude Include="safe_release.h" />
+    <ClInclude Include="simple_math.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="typedefs.h" />
     <ClInclude Include="Unknown.h" />

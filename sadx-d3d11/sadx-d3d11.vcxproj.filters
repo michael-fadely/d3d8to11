@@ -75,6 +75,9 @@
     <ClInclude Include="CBufferWriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="simple_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

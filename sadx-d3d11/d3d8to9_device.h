@@ -4,12 +4,12 @@
 #include <deque>
 #include <unordered_map>
 #include <wrl/client.h>
-#include <SimpleMath.h>
 
 #include "Unknown.h"
 #include "dirty_t.h"
+#include "simple_math.h"
 
-constexpr auto LIGHT_COUNT = 4;
+constexpr auto LIGHT_COUNT = 8;
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -22,7 +22,6 @@ using Direct3DSwapChain8 = void;
 using Direct3DCubeTexture8 = void;
 using Direct3DVolumeTexture8 = void;
 
-using Matrix = DirectX::SimpleMath::Matrix;
 using Microsoft::WRL::ComPtr;
 
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs);
@@ -32,20 +31,20 @@ bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
 
 struct Light
 {
-	bool  Enabled      = false;
-	int   Type         = 0;    /* Type of light source */
-	float Diffuse[4]   = {};   /* Diffuse color of light */
-	float Specular[4]  = {};   /* Specular color of light */
-	float Ambient[4]   = {};   /* Ambient color of light */
-	float Position[3]  = {};   /* Position in world space */
-	float Direction[3] = {};   /* Direction in world space */
-	float Range        = 0.0f; /* Cutoff range */
-	float Falloff      = 0.0f; /* Falloff */
-	float Attenuation0 = 0.0f; /* Constant attenuation */
-	float Attenuation1 = 0.0f; /* Linear attenuation */
-	float Attenuation2 = 0.0f; /* Quadratic attenuation */
-	float Theta        = 0.0f; /* Inner angle of spotlight cone */
-	float Phi          = 0.0f; /* Outer angle of spotlight cone */
+	bool    Enabled      = false; /* Light enabled state */
+	int     Type         = 0;     /* Type of light source */
+	Vector4 Diffuse      = {};    /* Diffuse color of light */
+	Vector4 Specular     = {};    /* Specular color of light */
+	Vector4 Ambient      = {};    /* Ambient color of light */
+	Vector3 Position     = {};    /* Position in world space */
+	Vector3 Direction    = {};    /* Direction in world space */
+	float   Range        = 0.0f;  /* Cutoff range */
+	float   Falloff      = 0.0f;  /* Falloff */
+	float   Attenuation0 = 0.0f;  /* Constant attenuation */
+	float   Attenuation1 = 0.0f;  /* Linear attenuation */
+	float   Attenuation2 = 0.0f;  /* Quadratic attenuation */
+	float   Theta        = 0.0f;  /* Inner angle of spotlight cone */
+	float   Phi          = 0.0f;  /* Outer angle of spotlight cone */
 
 	Light() = default;
 	explicit Light(const D3DLIGHT8& rhs);

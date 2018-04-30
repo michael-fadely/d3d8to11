@@ -22,25 +22,24 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-
 #pragma pack(push, 16)
 
 struct Material
 {
-	D3DCOLORVALUE Diffuse  = {};   /* Diffuse color RGBA */
-	D3DCOLORVALUE Ambient  = {};   /* Ambient color RGB */
-	D3DCOLORVALUE Specular = {};   /* Specular 'shininess' */
-	D3DCOLORVALUE Emissive = {};   /* Emissive color RGB */
-	float         Power    = 0.0f; /* Sharpness if specular highlight */
+	Vector4 Diffuse  = {};   /* Diffuse color RGBA */
+	Vector4 Ambient  = {};   /* Ambient color RGB */
+	Vector4 Specular = {};   /* Specular 'shininess' */
+	Vector4 Emissive = {};   /* Emissive color RGB */
+	float   Power    = 0.0f; /* Sharpness if specular highlight */
 
 	Material() = default;
 
 	explicit Material(const D3DMATERIAL8& rhs)
 	{
-		Diffuse  = rhs.Diffuse;
-		Ambient  = rhs.Ambient;
-		Specular = rhs.Specular;
-		Emissive = rhs.Emissive;
+		Diffuse  = Vector4(rhs.Diffuse.r, rhs.Diffuse.g, rhs.Diffuse.b , rhs.Diffuse.a);
+		Ambient  = Vector4(rhs.Ambient.r, rhs.Ambient.g, rhs.Ambient.b , rhs.Ambient.a);
+		Specular = Vector4(rhs.Specular.r, rhs.Specular.g, rhs.Specular.b , rhs.Specular.a);
+		Emissive = Vector4(rhs.Emissive.r, rhs.Emissive.g, rhs.Emissive.b , rhs.Emissive.a);
 		Power    = rhs.Power;
 	}
 
@@ -54,8 +53,8 @@ struct Material
 struct PerSceneRaw
 {
 	DirectX::XMMATRIX viewMatrix, projectionMatrix;
-	float screenDimensions[2];
-	float viewPosition[3];
+	Vector2 screenDimensions;
+	Vector3 viewPosition;
 };
 
 struct __declspec(align(16)) PerModelRaw
@@ -77,11 +76,11 @@ bool operator==(const D3DCOLORVALUE& lhs, const D3DCOLORVALUE& rhs)
 
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs)
 {
-	return lhs.Diffuse == rhs.Diffuse &&
-		   lhs.Ambient == rhs.Ambient &&
+	return lhs.Diffuse  == rhs.Diffuse &&
+		   lhs.Ambient  == rhs.Ambient &&
 		   lhs.Specular == rhs.Specular &&
 		   lhs.Emissive == rhs.Emissive &&
-		   lhs.Power == rhs.Power;
+		   lhs.Power    == rhs.Power;
 }
 
 bool operator==(const D3DVECTOR& lhs, const D3DVECTOR& rhs)
@@ -117,24 +116,11 @@ bool operator!=(const T& lhs, const T& rhs)
 Light::Light(const D3DLIGHT8& rhs)
 {
 	this->Type         = rhs.Type;
-	this->Diffuse[0]   = rhs.Diffuse.r;
-	this->Diffuse[1]   = rhs.Diffuse.g;
-	this->Diffuse[2]   = rhs.Diffuse.b;
-	this->Diffuse[3]   = rhs.Diffuse.a;
-	this->Specular[0]  = rhs.Specular.r;
-	this->Specular[1]  = rhs.Specular.g;
-	this->Specular[2]  = rhs.Specular.b;
-	this->Specular[3]  = rhs.Specular.a;
-	this->Ambient[0]   = rhs.Ambient.r;
-	this->Ambient[1]   = rhs.Ambient.g;
-	this->Ambient[2]   = rhs.Ambient.b;
-	this->Ambient[3]   = rhs.Ambient.a;
-	this->Position[0]  = rhs.Position.x;
-	this->Position[1]  = rhs.Position.y;
-	this->Position[2]  = rhs.Position.z;
-	this->Direction[0] = rhs.Direction.x;
-	this->Direction[1] = rhs.Direction.y;
-	this->Direction[2] = rhs.Direction.z;
+	this->Diffuse      = Vector4(rhs.Diffuse.r, rhs.Diffuse.g, rhs.Diffuse.b, rhs.Diffuse.a);
+	this->Specular     = Vector4(rhs.Specular.r, rhs.Specular.g, rhs.Specular.b, rhs.Specular.a);
+	this->Ambient      = Vector4(rhs.Ambient.r, rhs.Ambient.g, rhs.Ambient.b, rhs.Ambient.a);
+	this->Position     = Vector3(rhs.Position.x, rhs.Position.y, rhs.Position.z);
+	this->Direction    = Vector3(rhs.Direction.x, rhs.Direction.y, rhs.Direction.z);
 	this->Range        = rhs.Range;
 	this->Falloff      = rhs.Falloff;
 	this->Attenuation0 = rhs.Attenuation0;
@@ -171,18 +157,6 @@ bool Light::operator==(const Light& rhs) const
 bool Light::operator!=(const Light& rhs) const
 {
 	return !(*this == rhs);
-}
-
-CBufferWriter& operator<<(CBufferWriter& writer, const D3DCOLORVALUE& color)
-{
-	const float data[] = { color.r, color.g, color.b, color.a };
-	return writer << data;
-}
-
-CBufferWriter& operator<<(CBufferWriter& writer, const D3DVECTOR& d)
-{
-	const float data[] = { d.x, d.y, d.z };
-	return writer << data;
 }
 
 CBufferWriter& operator<<(CBufferWriter& writer, const Light& l)
@@ -1586,11 +1560,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8 *pLig
 	const auto& light = lights[Index].data();
 
 	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.Type);
-	pLight->Diffuse      = { light.Diffuse[0], light.Diffuse[1], light.Diffuse[2], light.Diffuse[3] };
-	pLight->Specular     = { light.Diffuse[0], light.Diffuse[1], light.Diffuse[2], light.Diffuse[3] };
-	pLight->Ambient      = { light.Ambient[0], light.Ambient[1], light.Ambient[2], light.Ambient[3] };
-	pLight->Position     = { light.Position[0], light.Position[1], light.Position[2] };
-	pLight->Direction    = { light.Direction[0], light.Direction[1], light.Direction[2] };
+	pLight->Diffuse      = { light.Diffuse.x, light.Diffuse.y, light.Diffuse.z, light.Diffuse.w };
+	pLight->Specular     = { light.Diffuse.x, light.Diffuse.y, light.Diffuse.z, light.Diffuse.w };
+	pLight->Ambient      = { light.Ambient.x, light.Ambient.y, light.Ambient.z, light.Ambient.w };
+	pLight->Position     = { light.Position.x, light.Position.y, light.Position.z };
+	pLight->Direction    = { light.Direction.x, light.Direction.y, light.Direction.z };
 	pLight->Range        = light.Range;
 	pLight->Falloff      = light.Falloff;
 	pLight->Attenuation0 = light.Attenuation0;

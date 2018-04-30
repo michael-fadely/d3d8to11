@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gsl/span>
+#include "simple_math.h"
 
 class CBufferWriter
 {
@@ -45,13 +46,13 @@ CBufferWriter& CBufferWriter::operator<<(const int& data);
 template <>
 CBufferWriter& CBufferWriter::operator<<(const float& data);
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Matrix& data);
+CBufferWriter& CBufferWriter::operator<<(const Matrix& data);
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector2& data);
+CBufferWriter& CBufferWriter::operator<<(const Vector2& data);
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector3& data);
+CBufferWriter& CBufferWriter::operator<<(const Vector3& data);
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector4& data);
+CBufferWriter& CBufferWriter::operator<<(const Vector4& data);
 template <>
 CBufferWriter& CBufferWriter::operator<<(const gsl::span<float>& data);
 template <>

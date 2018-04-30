@@ -4,7 +4,7 @@
 #define D3DLIGHT_DIRECTIONAL 3
 
 #ifndef LIGHT_COUNT
-#define LIGHT_COUNT 4
+#define LIGHT_COUNT 8
 #endif
 
 struct Material
