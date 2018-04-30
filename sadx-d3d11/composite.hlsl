@@ -62,12 +62,14 @@ float4 blend_colors(in uint srcBlend, in uint dstBlend, float4 texel, float4 pix
 
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
+	float4 backBufferColor = BackBuffer[input.position.xy];
+	
 	uint2 pos = uint2(input.position.xy);
 	uint head = FragListHead[pos];
 
 	if (head == FRAGMENT_LIST_NULL)
 	{
-		discard;
+		return backBufferColor;
 	}
 
 	OitNode fragments[MAX_FRAGMENTS];
@@ -117,7 +119,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	}
 #endif
 
-	float4 final = BackBuffer[input.position.xy];
+	float4 final = backBufferColor;
 
 	for (int l = 0; l < count; l++)
 	{

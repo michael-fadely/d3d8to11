@@ -539,6 +539,7 @@ void Direct3DDevice8::create_native()
 
 	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+	context->PSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
 
 	oit_load_shaders();
 	oit_init();
@@ -2796,8 +2797,9 @@ void Direct3DDevice8::commit_per_model()
 	uint32_t dest = dest_blend.data();
 
 	writer.start_new();
-	writer << (dest << 8 | src);
+	writer << src;
 	writer.start_new();
+	writer << dest;
 
 	for (const auto& light : lights)
 	{
