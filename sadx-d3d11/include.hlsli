@@ -45,6 +45,7 @@ globallycoherent RWStructuredBuffer<OitNode> FragListNodes : register(u2);
 
 Texture2D<uint>           FragListHead  : register(t0);
 StructuredBuffer<OitNode> FragListNodes : register(t1);
+Texture2D                 BackBuffer    : register(t2);
 
 #endif
 

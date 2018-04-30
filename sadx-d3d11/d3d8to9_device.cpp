@@ -380,12 +380,52 @@ void Direct3DDevice8::create_render_target()
 	ID3D11Texture2D* pBackBuffer;
 	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
 
+	D3D11_TEXTURE2D_DESC tex_desc {};
+	pBackBuffer->GetDesc(&tex_desc);
+
 	// use the back buffer address to create the render target
 	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
 	pBackBuffer->Release();
 
-	// set the render target as the back buffer
-	context->OMSetRenderTargets(1, render_target.GetAddressOf(), depth_view.Get());
+	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
+	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	auto hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_target_texture);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite target texture");
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC view_desc {};
+
+	view_desc.Format             = tex_desc.Format;
+	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+	view_desc.Texture2D.MipSlice = 0;
+
+	hr = device->CreateRenderTargetView(composite_target_texture.Get(), &view_desc, &composite_target_view);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite target view");
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+
+	srv_desc.Format = tex_desc.Format;
+	srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Texture2D.MostDetailedMip = 0;
+	srv_desc.Texture2D.MipLevels = 1;
+
+	hr = device->CreateShaderResourceView(composite_target_texture.Get(), &srv_desc, &composite_resource_view);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite resource view");
+	}
+
+	// set the composite render target as the back buffer
+	context->OMSetRenderTargets(1, composite_target_view.GetAddressOf(), depth_view.Get());
 }
 
 void Direct3DDevice8::create_native()
@@ -778,6 +818,47 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8 *pPresen
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion)
 {
 	UNREFERENCED_PARAMETER(pDirtyRegion);
+
+	const auto blend_original = blend_flags;
+	blend_flags = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+	update_blend();
+
+	// Switches to the composite to begin the sorting process.
+	context->PSSetShader(composite_ps.Get(), nullptr, 0);
+	context->VSSetShader(composite_vs.Get(), nullptr, 0);
+
+	// Unbinds UAV read/write buffers and binds their read-only
+	// shader resource views.
+	oit_read();
+
+	// Unbind the last vertex & index buffers (one of the cubes)...
+	context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// disable depth(?)
+	ComPtr<ID3D11DepthStencilState> depth_state;
+	context->OMGetDepthStencilState(&depth_state, nullptr);
+	context->OMSetDepthStencilState(nullptr, 0);
+
+	context->OMSetRenderTargets(1, render_target.GetAddressOf(), nullptr);
+	context->PSSetShaderResources(2, 1, composite_resource_view.GetAddressOf());
+
+	// ...then draw 3 points. The composite shader uses SV_VertexID
+	// to generate a full screen triangle, so we don't need a buffer!
+	context->Draw(3, 0);
+
+	// Restore R/W access to the UAV buffers from the shader.
+	oit_write();
+
+	// restore render target
+	ID3D11ShaderResourceView* one_null[] = { nullptr };
+	context->PSSetShaderResources(2, 1, &one_null[0]);
+	context->OMSetRenderTargets(1, composite_target_view.GetAddressOf(), depth_view.Get());
+	context->OMSetDepthStencilState(depth_state.Get(), 0);
+
+	blend_flags = blend_original;
+	update_blend();
 
 	if (FAILED(swap_chain->Present(1, 0)))
 	{
@@ -1369,10 +1450,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 			((Color >> 24) & 0xFF) / 255.0f,
 		};
 
-		if (render_target)
-		{
-			context->ClearRenderTargetView(render_target.Get(), color);
-		}
+		context->ClearRenderTargetView(composite_target_view.Get(), color);
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))
@@ -1389,10 +1467,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 			flags |= D3D11_CLEAR_STENCIL;
 		}
 
-		if (depth_view)
-		{
-			context->ClearDepthStencilView(depth_view.Get(), flags, Z, static_cast<uint8_t>(Stencil));
-		}
+		context->ClearDepthStencilView(depth_view.Get(), flags, Z, static_cast<uint8_t>(Stencil));
 	}
 
 	return D3D_OK;
@@ -3022,7 +3097,7 @@ void Direct3DDevice8::oit_release()
 {
 	static ID3D11UnorderedAccessView* null[3] = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_target_view.GetAddressOf(), nullptr,
 		1, 3, &null[0], nullptr);
 
 	FragListHeadB    = nullptr;
@@ -3037,8 +3112,8 @@ void Direct3DDevice8::oit_write()
 {
 	// Unbinds the shader resource views for our fragment list and list head.
 	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
-	ID3D11ShaderResourceView* srvs[2] = {};
-	context->PSSetShaderResources(0, 2, &srvs[0]);
+	ID3D11ShaderResourceView* srvs[3] = {};
+	context->PSSetShaderResources(0, 3, &srvs[0]);
 
 	ID3D11UnorderedAccessView* uavs[2] = {
 		FragListHeadUAV.Get(),
@@ -3051,7 +3126,7 @@ void Direct3DDevice8::oit_write()
 	static const uint zero[2] = { 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 2, &uavs[0], &zero[0]);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_target_view.GetAddressOf(), nullptr, 1, 2, &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
@@ -3065,7 +3140,7 @@ void Direct3DDevice8::oit_read()
 	ID3D11UnorderedAccessView* uavs[2] = {};
 
 	// Unbinds our UAVs.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 2, &uavs[0], nullptr);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_target_view.GetAddressOf(), nullptr, 1, 2, &uavs[0], nullptr);
 
 	ID3D11ShaderResourceView* srvs[2] = {
 		FragListHeadSRV.Get(),

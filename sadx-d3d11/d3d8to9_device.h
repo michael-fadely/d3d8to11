@@ -344,6 +344,10 @@ protected:
 	ComPtr<ID3D11DepthStencilView> depth_view;
 	ComPtr<ID3D11RenderTargetView> render_target;
 
+	ComPtr<ID3D11Texture2D> composite_target_texture;
+	ComPtr<ID3D11RenderTargetView> composite_target_view;
+	ComPtr<ID3D11ShaderResourceView> composite_resource_view;
+
 	ComPtr<ID3D11Buffer> per_scene_cbuf, per_model_cbuf;
 
 	INT CurrentBaseVertexIndex = 0;

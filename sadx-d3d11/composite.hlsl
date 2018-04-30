@@ -77,7 +77,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 #endif
 
 	// TODO: blend with actual backbuffer
-	float4 final = float4(0, 1, 1, 1);
+	float4 final = BackBuffer[input.position.xy];
 
 	for (int l = 0; l < count; l++)
 	{
