@@ -120,17 +120,23 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	p.y = -(((p.y / screen.y) * 2) - 1);
 
 	result.position = p;
+
+	#ifdef RS_ALPHA
+		result.depth = result.position.zw;
+	#endif
+
 #else
 	input.position.w = 1;
 	result.position = input.position;
 
 	result.position = mul(worldMatrix, result.position);
 	result.position = mul(viewMatrix, result.position);
-	result.position = mul(projectionMatrix, result.position);
-#endif
 
-#ifdef RS_ALPHA
-	result.depth = result.position.zw;
+	#ifdef RS_ALPHA
+		result.depth = result.position.zw;
+	#endif
+
+	result.position = mul(projectionMatrix, result.position);
 #endif
 
 #ifdef FVF_DIFFUSE
@@ -199,13 +205,8 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
-#ifdef RS_ALPHA
-[earlydepthstencil]
-void ps_main(VS_OUTPUT input)
-#else
 [earlydepthstencil]
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
-#endif
 {
 	float4 result;
 
@@ -227,7 +228,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	uint newIndex = FragListNodes.IncrementCounter();
 	if (newIndex == FRAGMENT_LIST_NULL)
 	{
-		return;
+		discard;
 	}
 
 	uint oldIndex;
@@ -243,7 +244,8 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	n.next  = oldIndex;
 
 	FragListNodes[newIndex] = n;
-#else
-	return result;
+	discard;
 #endif
+
+	return result;
 }

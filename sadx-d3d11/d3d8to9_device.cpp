@@ -3,7 +3,9 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
-// TODO: create separate render target for compositing
+// TODO: Z compare modes (invert depth in shader if it's set to GREATER)
+// TODO: either modify the drawing order to resolve, or sample depth buffer in composite shader to fix transparent things passing depth test
+// TODO: fix specular because it's broken af
 
 #include "stdafx.h"
 
@@ -17,8 +19,6 @@
 #include "CBufferWriter.h"
 
 using namespace Microsoft::WRL;
-
-static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
 
 static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 {
