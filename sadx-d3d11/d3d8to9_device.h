@@ -275,6 +275,8 @@ public:
 	static std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
 	VertexShader get_vs(uint32_t flags);
 	PixelShader get_ps(uint32_t flags);
+	void create_depth_stencil();
+	void create_render_target();
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const;
 	bool update_input_layout();

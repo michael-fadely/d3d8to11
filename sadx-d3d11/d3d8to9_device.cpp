@@ -299,74 +299,8 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 	return result;
 }
 
-void Direct3DDevice8::create_native()
+void Direct3DDevice8::create_depth_stencil()
 {
-	if (!present_params.EnableAutoDepthStencil)
-	{
-		throw std::runtime_error("manual depth buffer not supported");
-	}
-
-	palette_flag  = SupportsPalettes();
-
-	DXGI_SWAP_CHAIN_DESC desc = {};
-
-	desc.BufferCount       = 1;
-	desc.BufferDesc.Format = to_dxgi(present_params.BackBufferFormat);
-	desc.BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferDesc.Width  = present_params.BackBufferWidth;
-	desc.BufferDesc.Height = present_params.BackBufferHeight;
-	desc.OutputWindow      = present_params.hDeviceWindow;
-	desc.SampleDesc.Count  = 1;
-	desc.Windowed          = present_params.Windowed;
-
-	auto feature_level = static_cast<D3D_FEATURE_LEVEL>(0);
-
-#ifdef _DEBUG
-	constexpr auto flag = D3D11_CREATE_DEVICE_DEBUG;
-#else
-	constexpr auto flag = 0;
-#endif
-
-	auto error = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flag,
-											   FEATURE_LEVELS, 2,
-											   D3D11_SDK_VERSION, &desc, &swap_chain,
-											   &device, &feature_level, &context);
-
-	if (feature_level < D3D_FEATURE_LEVEL_11_0)
-	{
-		std::string msg = "Device does not meet the minimum required feature level (D3D_FEATURE_LEVEL_11_0).";
-		msg.append("\r\nThis mod utilizes interlocked operations which are only available in DirectX 11.X and Shader Model 5.X.");
-
-		throw std::runtime_error(msg.c_str());
-	}
-
-	if (error != S_OK)
-	{
-		throw std::runtime_error("Device creation failed with a known error that I'm too lazy to get the details of.");
-	}
-
-	D3D11_RASTERIZER_DESC raster {};
-
-	raster.FillMode = D3D11_FILL_SOLID;
-	//raster.CullMode = D3D11_CULL_BACK;
-	raster.CullMode        = D3D11_CULL_NONE;
-	raster.DepthClipEnable = TRUE;
-
-	if (FAILED(device->CreateRasterizerState(&raster, &raster_state)))
-	{
-		throw std::runtime_error("failed to create rasterizer state");
-	}
-
-	context->RSSetState(raster_state.Get());
-
-	// get the address of the back buffer
-	ID3D11Texture2D* pBackBuffer;
-	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
-
-	// use the back buffer address to create the render target
-	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
-	pBackBuffer->Release();
-
 	D3D11_TEXTURE2D_DESC depth_tdesc {};
 
 	depth_tdesc.Width      = present_params.BackBufferWidth;
@@ -422,13 +356,87 @@ void Direct3DDevice8::create_native()
 	{
 		throw std::runtime_error("failed to create depth stencil view");
 	}
+}
+
+void Direct3DDevice8::create_render_target()
+{
+	// get the address of the back buffer
+	ID3D11Texture2D* pBackBuffer;
+	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
+
+	// use the back buffer address to create the render target
+	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
+	pBackBuffer->Release();
 
 	// set the render target as the back buffer
 	context->OMSetRenderTargets(1, render_target.GetAddressOf(), depth_view.Get());
+}
+
+void Direct3DDevice8::create_native()
+{
+	if (!present_params.EnableAutoDepthStencil)
+	{
+		throw std::runtime_error("manual depth buffer not supported");
+	}
+
+	palette_flag  = SupportsPalettes();
+
+	DXGI_SWAP_CHAIN_DESC desc = {};
+
+	desc.BufferCount       = 1;
+	desc.BufferDesc.Format = to_dxgi(present_params.BackBufferFormat);
+	desc.BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	desc.BufferDesc.Width  = present_params.BackBufferWidth;
+	desc.BufferDesc.Height = present_params.BackBufferHeight;
+	desc.OutputWindow      = present_params.hDeviceWindow;
+	desc.SampleDesc.Count  = 1;
+	desc.Windowed          = present_params.Windowed;
+
+	auto feature_level = static_cast<D3D_FEATURE_LEVEL>(0);
+
+#ifdef _DEBUG
+	constexpr auto flag = D3D11_CREATE_DEVICE_DEBUG;
+#else
+	constexpr auto flag = 0;
+#endif
+
+	auto error = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flag,
+											   FEATURE_LEVELS, 2,
+											   D3D11_SDK_VERSION, &desc, &swap_chain,
+											   &device, &feature_level, &context);
+
+	if (feature_level < D3D_FEATURE_LEVEL_11_0)
+	{
+		std::string msg = "Device does not meet the minimum required feature level (D3D_FEATURE_LEVEL_11_0).";
+		msg.append("\r\nThis mod utilizes interlocked operations which are only available in DirectX 11.X and Shader Model 5.X.");
+
+		throw std::runtime_error(msg.c_str());
+	}
+
+	if (error != S_OK)
+	{
+		throw std::runtime_error("Device creation failed with a known error that I'm too lazy to get the details of.");
+	}
+
+	D3D11_RASTERIZER_DESC raster {};
+
+	raster.FillMode        = D3D11_FILL_SOLID;
+	raster.CullMode        = D3D11_CULL_NONE;
+	raster.DepthClipEnable = TRUE;
+
+	if (FAILED(device->CreateRasterizerState(&raster, &raster_state)))
+	{
+		throw std::runtime_error("failed to create rasterizer state");
+	}
+
+	context->RSSetState(raster_state.Get());
+
+	create_depth_stencil();
+	create_render_target();
 
 	D3DVIEWPORT8 vp {};
-	vp.Width  = PresentParameters.BackBufferWidth;
-	vp.Height = PresentParameters.BackBufferHeight;
+	vp.Width  = present_params.BackBufferWidth;
+	vp.Height = present_params.BackBufferHeight;
 	vp.MaxZ   = 1.0f;
 	SetViewport(&vp);
 
@@ -715,42 +723,35 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateAdditionalSwapChain(D3DPRESENT_
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8 *pPresentationParameters)
 {
-	// TODO
-#if 1
-	return D3DERR_INVALIDCALL;
-#else
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::Reset" << "(" << this << ", " << pPresentationParameters << ")' ..." << std::endl;
-#endif
-
-	if (pPresentationParameters == nullptr)
+	if (!pPresentationParameters)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	D3DPRESENT_PARAMETERS PresentParams;
-	ConvertPresentParameters(*pPresentationParameters, PresentParams);
+	// TODO: handle actual device lost state
+	// TODO: handle fullscreen toggle
 
-	// Get multisample quality level
-	if (PresentParams.MultiSampleType != D3DMULTISAMPLE_NONE)
+	if (pPresentationParameters->BackBufferWidth != present_params.BackBufferWidth ||
+		pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight)
 	{
-		DWORD QualityLevels = 0;
-		D3DDEVICE_CREATION_PARAMETERS CreationParams;
-		ProxyInterface->GetCreationParameters(&CreationParams);
+		present_params = *pPresentationParameters;
+		render_target = nullptr;
 
-		if (d3d->GetProxyInterface()->CheckDeviceMultiSampleType(CreationParams.AdapterOrdinal,
-			CreationParams.DeviceType, PresentParams.BackBufferFormat, PresentParams.Windowed,
-			PresentParams.MultiSampleType, &QualityLevels) == S_OK &&
-			d3d->GetProxyInterface()->CheckDeviceMultiSampleType(CreationParams.AdapterOrdinal,
-				CreationParams.DeviceType, PresentParams.AutoDepthStencilFormat, PresentParams.Windowed,
-				PresentParams.MultiSampleType, &QualityLevels) == S_OK)
-		{
-			PresentParams.MultiSampleQuality = (QualityLevels != 0) ? QualityLevels - 1 : 0;
-		}
+		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+		create_depth_stencil();
+		create_render_target();
+
+		D3DVIEWPORT8 vp {};
+		GetViewport(&vp);
+
+		vp.Width = present_params.BackBufferWidth;
+		vp.Height = present_params.BackBufferHeight;
+
+		SetViewport(&vp);
 	}
 
-	return ProxyInterface->Reset(&PresentParams);
-#endif
+	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion)
