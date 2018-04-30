@@ -22,7 +22,7 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-#pragma pack(push, 16)
+#pragma pack(push, 4)
 
 struct Material
 {
@@ -462,7 +462,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth           = int_multiple(sizeof(PerModelRaw), 256);
+	cbuf_desc.ByteWidth = 1168; // hard-coded because reasons
 	cbuf_desc.StructureByteStride = cbuf_desc.ByteWidth;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
@@ -482,9 +482,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8 *d3d, const D3DPRESENT_PARAMETERS8& p
 	blend_flags = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
 }
 
-Direct3DDevice8::~Direct3DDevice8()
-{
-}
+Direct3DDevice8::~Direct3DDevice8() = default;
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void **ppvObj)
 {
