@@ -3,6 +3,8 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
+// TODO: create separate render target for compositing
+
 #include "stdafx.h"
 
 #include <d3d11_1.h>
@@ -20,6 +22,14 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 {
 	D3D_FEATURE_LEVEL_11_1,
 	D3D_FEATURE_LEVEL_11_0
+};
+
+struct OitNode
+{
+	float    depth; // fragment depth
+	uint32_t color; // 32-bit packed fragment color
+	uint32_t flags; // source blend, destination blend, blend operation
+	uint32_t next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
 
 #pragma pack(push, 4)
@@ -62,6 +72,7 @@ struct __declspec(align(16)) PerModelRaw
 	DirectX::XMMATRIX worldMatrix;
 	Light lights[LIGHT_COUNT];
 	Material material;
+	uint32_t blendFlags;
 };
 
 #pragma pack(pop)
@@ -227,6 +238,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		result.push_back({ "RS_SPECULAR", "1" });
 	}
 
+	if (flags & ShaderFlags::rs_alpha)
+	{
+		result.push_back({ "RS_ALPHA", "1" });
+	}
+
 	result.push_back({});
 	return result;
 }
@@ -245,7 +261,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
-	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), nullptr, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -279,7 +295,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
-	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), nullptr, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -470,7 +486,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth = 1168; // hard-coded because reasons
+	cbuf_desc.ByteWidth = 1280; // hard-coded because reasons
 	cbuf_desc.StructureByteStride = cbuf_desc.ByteWidth;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
@@ -481,6 +497,9 @@ void Direct3DDevice8::create_native()
 
 	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+
+	oit_load_shaders();
+	oit_init();
 }
 // IDirect3DDevice8
 Direct3DDevice8::Direct3DDevice8(Direct3D8 *d3d, const D3DPRESENT_PARAMETERS8& parameters) :
@@ -749,6 +768,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8 *pPresen
 		vp.Height = present_params.BackBufferHeight;
 
 		SetViewport(&vp);
+
+		oit_init();
 	}
 
 	return D3D_OK;
@@ -1348,7 +1369,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 			((Color >> 24) & 0xFF) / 255.0f,
 		};
 
-		context->ClearRenderTargetView(render_target.Get(), color);
+		if (render_target)
+		{
+			context->ClearRenderTargetView(render_target.Get(), color);
+		}
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))
@@ -1365,7 +1389,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 			flags |= D3D11_CLEAR_STENCIL;
 		}
 
-		context->ClearDepthStencilView(depth_view.Get(), flags, Z, static_cast<uint8_t>(Stencil));
+		if (depth_view)
+		{
+			context->ClearDepthStencilView(depth_view.Get(), flags, Z, static_cast<uint8_t>(Stencil));
+		}
 	}
 
 	return D3D_OK;
@@ -2679,7 +2706,11 @@ void Direct3DDevice8::commit_per_model()
 		}
 	}
 
-	if (!t_world.dirty() && !light_dirty && !material.dirty())
+	auto& src_blend = render_state_values[D3DRS_SRCBLEND];
+	auto& dest_blend = render_state_values[D3DRS_DESTBLEND];
+
+	if (!t_world.dirty() && !light_dirty && !material.dirty()
+		&& !src_blend.dirty() && !dest_blend.dirty())
 	{
 		return;
 	}
@@ -2700,8 +2731,16 @@ void Direct3DDevice8::commit_per_model()
 	writer.start_new(); // pads out the end of the last light structure
 	writer << Material(material.data());
 
+	uint32_t src = src_blend.data();
+	uint32_t dest = dest_blend.data();
+
+	writer.start_new();
+	writer << (dest << 8 | src);
+
 	material.clear();
 	t_world.clear();
+	src_blend.clear();
+	dest_blend.clear();
 
 	for (auto& light : lights)
 	{
@@ -2871,6 +2910,22 @@ void Direct3DDevice8::update_shaders()
 		specular.clear();
 	}
 
+	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
+
+	if (alpha.dirty())
+	{
+		if (alpha.data() != 1)
+		{
+			shader_flags &= ~ShaderFlags::rs_alpha;
+		}
+		else
+		{
+			shader_flags |= ShaderFlags::rs_alpha;
+		}
+
+		alpha.clear();
+	}
+
 	VertexShader vs;
 	PixelShader ps;
 
@@ -2917,6 +2972,201 @@ void Direct3DDevice8::free_shaders()
 	{
 		it.shader = nullptr;
 		it.blob = nullptr;
+	}
+}
+
+void Direct3DDevice8::oit_load_shaders()
+{
+	std::string fragments_str = std::to_string(MAX_FRAGMENTS);
+
+	D3D_SHADER_MACRO preproc[] = {
+		{ "MAX_FRAGMENTS", fragments_str.c_str() },
+		{}
+	};
+
+	ComPtr<ID3DBlob> errors;
+	ComPtr<ID3DBlob> blob;
+
+	auto hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+
+	if (FAILED(hr))
+	{
+		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+		throw std::runtime_error(str);
+	}
+
+	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("composite vertex shader creation failed");
+	}
+
+	hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+
+	if (FAILED(hr))
+	{
+		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+		throw std::runtime_error(str);
+	}
+
+	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("composite pixel shader creation failed");
+	}
+}
+
+void Direct3DDevice8::oit_release()
+{
+	static ID3D11UnorderedAccessView* null[3] = {};
+
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
+		1, 3, &null[0], nullptr);
+
+	FragListHeadB    = nullptr;
+	FragListHeadSRV  = nullptr;
+	FragListHeadUAV  = nullptr;
+	FragListNodesB   = nullptr;
+	FragListNodesSRV = nullptr;
+	FragListNodesUAV = nullptr;
+}
+
+void Direct3DDevice8::oit_write()
+{
+	// Unbinds the shader resource views for our fragment list and list head.
+	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
+	ID3D11ShaderResourceView* srvs[2] = {};
+	context->PSSetShaderResources(0, 2, &srvs[0]);
+
+	ID3D11UnorderedAccessView* uavs[2] = {
+		FragListHeadUAV.Get(),
+		FragListNodesUAV.Get()
+	};
+
+	// This is used to set the hidden counter of FragListNodes to 0.
+	// It only works on FragListNodes, but the number of elements here
+	// must match the number of UAVs given.
+	static const uint zero[2] = { 0, 0 };
+
+	// Binds our fragment list & list head UAVs for read/write operations.
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 2, &uavs[0], &zero[0]);
+
+	// Resets the list head indices to FRAGMENT_LIST_NULL.
+	// 4 elements are required as this can be used to clear a texture
+	// with 4 color channels, even though our list head only has one.
+	static const UINT clear[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+	context->ClearUnorderedAccessViewUint(FragListHeadUAV.Get(), &clear[0]);
+}
+
+void Direct3DDevice8::oit_read()
+{
+	ID3D11UnorderedAccessView* uavs[2] = {};
+
+	// Unbinds our UAVs.
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 2, &uavs[0], nullptr);
+
+	ID3D11ShaderResourceView* srvs[2] = {
+		FragListHeadSRV.Get(),
+		FragListNodesSRV.Get()
+	};
+
+	// Binds the shader resource views of our UAV buffers as read-only.
+	context->PSSetShaderResources(0, 2, &srvs[0]);
+}
+
+void Direct3DDevice8::oit_init()
+{
+	oit_release();
+
+	FragListHead_Init();
+	FragListNodes_Init();
+
+	oit_write();
+}
+
+void Direct3DDevice8::FragListHead_Init()
+{
+	D3D11_TEXTURE2D_DESC desc2D = {};
+
+	desc2D.ArraySize          = 1;
+	desc2D.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc2D.Usage              = D3D11_USAGE_DEFAULT;
+	desc2D.Format             = DXGI_FORMAT_R32_UINT;
+	desc2D.Width              = static_cast<UINT>(viewport.Width);
+	desc2D.Height             = static_cast<UINT>(viewport.Height);
+	desc2D.MipLevels          = 1;
+	desc2D.SampleDesc.Count   = 1;
+	desc2D.SampleDesc.Quality = 0;
+
+	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &FragListHeadB)))
+	{
+		throw;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descRV;
+
+	descRV.Format                    = desc2D.Format;
+	descRV.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	descRV.Texture2D.MipLevels       = 1;
+	descRV.Texture2D.MostDetailedMip = 0;
+
+	if (FAILED(device->CreateShaderResourceView(FragListHeadB.Get(), &descRV, &FragListHeadSRV)))
+	{
+		throw;
+	}
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+
+	descUAV.Format              = desc2D.Format;
+	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
+	descUAV.Buffer.FirstElement = 0;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	descUAV.Buffer.Flags        = 0;
+
+	if (FAILED(device->CreateUnorderedAccessView(FragListHeadB.Get(), &descUAV, &FragListHeadUAV)))
+	{
+		throw;
+	}
+}
+
+void Direct3DDevice8::FragListNodes_Init()
+{
+	D3D11_BUFFER_DESC descBuf = {};
+
+	descBuf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	descBuf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+	descBuf.StructureByteStride = sizeof(OitNode);
+
+	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &FragListNodesB)))
+	{
+		throw;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descRV = {};
+
+	descRV.Format             = DXGI_FORMAT_UNKNOWN;
+	descRV.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
+	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+
+	if (FAILED(device->CreateShaderResourceView(FragListNodesB.Get(), &descRV, &FragListNodesSRV)))
+	{
+		throw;
+	}
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+
+	descUAV.Format              = DXGI_FORMAT_UNKNOWN;
+	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
+	descUAV.Buffer.FirstElement = 0;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+	descUAV.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
+
+	if (FAILED(device->CreateUnorderedAccessView(FragListNodesB.Get(), &descUAV, &FragListNodesUAV)))
+	{
+		throw;
 	}
 }
 

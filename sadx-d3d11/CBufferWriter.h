@@ -42,7 +42,9 @@ private:
 template <>
 CBufferWriter& CBufferWriter::operator<<(const bool& data);
 template <>
-CBufferWriter& CBufferWriter::operator<<(const int& data);
+CBufferWriter& CBufferWriter::operator<<(const int32_t& data);
+template <>
+CBufferWriter& CBufferWriter::operator<<(const uint32_t& data);
 template <>
 CBufferWriter& CBufferWriter::operator<<(const float& data);
 template <>

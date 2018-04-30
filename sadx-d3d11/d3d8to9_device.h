@@ -10,6 +10,7 @@
 #include "simple_math.h"
 
 constexpr auto LIGHT_COUNT = 8;
+constexpr auto MAX_FRAGMENTS = 32;
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -68,9 +69,10 @@ struct ShaderFlags
 		tci_envmap  = 0b00010000,
 		rs_lighting = 0b00100000,
 		rs_specular = 0b01000000,
+		rs_alpha    = 0b10000000,
 
 		fvf_mask    = 0b00001111,
-		mask        = 0b01111111,
+		mask        = 0b11111111,
 
 		count
 	};
@@ -78,8 +80,8 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
-	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1 | rs_specular;
+	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
+	static constexpr auto ps_mask = fvf_diffuse | fvf_tex1 | rs_specular | rs_alpha;
 #endif
 };
 
@@ -163,10 +165,6 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 class Direct3DDevice8 : public Unknown
 {
 public:
-	uint32_t shader_flags = ShaderFlags::none;
-	std::array<VertexShader, ShaderFlags::count> vertex_shaders;
-	std::array<PixelShader, ShaderFlags::count> pixel_shaders;
-
 	Direct3DDevice8(const Direct3DDevice8 &) = delete;
 	Direct3DDevice8 &operator=(const Direct3DDevice8 &) = delete;
 
@@ -288,6 +286,18 @@ public:
 	bool update();
 	void free_shaders();
 
+	void oit_load_shaders();
+	void oit_release();
+	void oit_write();
+	void oit_read();
+	void oit_init();
+	void FragListHead_Init();
+	void FragListNodes_Init();
+
+	uint32_t shader_flags = ShaderFlags::none;
+	std::array<VertexShader, ShaderFlags::count> vertex_shaders;
+	std::array<PixelShader, ShaderFlags::count> pixel_shaders;
+
 	D3DPRESENT_PARAMETERS8 present_params {};
 	ComPtr<IDXGISwapChain> swap_chain;
 
@@ -297,6 +307,16 @@ public:
 
 protected:
 	Direct3D8 *const d3d;
+
+	ComPtr<ID3D11VertexShader> composite_vs;
+	ComPtr<ID3D11PixelShader> composite_ps;
+
+	ComPtr<ID3D11Texture2D>           FragListHeadB;
+	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListHeadUAV;
+	ComPtr<ID3D11Buffer>              FragListNodesB;
+	ComPtr<ID3D11ShaderResourceView>  FragListNodesSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListNodesUAV;
 
 	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
 	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;

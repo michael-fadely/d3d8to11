@@ -1,3 +1,5 @@
+#define NODE_WRITE
+#include "include.hlsli"
 
 #define D3DLIGHT_POINT 1
 #define D3DLIGHT_SPOT 2
@@ -68,7 +70,11 @@ struct VS_OUTPUT
 #endif
 
 #ifdef FVF_TEX1
-	float2 tex      : TEXCOORD;
+	float2 tex      : TEXCOORD0;
+#endif
+
+#ifdef RS_ALPHA
+	float2 depth    : TEXCOORD1;
 #endif
 };
 
@@ -92,6 +98,7 @@ cbuffer PerModelBuffer : register(b1)
 	matrix worldMatrix;
 	Light lights[LIGHT_COUNT];
 	Material material;
+	uint blendFlags;
 };
 
 Texture2D<float4> DiffuseMap : register(t0);
@@ -116,6 +123,10 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.position = mul(worldMatrix, result.position);
 	result.position = mul(viewMatrix, result.position);
 	result.position = mul(projectionMatrix, result.position);
+#endif
+
+#ifdef RS_ALPHA
+	result.depth = result.position.zw;
 #endif
 
 #ifdef FVF_DIFFUSE
@@ -184,7 +195,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
+#ifdef RS_ALPHA
+void ps_main(VS_OUTPUT input)
+#else
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
+#endif
 {
 	float4 result;
 
@@ -202,5 +217,27 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result += input.specular;
 #endif
 
+#ifdef RS_ALPHA
+	uint newIndex = FragListNodes.IncrementCounter();
+	if (newIndex == FRAGMENT_LIST_NULL)
+	{
+		return;
+	}
+
+	uint oldIndex;
+	uint2 pos = uint2(input.position.xy);
+
+	InterlockedExchange(FragListHead[pos], newIndex, oldIndex);
+
+	OitNode n;
+
+	n.depth = f32tof16(input.depth.x);
+	n.next = oldIndex;
+	n.color = float4_to_unorm(result);
+	n.flags = blendFlags;
+
+	FragListNodes[newIndex] = n;
+#else
 	return result;
+#endif
 }

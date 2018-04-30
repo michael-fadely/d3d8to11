@@ -133,5 +133,13 @@
     <None Include="shader.hlsl">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="include.hlsli">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="composite.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
