@@ -19,6 +19,47 @@ VertexOutput vs_main(uint vertexId : SV_VertexID)
 	return output;
 }
 
+float4 get_blend_factor(in uint mode, in float4 source, in float4 destination)
+{
+	switch (mode)
+	{
+		default: // error state
+			return float4(1, 0, 0, 1);
+		case D3DBLEND_ZERO:
+			return float4(0, 0, 0, 0);
+		case D3DBLEND_ONE:
+			return float4(1, 1, 1, 1);
+		case D3DBLEND_SRCCOLOR:
+			return source;
+		case D3DBLEND_INVSRCCOLOR:
+			return 1.0f - source;
+		case D3DBLEND_SRCALPHA:
+			return source.aaaa;
+		case D3DBLEND_INVSRCALPHA:
+			return 1.0f - source.aaaa;
+		case D3DBLEND_DESTALPHA:
+			return destination.aaaa;
+		case D3DBLEND_INVDESTALPHA:
+			return 1.0f - destination.aaaa;
+		case D3DBLEND_DESTCOLOR:
+			return destination;
+		case D3DBLEND_INVDESTCOLOR:
+			return 1.0f - destination;
+		case D3DBLEND_SRCALPHASAT:
+			float f = min(source.a, 1 - destination.a);
+			return float4(f, f, f, 1);
+	}
+}
+
+float4 blend_colors(in uint srcBlend, in uint dstBlend, float4 texel, float4 pixel)
+{
+	float4 result;
+
+	float4 src = get_blend_factor(srcBlend, texel, pixel);
+	float4 dst = get_blend_factor(dstBlend, texel, pixel);
+	return (texel * src) + (pixel * dst);
+}
+
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
 	uint2 pos = uint2(input.position.xy);
@@ -76,13 +117,22 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	}
 #endif
 
-	// TODO: blend with actual backbuffer
 	float4 final = BackBuffer[input.position.xy];
 
 	for (int l = 0; l < count; l++)
 	{
+		uint blend = fragments[l].flags;
+
+		if (blend == 0)
+		{
+			return float4(1, 0, 0, 1);
+		}
+
+		uint srcBlend = blend >> 8;
+		uint destBlend = blend & 0xFF;
+
 		float4 color = unorm_to_float4(fragments[l].color);
-		final = (color.a * color) + ((1.0 - color.a) * final);
+		final = blend_colors(srcBlend, destBlend, color, final);
 	}
 
 	return float4(final.rgb, 1);

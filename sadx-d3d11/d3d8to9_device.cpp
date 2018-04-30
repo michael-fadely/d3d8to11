@@ -838,26 +838,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, cons
 	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// disable depth(?)
-	/*ComPtr<ID3D11DepthStencilState> depth_state;
-	context->OMGetDepthStencilState(&depth_state, nullptr);
-	context->OMSetDepthStencilState(nullptr, 0);*/
-
-	//context->OMSetRenderTargets(1, render_target.GetAddressOf(), nullptr);
-	//context->PSSetShaderResources(2, 1, composite_resource_view.GetAddressOf());
-
 	// ...then draw 3 points. The composite shader uses SV_VertexID
 	// to generate a full screen triangle, so we don't need a buffer!
 	context->Draw(3, 0);
 
 	// Restore R/W access to the UAV buffers from the shader.
 	oit_write();
-
-	// restore render target
-	//ID3D11ShaderResourceView* one_null[] = { nullptr };
-	//context->PSSetShaderResources(2, 1, &one_null[0]);
-	//context->OMSetRenderTargets(1, composite_target_view.GetAddressOf(), depth_view.Get());
-	//context->OMSetDepthStencilState(depth_state.Get(), 0);
 
 	blend_flags = blend_original;
 	update_blend();
@@ -2806,6 +2792,13 @@ void Direct3DDevice8::commit_per_model()
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	writer << t_world.data();
 
+	uint32_t src = src_blend.data();
+	uint32_t dest = dest_blend.data();
+
+	writer.start_new();
+	writer << (dest << 8 | src);
+	writer.start_new();
+
 	for (const auto& light : lights)
 	{
 		writer.start_new();
@@ -2815,12 +2808,6 @@ void Direct3DDevice8::commit_per_model()
 
 	writer.start_new(); // pads out the end of the last light structure
 	writer << Material(material.data());
-
-	uint32_t src = src_blend.data();
-	uint32_t dest = dest_blend.data();
-
-	writer.start_new();
-	writer << (dest << 8 | src);
 
 	material.clear();
 	t_world.clear();

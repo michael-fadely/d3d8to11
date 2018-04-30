@@ -96,9 +96,9 @@ cbuffer PerSceneBuffer : register(b0)
 cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
+	uint blendFlags;
 	Light lights[LIGHT_COUNT];
 	Material material;
-	uint blendFlags;
 };
 
 Texture2D<float4> DiffuseMap : register(t0);
