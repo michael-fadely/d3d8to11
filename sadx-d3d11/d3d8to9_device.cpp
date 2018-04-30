@@ -549,7 +549,6 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8 *d3d, const D3DPRESENT_PARAMETERS8& p
 	present_params(parameters), d3d(d3d)
 {
 	sampler_flags = SamplerFlags::u_wrap | SamplerFlags::v_wrap | SamplerFlags::w_wrap;
-	blend_flags = BLEND_DEFAULT;
 }
 
 Direct3DDevice8::~Direct3DDevice8() = default;
@@ -822,10 +821,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, cons
 {
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
-	const auto blend_original = blend_flags;
-	blend_flags = BLEND_DEFAULT;
-	update_blend();
-
 	// Switches to the composite to begin the sorting process.
 	context->PSSetShader(composite_ps.Get(), nullptr, 0);
 	context->VSSetShader(composite_vs.Get(), nullptr, 0);
@@ -845,9 +840,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, cons
 
 	// Restore R/W access to the UAV buffers from the shader.
 	oit_write();
-
-	blend_flags = blend_original;
-	update_blend();
 
 	try
 	{
@@ -1743,44 +1735,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		return D3DERR_INVALIDCALL;
 	}
 
-	render_state_values[State] = Value;
+	auto& ref = render_state_values[State];
+	ref = Value;
 
-	switch (State)
+	if (State == D3DRS_ZWRITEENABLE && ref.dirty())
 	{
-		default:
-			break;
+		ref.clear();
 
-		case D3DRS_ZWRITEENABLE:
-			if (render_state_values[State].dirty())
-			{
-				render_state_values[State].clear();
-
-				if (Value)
-				{
-					context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
-				}
-				else
-				{
-					context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
-				}
-			}
-			break;
-
-		case D3DRS_SRCBLEND:
-			blend_flags = (blend_flags.data() & ~0x0F) | Value;
-			break;
-
-		case D3DRS_DESTBLEND:
-			blend_flags = (blend_flags.data() & ~0xF0) | (Value << 4);
-			break;
-
-		case D3DRS_ALPHABLENDENABLE:
-			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
-			break;
-
-		case D3DRS_BLENDOP:
-			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
-			break;
+		if (Value)
+		{
+			context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
+		}
+		else
+		{
+			context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
+		}
 	}
 
 	return D3D_OK;
@@ -2155,7 +2124,29 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 			return D3DERR_INVALIDCALL;
 	}
 
-	context->Draw(count, StartVertex);
+	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
+
+	if (alpha.data() == TRUE)
+	{
+		DWORD ZWRITEENABLE;
+		DWORD ZENABLE;
+
+		GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
+		GetRenderState(D3DRS_ZENABLE, &ZENABLE);
+
+		SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+		SetRenderState(D3DRS_ZENABLE, TRUE);
+
+		context->Draw(count, StartVertex);
+
+		SetRenderState(D3DRS_ZWRITEENABLE, ZWRITEENABLE);
+		SetRenderState(D3DRS_ZENABLE, ZENABLE);
+	}
+	else
+	{
+		context->Draw(count, StartVertex);
+	}
+
 	return D3D_OK;
 }
 
@@ -2891,48 +2882,6 @@ void Direct3DDevice8::update_sampler()
 	sampler_states[static_cast<SamplerFlags::T>(flags)] = sampler_state;
 }
 
-void Direct3DDevice8::update_blend()
-{
-	if (!blend_flags.dirty())
-	{
-		return;
-	}
-
-	blend_flags.clear();
-
-	const auto it = blend_states.find(blend_flags.data());
-
-	if (it != blend_states.end())
-	{
-		context->OMSetBlendState(it->second.Get(), nullptr, 0xFFFFFFFF);
-		return;
-	}
-
-	D3D11_BLEND_DESC desc {};
-
-	auto flags = blend_flags.data();
-
-	desc.RenderTarget[0].BlendEnable           = flags >> 15 & 1;
-	desc.RenderTarget[0].SrcBlend              = static_cast<D3D11_BLEND>(flags & 0xF);
-	desc.RenderTarget[0].DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
-	desc.RenderTarget[0].BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
-	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	desc.RenderTarget[0].SrcBlendAlpha         = D3D11_BLEND_ONE;
-	desc.RenderTarget[0].DestBlendAlpha        = D3D11_BLEND_ZERO;
-	desc.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
-
-	ComPtr<ID3D11BlendState> blend_state;
-	auto hr = device->CreateBlendState(&desc, &blend_state);
-
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("CreateBlendState failed");
-	}
-
-	blend_states[flags] = blend_state;
-	context->OMSetBlendState(blend_state.Get(), nullptr, 0xFFFFFFFF);
-}
-
 void Direct3DDevice8::update_shaders()
 {
 	auto& tci = texture_state_values[0][D3DTSS_TEXCOORDINDEX];
@@ -3027,7 +2976,6 @@ bool Direct3DDevice8::update()
 {
 	update_shaders();
 	update_sampler();
-	update_blend();
 	commit_per_scene();
 	commit_per_model();
 	return update_input_layout();

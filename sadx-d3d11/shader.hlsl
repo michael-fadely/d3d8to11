@@ -200,8 +200,10 @@ VS_OUTPUT vs_main(VS_INPUT input)
 }
 
 #ifdef RS_ALPHA
+[earlydepthstencil]
 void ps_main(VS_OUTPUT input)
 #else
+[earlydepthstencil]
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 {
@@ -235,7 +237,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	OitNode n;
 
-	n.depth = f32tof16(input.depth.x);
+	n.depth = input.depth.x;
 	n.color = float4_to_unorm(result);
 	n.flags = (srcBlend << 8) | destBlend;
 	n.next  = oldIndex;

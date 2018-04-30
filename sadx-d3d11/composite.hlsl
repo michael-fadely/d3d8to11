@@ -82,9 +82,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	// allowed sortable fragments.
 	for (int i = 0; i < MAX_FRAGMENTS; i++)
 	{
-		fragments[count].color = FragListNodes[index].color;
-		fragments[count].depth = FragListNodes[index].depth;
-		fragments[count].flags = FragListNodes[index].flags;
+		fragments[count] = FragListNodes[index];
 
 		++count;
 		index = FragListNodes[index].next;

@@ -281,7 +281,6 @@ public:
 	void commit_per_model();
 	void commit_per_scene();
 	void update_sampler();
-	void update_blend();
 	void update_shaders();
 	bool update();
 	void free_shaders();
@@ -326,10 +325,6 @@ protected:
 
 	dirty_t<uint32_t> sampler_flags;
 	std::unordered_map<SamplerFlags::T, ComPtr<ID3D11SamplerState>> sampler_states;
-
-	// this will not be useful with OIT
-	dirty_t<uint32_t> blend_flags;
-	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> blend_states;
 
 	Direct3DIndexBuffer8* index_buffer = nullptr;
 
