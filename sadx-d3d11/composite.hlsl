@@ -19,7 +19,7 @@ VertexOutput vs_main(uint vertexId : SV_VertexID)
 	return output;
 }
 
-float4 get_blend_factor(in uint mode, in float4 source, in float4 destination)
+float4 get_blend_factor(uint mode, float4 source, float4 destination)
 {
 	switch (mode)
 	{
@@ -51,13 +51,13 @@ float4 get_blend_factor(in uint mode, in float4 source, in float4 destination)
 	}
 }
 
-float4 blend_colors(in uint srcBlend, in uint dstBlend, float4 texel, float4 pixel)
+float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 destinationColor)
 {
 	float4 result;
 
-	float4 src = get_blend_factor(srcBlend, texel, pixel);
-	float4 dst = get_blend_factor(dstBlend, texel, pixel);
-	return (texel * src) + (pixel * dst);
+	float4 src = get_blend_factor(srcBlend, sourceColor, destinationColor);
+	float4 dst = get_blend_factor(dstBlend, sourceColor, destinationColor);
+	return (sourceColor * src) + (destinationColor * dst);
 }
 
 float4 ps_main(VertexOutput input) : SV_TARGET
@@ -84,6 +84,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	{
 		fragments[count].color = FragListNodes[index].color;
 		fragments[count].depth = FragListNodes[index].depth;
+		fragments[count].flags = FragListNodes[index].flags;
 
 		++count;
 		index = FragListNodes[index].next;
@@ -124,11 +125,6 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	for (int l = 0; l < count; l++)
 	{
 		uint blend = fragments[l].flags;
-
-		if (blend == 0)
-		{
-			return float4(1, 0, 0, 1);
-		}
 
 		uint srcBlend = blend >> 8;
 		uint destBlend = blend & 0xFF;

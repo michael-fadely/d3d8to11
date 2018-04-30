@@ -2798,7 +2798,6 @@ void Direct3DDevice8::commit_per_model()
 
 	writer.start_new();
 	writer << src;
-	writer.start_new();
 	writer << dest;
 
 	for (const auto& light : lights)

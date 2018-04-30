@@ -236,9 +236,9 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	OitNode n;
 
 	n.depth = f32tof16(input.depth.x);
-	n.next = oldIndex;
 	n.color = float4_to_unorm(result);
 	n.flags = (srcBlend << 8) | destBlend;
+	n.next  = oldIndex;
 
 	FragListNodes[newIndex] = n;
 #else
