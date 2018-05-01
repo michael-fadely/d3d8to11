@@ -166,6 +166,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	#ifdef RS_SPECULAR
 		specular *= Cs;
 		result.specular = saturate(specular);
+		result.specular.a = 0;
 	#endif
 
 	result.diffuse.rgb = Cd.rgb * saturate(saturate(diffuse.rgb) + ambient.rgb);

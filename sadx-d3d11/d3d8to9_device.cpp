@@ -2845,8 +2845,17 @@ void Direct3DDevice8::commit_per_scene()
 	float vp_dimensions[] = { viewport.Width, viewport.Height };
 	writer << vp_dimensions;
 
-	auto translation = t_view.data().Translation();
-	writer << translation;
+	if (Camera_Data1)
+	{
+		const NJS_VECTOR& position = Camera_Data1->Position;
+		Vector3 vector = { position.x, position.y, position.z };
+		writer << vector;
+	}
+	else
+	{
+		auto translation = t_view.data().Translation();
+		writer << translation;
+	}
 
 	t_view.clear();
 	t_projection.clear();
