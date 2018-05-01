@@ -60,22 +60,10 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 position : SV_POSITION;
-
-#ifdef FVF_DIFFUSE
-	float4 diffuse   : COLOR0;
-#endif
-
-#ifdef RS_SPECULAR
+	float4 diffuse  : COLOR0;
 	float4 specular : COLOR1;
-#endif
-
-#ifdef FVF_TEX1
 	float2 tex      : TEXCOORD0;
-#endif
-
-#ifdef RS_ALPHA
 	float2 depth    : TEXCOORD1;
-#endif
 };
 
 static const matrix textureTransform = {
@@ -110,7 +98,7 @@ SamplerState DiffuseSampler : register(s0);
 
 VS_OUTPUT vs_main(VS_INPUT input)
 {
-	VS_OUTPUT result;
+	VS_OUTPUT result = (VS_OUTPUT)0;
 
 #ifdef FVF_RHW
 	float4 p = input.position;
@@ -177,7 +165,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	#ifdef RS_SPECULAR
 		specular *= Cs;
-		result.specular = specular;
+		result.specular = saturate(specular);
 	#endif
 
 	result.diffuse.rgb = Cd.rgb * saturate(saturate(diffuse.rgb) + ambient.rgb);
@@ -209,13 +197,8 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result = float4(1, 1, 1, 1);
 #endif
 
-#ifdef FVF_DIFFUSE
 	result *= input.diffuse;
-#endif
-
-#ifdef RS_SPECULAR
 	result += input.specular;
-#endif
 
 #ifdef RS_ALPHA
 	uint newIndex = FragListNodes.IncrementCounter();
