@@ -101,7 +101,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		int j = k;
 		OitNode t = fragments[k];
 
-		while (fragments[j - 1].depth < t.depth)
+		while (fragments[j - 1].depth <= t.depth)
 		{
 			fragments[j] = fragments[j - 1];
 			j--;
