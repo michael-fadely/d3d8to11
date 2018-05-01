@@ -966,7 +966,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		PrintDebug(__FUNCTION__ " %s\n", ex.what());
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -1047,7 +1047,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		PrintDebug(__FUNCTION__ " %s\n", ex.what());
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -1072,7 +1072,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		PrintDebug(__FUNCTION__ " %s\n", ex.what());
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -2749,7 +2749,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (fvf != 0)
 	{
-		printf("unsupported FVF\n");
+		PrintDebug("unsupported FVF\n");
 		return false;
 	}
 
@@ -2762,7 +2762,7 @@ bool Direct3DDevice8::update_input_layout()
 	if (FAILED(hr))
 	{
 		//throw std::runtime_error("CreateInputLayout failed");
-		printf("CreateInputLayout failed\n");
+		PrintDebug("CreateInputLayout failed\n");
 		return false;
 	}
 

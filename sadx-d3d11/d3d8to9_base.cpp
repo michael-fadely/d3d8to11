@@ -325,7 +325,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT              Adapter, D3D
 	catch (std::exception& ex)
 	{
 		delete device;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		PrintDebug(__FUNCTION__ " %s\n", ex.what());
 		return D3DERR_INVALIDCALL;
 	}
 

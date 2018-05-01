@@ -41,7 +41,7 @@ extern "C" Direct3D8 *WINAPI Direct3DCreate8(UINT SDKVersion)
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf("%s\n", ex.what());
+		PrintDebug("%s\n", ex.what());
 		return nullptr;
 	}
 }

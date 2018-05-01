@@ -79,7 +79,7 @@ struct PolyBuffEx
 			}
 		}
 
-		printf("%s is allocating (%u + 1)\n", parent->name, free_buffers.size() + used_buffers.size());
+		PrintDebug("%s is allocating (%u + 1)\n", parent->name, free_buffers.size() + used_buffers.size());
 
 		Direct3DVertexBuffer8* result;
 		auto hr = Direct3D_Device->CreateVertexBuffer(int_multiple(target_size, 16), D3DUSAGE_DYNAMIC, parent->FVF, D3DPOOL_MANAGED, &result);
@@ -130,7 +130,7 @@ Trampoline PolyBuff_DrawTriangleList_t(0x007947B0, 0x007947B7, PolyBuff_DrawTria
 
 void __fastcall PolyBuff_Init(PolyBuff* _this, uint32_t count, uint32_t stride, uint32_t FVF, const char* name)
 {
-	printf("PolyBuff_Init %s: count: %d - stride: %d\n", name, count, stride);
+	PrintDebug("PolyBuff_Init %s: count: %d - stride: %d\n", name, count, stride);
 
 	int _count = count;
 
