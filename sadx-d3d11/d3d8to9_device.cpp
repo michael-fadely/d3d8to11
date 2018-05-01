@@ -221,11 +221,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 	if (flags & ShaderFlags::fvf_tex1)
 	{
 		result.push_back({ "FVF_TEX1", "1" });
+	}
 
-		if (flags & ShaderFlags::tci_envmap)
-		{
-			result.push_back({ "TCI_CAMERASPACENORMAL", "1" });
-		}
+	if (flags & ShaderFlags::tci_envmap)
+	{
+		result.push_back({ "TCI_CAMERASPACENORMAL", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_lighting)
@@ -2908,67 +2908,53 @@ void Direct3DDevice8::update_shaders()
 {
 	auto& tci = texture_state_values[0][D3DTSS_TEXCOORDINDEX];
 
-	if (tci.dirty())
+	if (tci.data() != 0 && shader_flags & ShaderFlags::fvf_tex1)
 	{
-		if (tci.data() != 0)
-		{
-			shader_flags |= ShaderFlags::tci_envmap;
-		}
-		else
-		{
-			shader_flags &= ~ShaderFlags::tci_envmap;
-		}
-
-		tci.clear();
+		shader_flags |= ShaderFlags::tci_envmap;
+	}
+	else
+	{
+		shader_flags &= ~ShaderFlags::tci_envmap;
 	}
 
-	auto& lighting = render_state_values[D3DRS_LIGHTING];
+	tci.clear();
 
-	if (lighting.dirty())
+	auto lighting = render_state_values[D3DRS_LIGHTING].data();
+
+	if (lighting != 1 && shader_flags & ShaderFlags::fvf_normal)
 	{
-		if (lighting.data() != 1)
-		{
-			shader_flags &= ~ShaderFlags::rs_lighting;
-		}
-		else
-		{
-			shader_flags |= ShaderFlags::rs_lighting;
-		}
-
-		lighting.clear();
+		shader_flags &= ~ShaderFlags::rs_lighting;
+	}
+	else
+	{
+		shader_flags |= ShaderFlags::rs_lighting;
 	}
 
 	auto& specular = render_state_values[D3DRS_SPECULARENABLE];
 
-	if (specular.dirty())
+	if (specular.data() != 1 && shader_flags & ShaderFlags::rs_lighting)
 	{
-		if (specular.data() != 1)
-		{
-			shader_flags &= ~ShaderFlags::rs_specular;
-		}
-		else
-		{
-			shader_flags |= ShaderFlags::rs_specular;
-		}
-
-		specular.clear();
+		shader_flags &= ~ShaderFlags::rs_specular;
 	}
+	else
+	{
+		shader_flags |= ShaderFlags::rs_specular;
+	}
+
+	specular.clear();
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
 
-	if (alpha.dirty())
+	if (alpha.data() != 1)
 	{
-		if (alpha.data() != 1)
-		{
-			shader_flags &= ~ShaderFlags::rs_alpha;
-		}
-		else
-		{
-			shader_flags |= ShaderFlags::rs_alpha;
-		}
-
-		alpha.clear();
+		shader_flags &= ~ShaderFlags::rs_alpha;
 	}
+	else
+	{
+		shader_flags |= ShaderFlags::rs_alpha;
+	}
+
+	alpha.clear();
 
 	VertexShader vs;
 	PixelShader ps;
