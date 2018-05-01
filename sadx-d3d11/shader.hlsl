@@ -85,12 +85,12 @@ cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
 
+	Light lights[LIGHT_COUNT];
+	Material material;
+
 	// TODO: separate constant buffer for pixel shader?
 	uint srcBlend;
 	uint destBlend;
-
-	Light lights[LIGHT_COUNT];
-	Material material;
 };
 
 Texture2D<float4> DiffuseMap : register(t0);

@@ -2799,13 +2799,6 @@ void Direct3DDevice8::commit_per_model()
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	writer << t_world.data();
 
-	uint32_t src = src_blend.data();
-	uint32_t dest = dest_blend.data();
-
-	writer.start_new();
-	writer << src;
-	writer << dest;
-
 	for (const auto& light : lights)
 	{
 		writer.start_new();
@@ -2814,6 +2807,13 @@ void Direct3DDevice8::commit_per_model()
 
 	writer.start_new(); // pads out the end of the last light structure
 	writer << Material(material.data());
+
+	uint32_t src = src_blend.data();
+	uint32_t dest = dest_blend.data();
+
+	//writer.start_new();
+	writer << src;
+	writer << dest;
 
 	material.clear();
 	t_world.clear();
