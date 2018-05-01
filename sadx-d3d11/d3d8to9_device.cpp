@@ -4,7 +4,6 @@
  */
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
-// TODO: Z compare modes (invert depth in shader if it's set to GREATER)
 
 #include "stdafx.h"
 
