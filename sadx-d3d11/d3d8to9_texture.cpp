@@ -51,7 +51,12 @@ void Direct3DTexture8::create_native()
 
 	if (FAILED(device->CreateTexture2D(&desc, nullptr, &texture)))
 	{
-		throw std::runtime_error("CreateTexture2D failed");
+		std::stringstream message;
+
+		message << "CreateTexture2D failed: format: " << static_cast<uint32_t>(desc.Format)
+			<< " width: " << desc.Width << " height: " << desc.Height << " levels: " << desc.MipLevels;
+
+		throw std::runtime_error(message.str());
 	}
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
