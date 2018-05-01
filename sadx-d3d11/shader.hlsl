@@ -120,23 +120,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	p.y = -(((p.y / screen.y) * 2) - 1);
 
 	result.position = p;
-
-	#ifdef RS_ALPHA
-		result.depth = result.position.zw;
-	#endif
-
 #else
 	input.position.w = 1;
 	result.position = input.position;
 
 	result.position = mul(worldMatrix, result.position);
 	result.position = mul(viewMatrix, result.position);
-
-	#ifdef RS_ALPHA
-		result.depth = result.position.zw;
-	#endif
-
 	result.position = mul(projectionMatrix, result.position);
+#endif
+
+#ifdef RS_ALPHA
+	result.depth = result.position.zw;
 #endif
 
 #ifdef FVF_DIFFUSE
@@ -238,7 +232,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	OitNode n;
 
-	n.depth = input.depth.x;
+	n.depth = input.depth.x / input.depth.y;
 	n.color = float4_to_unorm(result);
 	n.flags = (srcBlend << 8) | destBlend;
 	n.next  = oldIndex;

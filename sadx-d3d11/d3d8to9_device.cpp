@@ -3,8 +3,8 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
+// TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
 // TODO: Z compare modes (invert depth in shader if it's set to GREATER)
-// TODO: either modify the drawing order to resolve, or sample depth buffer in composite shader to fix transparent things passing depth test
 // TODO: fix specular because it's broken af
 
 #include "stdafx.h"
@@ -325,9 +325,11 @@ void Direct3DDevice8::create_depth_stencil()
 	depth_tdesc.Height     = present_params.BackBufferHeight;
 	depth_tdesc.MipLevels  = 1;
 	depth_tdesc.ArraySize  = 1;
-	depth_tdesc.Format     = to_dxgi(present_params.AutoDepthStencilFormat);
+	// TODO: determine typeless equivalent of provided depth format automatically
+	//depth_tdesc.Format     = to_dxgi(present_params.AutoDepthStencilFormat);
+	depth_tdesc.Format     = DXGI_FORMAT_R32_TYPELESS;
 	depth_tdesc.SampleDesc = { 1, 0 };
-	depth_tdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
+	depth_tdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 	if (FAILED(device->CreateTexture2D(&depth_tdesc, nullptr, &depth_texture)))
 	{
@@ -367,12 +369,26 @@ void Direct3DDevice8::create_depth_stencil()
 	context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depth_vdesc {};
-	depth_vdesc.Format        = depth_tdesc.Format;
+	depth_vdesc.Format        = DXGI_FORMAT_D32_FLOAT;
 	depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 
 	if (FAILED(device->CreateDepthStencilView(depth_texture.Get(), &depth_vdesc, &depth_view)))
 	{
 		throw std::runtime_error("failed to create depth stencil view");
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+
+	srv_desc.Format                    = DXGI_FORMAT_R32_FLOAT;
+	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Texture2D.MostDetailedMip = 0;
+	srv_desc.Texture2D.MipLevels       = 1;
+
+	auto hr = device->CreateShaderResourceView(depth_texture.Get(), &srv_desc, &depth_srv);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("failed to create depth srv");
 	}
 }
 
@@ -392,7 +408,7 @@ void Direct3DDevice8::create_render_target()
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
 	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	auto hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_target_texture);
+	auto hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_texture);
 
 	if (FAILED(hr))
 	{
@@ -405,7 +421,7 @@ void Direct3DDevice8::create_render_target()
 	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 	view_desc.Texture2D.MipSlice = 0;
 
-	hr = device->CreateRenderTargetView(composite_target_texture.Get(), &view_desc, &composite_target_view);
+	hr = device->CreateRenderTargetView(composite_texture.Get(), &view_desc, &composite_view);
 
 	if (FAILED(hr))
 	{
@@ -414,12 +430,12 @@ void Direct3DDevice8::create_render_target()
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-	srv_desc.Format = tex_desc.Format;
-	srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Format                    = tex_desc.Format;
+	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srv_desc.Texture2D.MostDetailedMip = 0;
-	srv_desc.Texture2D.MipLevels = 1;
+	srv_desc.Texture2D.MipLevels       = 1;
 
-	hr = device->CreateShaderResourceView(composite_target_texture.Get(), &srv_desc, &composite_resource_view);
+	hr = device->CreateShaderResourceView(composite_texture.Get(), &srv_desc, &composite_srv);
 
 	if (FAILED(hr))
 	{
@@ -427,7 +443,7 @@ void Direct3DDevice8::create_render_target()
 	}
 
 	// set the composite render target as the back buffer
-	context->OMSetRenderTargets(1, composite_target_view.GetAddressOf(), depth_view.Get());
+	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), depth_view.Get());
 }
 
 void Direct3DDevice8::create_native()
@@ -1438,7 +1454,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 			((Color >> 24) & 0xFF) / 255.0f,
 		};
 
-		context->ClearRenderTargetView(composite_target_view.Get(), color);
+		context->ClearRenderTargetView(composite_view.Get(), color);
 		context->ClearRenderTargetView(render_target.Get(), color);
 	}
 
@@ -3043,7 +3059,7 @@ void Direct3DDevice8::oit_release()
 {
 	static ID3D11UnorderedAccessView* null[3] = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_target_view.GetAddressOf(), nullptr,
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_view.GetAddressOf(), nullptr,
 		1, 3, &null[0], nullptr);
 
 	FragListHeadB    = nullptr;
@@ -3058,8 +3074,8 @@ void Direct3DDevice8::oit_write()
 {
 	// Unbinds the shader resource views for our fragment list and list head.
 	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
-	ID3D11ShaderResourceView* srvs[3] = {};
-	context->PSSetShaderResources(0, 3, &srvs[0]);
+	ID3D11ShaderResourceView* srvs[4] = {};
+	context->PSSetShaderResources(0, 4, &srvs[0]);
 
 	ID3D11UnorderedAccessView* uavs[2] = {
 		FragListHeadUAV.Get(),
@@ -3072,7 +3088,7 @@ void Direct3DDevice8::oit_write()
 	static const uint zero[2] = { 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_target_view.GetAddressOf(), depth_view.Get(), 1, 2, &uavs[0], &zero[0]);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_view.GetAddressOf(), depth_view.Get(), 1, 2, &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
@@ -3088,14 +3104,15 @@ void Direct3DDevice8::oit_read()
 	// Unbinds our UAVs.
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 2, &uavs[0], nullptr);
 
-	ID3D11ShaderResourceView* srvs[3] = {
+	ID3D11ShaderResourceView* srvs[4] = {
 		FragListHeadSRV.Get(),
 		FragListNodesSRV.Get(),
-		composite_resource_view.Get()
+		composite_srv.Get(),
+		depth_srv.Get()
 	};
 
 	// Binds the shader resource views of our UAV buffers as read-only.
-	context->PSSetShaderResources(0, 3, &srvs[0]);
+	context->PSSetShaderResources(0, 4, &srvs[0]);
 }
 
 void Direct3DDevice8::oit_init()
