@@ -19,6 +19,9 @@
     <Filter Include="external">
       <UniqueIdentifier>{ae01d236-8557-4c0f-857f-cf19fc622e9c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\shaders">
+      <UniqueIdentifier>{b4aa43bf-d368-4bbe-ae56-d00ef9cea08e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -130,16 +133,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shader.hlsl">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="include.hlsli">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\shaders</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="composite.hlsl">
-      <Filter>Source Files</Filter>
-    </FxCompile>
+    <None Include="shader.hlsl">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="composite.hlsl">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

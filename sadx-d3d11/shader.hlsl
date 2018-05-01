@@ -97,7 +97,7 @@ cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
 
-	// TODO: separate constant buffer
+	// TODO: separate constant buffer for pixel shader?
 	uint srcBlend;
 	uint destBlend;
 
@@ -152,7 +152,6 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		float P   = material.Power;
 
 		float4 worldPosition = mul(worldMatrix, input.position);
-		worldPosition = mul(viewMatrix, worldPosition);
 	#endif
 
 	for (uint i = 0; i < LIGHT_COUNT; ++i)
@@ -171,7 +170,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 		#ifdef RS_SPECULAR
 			float4 Ls = lights[i].Specular;
-			float3 H = normalize(normalize(viewPosition - worldPosition) + Ldir); // I think this is fine???
+			float3 H = normalize(normalize(viewPosition - worldPosition) + Ldir);
 			specular += Ls * pow(saturate(dot(N, H)), P);
 		#endif
 	}

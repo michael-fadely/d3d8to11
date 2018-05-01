@@ -5,7 +5,6 @@
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
 // TODO: Z compare modes (invert depth in shader if it's set to GREATER)
-// TODO: fix specular because it's broken af
 
 #include "stdafx.h"
 
@@ -2811,7 +2810,6 @@ void Direct3DDevice8::commit_per_model()
 	{
 		writer.start_new();
 		writer << light.data();
-		writer.start_new();
 	}
 
 	writer.start_new(); // pads out the end of the last light structure
