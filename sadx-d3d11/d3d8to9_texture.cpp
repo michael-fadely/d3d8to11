@@ -39,11 +39,27 @@ void Direct3DTexture8::create_native()
 		throw std::runtime_error("D3DUSAGE_RENDERTARGET not supported");
 	}
 
+	auto format = to_dxgi(Format);
+
+	if (!IsWindows8OrGreater())
+	{
+		switch (format)
+		{
+			case DXGI_FORMAT_B5G6R5_UNORM:
+			case DXGI_FORMAT_B5G5R5A1_UNORM:
+			case DXGI_FORMAT_B4G4R4A4_UNORM:
+				format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				break;
+			default:
+				break;
+		}
+	}
+
 	desc.ArraySize      = 1;
 	desc.BindFlags      = D3D11_BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	desc.Usage          = static_cast<D3D11_USAGE>(usage);
-	desc.Format         = to_dxgi(Format);
+	desc.Format         = format;
 	desc.Width          = Width;
 	desc.Height         = Height;
 	desc.MipLevels      = Levels;
@@ -296,8 +312,6 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT 
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto format = to_d3d8(desc.Format);
-
 	auto width = Width;
 	auto height = Height;
 
@@ -308,7 +322,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT 
 	}
 
 	D3DLOCKED_RECT rect;
-	rect.Pitch = CalcTextureSize(width, 1, 1, format);
+	rect.Pitch = CalcTextureSize(width, 1, 1, Format);
 
 	auto it = texture_levels.find(Level);
 
@@ -319,7 +333,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT 
 	}
 	else
 	{
-		std::vector<uint8_t> v(CalcTextureSize(width, height, 1, format));
+		std::vector<uint8_t> v(CalcTextureSize(width, height, 1, Format));
 		rect.pBits = v.data();
 		texture_levels[Level] = std::move(v);
 	}
@@ -341,8 +355,85 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 	auto& rect = it->second;
 	auto context = Device->context;
 
-	context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
+	if (!IsWindows8OrGreater())
+	{
+		D3DSURFACE_DESC8 level_desc {};
+		GetLevelDesc(Level, &level_desc);
 
+		auto& buffer = texture_levels[Level];
+		std::vector<uint32_t> rgba(buffer.size() / 2);
+
+		auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+		auto b32 = rgba.data();
+		auto length = rgba.size();
+
+		auto format = to_dxgi(Format);
+
+		switch (format)
+		{
+			case DXGI_FORMAT_B5G6R5_UNORM:
+			{
+				for (size_t i = 0; i < length; ++i)
+				{
+					auto p16 = b16[i];
+					auto& p32 = b32[i];
+
+					auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
+					auto g = static_cast<uint8_t>(((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
+					auto r = static_cast<uint8_t>(((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
+
+					p32 = 255 << 24 | r << 16 | g << 8 | b;
+				}
+				break;
+			}
+
+			case DXGI_FORMAT_B5G5R5A1_UNORM:
+			{
+				for (size_t i = 0; i < length; ++i)
+				{
+					auto p16 = b16[i];
+					auto& p32 = b32[i];
+
+					auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
+					auto g = static_cast<uint8_t>(((p16 >> 5) & 0b011111) / 32.0f * 255.0f);
+					auto r = static_cast<uint8_t>(((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
+					auto a = static_cast<uint8_t>(p16 & (1 << 15) ? 255 : 0);
+
+					p32 = a << 24 | r << 16 | g << 8 | b;
+				}
+				break;
+			}
+
+			case DXGI_FORMAT_B4G4R4A4_UNORM:
+			{
+				for (size_t i = 0; i < length; ++i)
+				{
+					auto p16 = b16[i];
+					auto& p32 = b32[i];
+
+					auto b = static_cast<uint8_t>((p16 & 0xF) / 15.0f * 255.0f);
+					auto g = static_cast<uint8_t>(((p16 >> 4) & 0xF) / 15.0f * 255.0f);
+					auto r = static_cast<uint8_t>(((p16 >> 8) & 0xF) / 15.0f * 255.0f);
+					auto a = static_cast<uint8_t>(((p16 >> 12) & 0xF) / 15.0f * 255.0f);
+
+					p32 = a << 24 | r << 16 | g << 8 | b;
+				}
+				break;
+			}
+
+			default:
+				context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
+				goto DONE;
+		}
+
+		context->UpdateSubresource(texture.Get(), Level, nullptr, b32, 4 * level_desc.Width, 0);
+	}
+	else
+	{
+		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
+	}
+
+DONE:
 	locked_rects.erase(it);
 	return D3D_OK;
 }

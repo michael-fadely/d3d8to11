@@ -6,7 +6,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <atlbase.h>
-
+#include <VersionHelpers.h>
 
 // Direct3D
 #include <d3d11_1.h>
