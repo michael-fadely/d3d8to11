@@ -48,8 +48,11 @@ void Direct3DTexture8::create_native()
 			case DXGI_FORMAT_B5G6R5_UNORM:
 			case DXGI_FORMAT_B5G5R5A1_UNORM:
 			case DXGI_FORMAT_B4G4R4A4_UNORM:
-				format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+				PrintDebug(__FUNCTION__ "redirecting 16-bit/BGR 32-bit format %u to RGB 32-bit\n", format);
+				format = DXGI_FORMAT_R8G8B8A8_UNORM;
 				break;
+
 			default:
 				break;
 		}
@@ -361,18 +364,20 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 		GetLevelDesc(Level, &level_desc);
 
 		auto& buffer = texture_levels[Level];
-		std::vector<uint32_t> rgba(buffer.size() / 2);
-
-		auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
-		auto b32 = rgba.data();
-		auto length = rgba.size();
-
 		auto format = to_dxgi(Format);
+
+		std::vector<uint32_t> rgba;
 
 		switch (format)
 		{
 			case DXGI_FORMAT_B5G6R5_UNORM:
 			{
+				rgba.resize(buffer.size() / 2);
+
+				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+				auto b32 = rgba.data();
+				auto length = rgba.size();
+
 				for (size_t i = 0; i < length; ++i)
 				{
 					auto p16 = b16[i];
@@ -382,13 +387,19 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 					auto g = static_cast<uint8_t>(((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
 					auto r = static_cast<uint8_t>(((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
 
-					p32 = 255 << 24 | r << 16 | g << 8 | b;
+					p32 = 255 << 24 | b << 16 | g << 8 | r;
 				}
 				break;
 			}
 
 			case DXGI_FORMAT_B5G5R5A1_UNORM:
 			{
+				rgba.resize(buffer.size() / 2);
+
+				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+				auto b32 = rgba.data();
+				auto length = rgba.size();
+
 				for (size_t i = 0; i < length; ++i)
 				{
 					auto p16 = b16[i];
@@ -399,13 +410,19 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 					auto r = static_cast<uint8_t>(((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
 					auto a = static_cast<uint8_t>(p16 & (1 << 15) ? 255 : 0);
 
-					p32 = a << 24 | r << 16 | g << 8 | b;
+					p32 = a << 24 | b << 16 | g << 8 | r;
 				}
 				break;
 			}
 
 			case DXGI_FORMAT_B4G4R4A4_UNORM:
 			{
+				rgba.resize(buffer.size() / 2);
+
+				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+				auto b32 = rgba.data();
+				auto length = rgba.size();
+
 				for (size_t i = 0; i < length; ++i)
 				{
 					auto p16 = b16[i];
@@ -416,8 +433,27 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 					auto r = static_cast<uint8_t>(((p16 >> 8) & 0xF) / 15.0f * 255.0f);
 					auto a = static_cast<uint8_t>(((p16 >> 12) & 0xF) / 15.0f * 255.0f);
 
-					p32 = a << 24 | r << 16 | g << 8 | b;
+					p32 = a << 24 | b << 16 | g << 8 | r;
 				}
+				break;
+			}
+
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+			{
+				rgba.resize(buffer.size() / 4);
+
+				auto bgr = reinterpret_cast<uint32_t*>(buffer.data());
+				auto b32 = rgba.data();
+				auto length = rgba.size();
+
+				for (size_t i = 0; i < length; ++i)
+				{
+					auto a = bgr[i];
+					auto& b = b32[i];
+
+					b = (a & 0xFF000000) | ((a >> 16) & 0xFF) | ((a >> 8) & 0xFF) << 8 | (a & 0xFF) << 16;
+				}
+
 				break;
 			}
 
@@ -426,7 +462,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 				goto DONE;
 		}
 
-		context->UpdateSubresource(texture.Get(), Level, nullptr, b32, 4 * level_desc.Width, 0);
+		context->UpdateSubresource(texture.Get(), Level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
 	}
 	else
 	{
