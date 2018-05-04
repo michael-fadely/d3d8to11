@@ -216,7 +216,9 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceType(UINT Adapter, D3DDEVTYPE Ch
 
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceFormat(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat, DWORD Usage, D3DRESOURCETYPE RType, D3DFORMAT CheckFormat)
 {
+#ifdef _DEBUG
 	PrintDebug(__FUNCTION__ " RType: %u, CheckFormat: %u\n", RType, CheckFormat);
+#endif
 
 	if (RType == D3DRTYPE_TEXTURE)
 	{
