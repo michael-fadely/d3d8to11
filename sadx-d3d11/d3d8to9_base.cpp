@@ -216,11 +216,13 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceType(UINT Adapter, D3DDEVTYPE Ch
 
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceFormat(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat, DWORD Usage, D3DRESOURCETYPE RType, D3DFORMAT CheckFormat)
 {
+	PrintDebug(__FUNCTION__ " RType: %u, CheckFormat: %u\n", RType, CheckFormat);
+
 	if (RType == D3DRTYPE_TEXTURE)
 	{
-		if (CheckFormat == D3DFMT_A8L8 || CheckFormat == D3DFMT_L8 || CheckFormat == D3DFMT_A8)
+		if (CheckFormat == D3DFMT_A8L8 || CheckFormat == D3DFMT_L8 || CheckFormat == D3DFMT_A8 || CheckFormat == D3DFMT_R8G8B8)
 		{
-			return D3DERR_INVALIDCALL;
+			return D3DERR_NOTAVAILABLE;
 		}
 	}
 

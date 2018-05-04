@@ -206,6 +206,8 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE DrawTriPatch(UINT Handle, const float *pNumSegs, const D3DTRIPATCH_INFO *pTriPatchInfo);
 	virtual HRESULT STDMETHODCALLTYPE DeletePatch(UINT Handle);
 
+	void print_info_queue() const;
+
 	static std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
 	VertexShader get_vs(uint32_t flags);
 	PixelShader get_ps(uint32_t flags);
@@ -239,6 +241,7 @@ public:
 
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
+	ComPtr<ID3D11InfoQueue> info_queue;
 	ComPtr<ID3D11RasterizerState> raster_state;
 
 protected:

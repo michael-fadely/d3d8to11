@@ -4,6 +4,7 @@
  */
 
 #include "stdafx.h"
+#include <iomanip>
 #include "d3d8to9.hpp"
 
 // TODO: instead of storing in map/vector, let d3d do the work if possible
@@ -49,7 +50,6 @@ void Direct3DTexture8::create_native()
 			case DXGI_FORMAT_B5G5R5A1_UNORM:
 			case DXGI_FORMAT_B4G4R4A4_UNORM:
 			case DXGI_FORMAT_B8G8R8A8_UNORM:
-				PrintDebug(__FUNCTION__ "redirecting 16-bit/BGR 32-bit format %u to RGB 32-bit\n", format);
 				format = DXGI_FORMAT_R8G8B8A8_UNORM;
 				break;
 
@@ -58,21 +58,23 @@ void Direct3DTexture8::create_native()
 		}
 	}
 
-	desc.ArraySize      = 1;
-	desc.BindFlags      = D3D11_BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	desc.Usage          = static_cast<D3D11_USAGE>(usage);
-	desc.Format         = format;
-	desc.Width          = Width;
-	desc.Height         = Height;
-	desc.MipLevels      = Levels;
-	desc.SampleDesc     = { 1, 0 };
+	desc.ArraySize  = 1;
+	desc.BindFlags  = D3D11_BIND_SHADER_RESOURCE;
+	desc.Usage      = static_cast<D3D11_USAGE>(usage);
+	desc.Format     = format;
+	desc.Width      = Width;
+	desc.Height     = Height;
+	desc.MipLevels  = Levels;
+	desc.SampleDesc = { 1, 0 };
 
-	if (FAILED(device->CreateTexture2D(&desc, nullptr, &texture)))
+	auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
+
+	if (FAILED(hr))
 	{
 		std::stringstream message;
 
-		message << "CreateTexture2D failed: format: " << static_cast<uint32_t>(desc.Format)
+		message << "CreateTexture2D failed with error " << std::hex << static_cast<uint32_t>(hr) << std::dec
+			<< ": format: " << static_cast<uint32_t>(desc.Format)
 			<< " width: " << desc.Width << " height: " << desc.Height << " levels: " << desc.MipLevels;
 
 		throw std::runtime_error(message.str());

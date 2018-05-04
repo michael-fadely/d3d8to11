@@ -287,7 +287,7 @@ void Direct3DDevice8::create_native()
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount       = 1;
-	desc.BufferDesc.Format = to_dxgi(present_params.BackBufferFormat);
+	desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; /*to_dxgi(present_params.BackBufferFormat);*/
 	desc.BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferDesc.Width  = present_params.BackBufferWidth;
 	desc.BufferDesc.Height = present_params.BackBufferHeight;
@@ -307,6 +307,14 @@ void Direct3DDevice8::create_native()
 											   FEATURE_LEVELS, 2,
 											   D3D11_SDK_VERSION, &desc, &swap_chain,
 											   &device, &feature_level, &context);
+
+	device->QueryInterface(__uuidof(ID3D11InfoQueue), &info_queue);
+
+	if (info_queue)
+	{
+		PrintDebug("D3D11 debug info queue enabled\n");
+		info_queue->SetMuteDebugOutput(FALSE);
+	}
 
 	if (feature_level < D3D_FEATURE_LEVEL_11_0)
 	{
@@ -679,6 +687,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8 *pPresen
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion)
 {
+	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
 	// Switches to the composite to begin the sorting process.
@@ -812,6 +821,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	{
 		delete result;
 		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -893,6 +903,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	{
 		delete result;
 		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -918,6 +929,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	{
 		delete result;
 		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
 
@@ -2525,6 +2537,47 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePatch(UINT Handle)
 #else
 	return ProxyInterface->DeletePatch(Handle);
 #endif
+}
+
+void Direct3DDevice8::print_info_queue() const
+{
+	if (!info_queue)
+	{
+		return;
+	}
+
+	UINT64 i = 0;
+
+	do
+	{
+		SIZE_T size = 0;
+		HRESULT hr = info_queue->GetMessageW(i, nullptr, &size);
+
+		if (hr != S_FALSE)
+		{
+			break;
+		}
+
+		if (!size)
+		{
+			break;
+		}
+
+		auto pMessage = reinterpret_cast<D3D11_MESSAGE*>(new uint8_t[size]);
+
+		hr = info_queue->GetMessageW(i, pMessage, &size);
+
+		if (hr == S_OK && pMessage->pDescription)
+		{
+			PrintDebug("%s\n", pMessage->pDescription);
+		}
+
+		delete[] pMessage;
+
+		++i;
+	} while (true);
+
+	info_queue->ClearStoredMessages();
 }
 
 bool Direct3DDevice8::update_input_layout()
