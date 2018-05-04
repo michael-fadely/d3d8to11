@@ -547,7 +547,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth = 1168; // hard-coded because reasons
+	cbuf_desc.ByteWidth = 1232; // hard-coded because reasons
 	cbuf_desc.StructureByteStride = cbuf_desc.ByteWidth;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
@@ -2844,7 +2844,7 @@ void Direct3DDevice8::commit_per_model()
 		}
 	}
 
-	if (!t_world.dirty() && !light_dirty && !material.dirty())
+	if (!t_world.dirty() && !t_texture.dirty() && !light_dirty && !material.dirty())
 	{
 		return;
 	}
@@ -2853,7 +2853,7 @@ void Direct3DDevice8::commit_per_model()
 	context->Map(per_model_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-	writer << t_world.data();
+	writer << t_world << t_texture;
 
 	for (const auto& light : lights)
 	{
@@ -2866,6 +2866,7 @@ void Direct3DDevice8::commit_per_model()
 
 	material.clear();
 	t_world.clear();
+	t_texture.clear();
 
 	for (auto& light : lights)
 	{
