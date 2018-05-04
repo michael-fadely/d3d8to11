@@ -106,7 +106,7 @@ struct PolyBuffEx
 	}
 };
 
-void __fastcall PolyBuff_Init(PolyBuff*                  _this, uint32_t count, uint32_t stride, uint32_t FVF, const char* name);
+void __fastcall     PolyBuff_Init(PolyBuff*              _this, uint32_t count, uint32_t stride, uint32_t FVF, const char* name);
 void __fastcall     PolyBuff_Free(PolyBuff*              _this);
 void __fastcall     PolyBuff_Discard(PolyBuff*           _this);
 void __fastcall     PolyBuff_SetCurrent(PolyBuff*        _this);
@@ -215,6 +215,7 @@ void __fastcall PolyBuff_SetCurrent(PolyBuff* _this)
 
 uint8_t* __fastcall PolyBuff_LockTriangleStrip(PolyBuff* _this, uint32_t primitives, uint32_t cullmode)
 {
+	primitives = std::max(3u, primitives);
 	uint32_t current = _this->CurrentSize;
 	uint32_t stride  = _this->Stride;
 	uint32_t size = primitives * stride;
@@ -242,6 +243,7 @@ uint8_t* __fastcall PolyBuff_LockTriangleStrip(PolyBuff* _this, uint32_t primiti
 
 uint8_t* __fastcall PolyBuff_LockTriangleList(PolyBuff* _this, uint32_t primitives, uint32_t cullmode)
 {
+	primitives = std::max(3u, primitives);
 	uint32_t current = _this->CurrentSize;
 	uint32_t stride  = _this->Stride;
 	uint32_t size    = (1 + primitives) * stride;
