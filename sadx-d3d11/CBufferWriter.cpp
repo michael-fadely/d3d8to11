@@ -2,30 +2,40 @@
 #include "CBufferWriter.h"
 #include <gsl/span>
 
-static constexpr auto VECTOR_ALIGN = (sizeof(float) * 4);
-
 CBufferWriter::CBufferWriter(uint8_t* ptr_)
 	: ptr(ptr_)
 {
 }
 
-bool CBufferWriter::start_new(size_t size)
+bool CBufferBase::align(size_t size)
 {
-	if (!write_align)
+	if (!alignment_)
 	{
 		return false;
 	}
 
-	const auto delta = VECTOR_ALIGN - write_align;
+	const auto delta = VECTOR_SIZE - alignment_;
 
 	if (delta >= size)
 	{
 		return false;
 	}
 
-	write_pos += delta;
-	write_align = 0;
+	offset_ += delta;
+	alignment_ = 0;
 	return true;
+}
+
+void CBufferBase::add(size_t size)
+{
+	offset_ += size;
+	alignment_ = (alignment_ + size) % VECTOR_SIZE;
+}
+
+void CBufferBase::reset()
+{
+	offset_ = 0;
+	alignment_ = 0;
 }
 
 void CBufferWriter::write(const void* data, size_t size)
@@ -35,36 +45,47 @@ void CBufferWriter::write(const void* data, size_t size)
 		throw;
 	}
 
-	start_new(size);
+	align(size);
+	memcpy(&ptr[offset()], data, size);
+	add(size);
+}
 
-	memcpy(&ptr[write_pos], data, size);
-	write_pos += size;
-	write_align = (write_align + size) % VECTOR_ALIGN;
+size_t ICBuffer::cbuffer_size() const
+{
+	CBufferBase cbuf;
+	write(cbuf);
+	return cbuf.offset();
+}
+
+CBufferBase& CBufferBase::operator<<(const CBufferAlign& align_of)
+{
+	align(align_of.size);
+	return *this;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const int32_t& data)
+CBufferBase& CBufferBase::operator<<(const int32_t& data)
 {
 	write(&data, sizeof(int32_t));
 	return *this;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const uint32_t& data)
+CBufferBase& CBufferBase::operator<<(const uint32_t& data)
 {
 	write(&data, sizeof(uint32_t));
 	return *this;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const float& data)
+CBufferBase& CBufferBase::operator<<(const float& data)
 {
 	write(&data, sizeof(float));
 	return *this;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Matrix& data)
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Matrix& data)
 {
 	const float array[] = {
 		data._11, data._12, data._13, data._14,
@@ -77,35 +98,35 @@ CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Matrix& data
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector2& data)
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector2& data)
 {
 	const float array[] = { data.x, data.y };
 	return *this << array;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector3& data)
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector3& data)
 {
 	const float array[] = { data.x, data.y, data.z };
 	return *this << array;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const DirectX::SimpleMath::Vector4& data)
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector4& data)
 {
 	const float array[] = { data.x, data.y, data.z, data.w };
 	return *this << array;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const gsl::span<float>& data)
+CBufferBase& CBufferBase::operator<<(const gsl::span<float>& data)
 {
 	write(&data[0], data.size_bytes());
 	return *this;
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const gsl::span<const float>& data)
+CBufferBase& CBufferBase::operator<<(const gsl::span<const float>& data)
 {
 	write(&data[0], data.size_bytes());
 	return *this;

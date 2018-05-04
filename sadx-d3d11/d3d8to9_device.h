@@ -210,9 +210,9 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE BeginScene();
 	virtual HRESULT STDMETHODCALLTYPE EndScene();
 	virtual HRESULT STDMETHODCALLTYPE Clear(DWORD Count, const D3DRECT *pRects, DWORD Flags, D3DCOLOR Color, float Z, DWORD Stencil);
-	virtual HRESULT STDMETHODCALLTYPE SetTransform(D3DTRANSFORMSTATETYPE State, const Matrix *pMatrix);
-	virtual HRESULT STDMETHODCALLTYPE GetTransform(D3DTRANSFORMSTATETYPE State, Matrix *pMatrix);
-	virtual HRESULT STDMETHODCALLTYPE MultiplyTransform(D3DTRANSFORMSTATETYPE State, const Matrix *pMatrix);
+	virtual HRESULT STDMETHODCALLTYPE SetTransform(D3DTRANSFORMSTATETYPE State, const matrix *pMatrix);
+	virtual HRESULT STDMETHODCALLTYPE GetTransform(D3DTRANSFORMSTATETYPE State, matrix *pMatrix);
+	virtual HRESULT STDMETHODCALLTYPE MultiplyTransform(D3DTRANSFORMSTATETYPE State, const matrix *pMatrix);
 	virtual HRESULT STDMETHODCALLTYPE SetViewport(const D3DVIEWPORT8 *pViewport);
 	virtual HRESULT STDMETHODCALLTYPE GetViewport(D3DVIEWPORT8 *pViewport);
 	virtual HRESULT STDMETHODCALLTYPE SetMaterial(const D3DMATERIAL8 *pMaterial);
@@ -358,10 +358,10 @@ protected:
 	float StoredClipPlanes[MAX_CLIP_PLANES][4] = {};
 	//DWORD ClipPlaneRenderState = 0;
 
-	dirty_t<Matrix> t_view;
-	dirty_t<Matrix> t_projection;
-	dirty_t<Matrix> t_world;
-	dirty_t<Matrix> t_texture;
+	dirty_t<matrix> t_view;
+	dirty_t<matrix> t_projection;
+	dirty_t<matrix> t_world;
+	dirty_t<matrix> t_texture;
 
 	D3D11_VIEWPORT viewport {};
 
