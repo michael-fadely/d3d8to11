@@ -24,23 +24,27 @@ public:
 	CBufferWriter& operator<<(const gsl::span<const T>& data) = delete;
 
 	template <typename T, size_t size>
-	CBufferWriter& operator<<(const std::array<T, size>& array)
+	__forceinline CBufferWriter& operator<<(const std::array<T, size>& array)
 	{
 		return *this << gsl::span<const T>(array);
 	}
 
 	template <typename T, size_t size>
-	CBufferWriter& operator<<(const T(&array)[size])
+	__forceinline CBufferWriter& operator<<(const T(&array)[size])
 	{
 		return *this << gsl::span<const T>(array);
+	}
+
+	template <typename T>
+	__forceinline CBufferWriter& operator<<(const dirty_t<T>& value)
+	{
+		return *this << value.data();
 	}
 
 private:
 	void write(const void* data, size_t size);
 };
 
-template <>
-CBufferWriter& CBufferWriter::operator<<(const bool& data);
 template <>
 CBufferWriter& CBufferWriter::operator<<(const int32_t& data);
 template <>
@@ -59,3 +63,15 @@ template <>
 CBufferWriter& CBufferWriter::operator<<(const gsl::span<float>& data);
 template <>
 CBufferWriter& CBufferWriter::operator<<(const gsl::span<const float>& data);
+
+template <>
+__forceinline CBufferWriter& CBufferWriter::operator<<(const DWORD& data)
+{
+	return *this << static_cast<uint32_t>(data);
+}
+
+template <>
+__forceinline CBufferWriter& CBufferWriter::operator<<(const bool& data)
+{
+	return *this << (data ? 1 : 0);
+}

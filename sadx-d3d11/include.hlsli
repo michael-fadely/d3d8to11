@@ -3,19 +3,31 @@
 #define MAX_FRAGMENTS 16
 #endif
 
-#define D3DBLEND_ZERO            1
-#define D3DBLEND_ONE             2
-#define D3DBLEND_SRCCOLOR        3
-#define D3DBLEND_INVSRCCOLOR     4
-#define D3DBLEND_SRCALPHA        5
-#define D3DBLEND_INVSRCALPHA     6
-#define D3DBLEND_DESTALPHA       7
-#define D3DBLEND_INVDESTALPHA    8
-#define D3DBLEND_DESTCOLOR       9
-#define D3DBLEND_INVDESTCOLOR    10
-#define D3DBLEND_SRCALPHASAT     11
-#define D3DBLEND_BOTHSRCALPHA    12
-#define D3DBLEND_BOTHINVSRCALPHA 13
+// D3DBLEND enum
+#define BLEND_ZERO            1
+#define BLEND_ONE             2
+#define BLEND_SRCCOLOR        3
+#define BLEND_INVSRCCOLOR     4
+#define BLEND_SRCALPHA        5
+#define BLEND_INVSRCALPHA     6
+#define BLEND_DESTALPHA       7
+#define BLEND_INVDESTALPHA    8
+#define BLEND_DESTCOLOR       9
+#define BLEND_INVDESTCOLOR    10
+#define BLEND_SRCALPHASAT     11
+
+// D3DMCS enum (color source)
+#define CS_MATERIAL 0 // Color from material is used
+#define CS_COLOR1   1 // Diffuse vertex color is used
+#define CS_COLOR2   2 // Specular vertex color is used
+
+// From FixedFuncEMU.fx
+// Copyright (c) 2005 Microsoft Corporation. All rights reserved.
+#define FOGMODE_NONE   0
+#define FOGMODE_EXP    1
+#define FOGMODE_EXP2   2
+#define FOGMODE_LINEAR 3
+#define E              2.71828
 
 // Magic number to consider a null-entry.
 static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;

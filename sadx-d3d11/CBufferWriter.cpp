@@ -43,12 +43,6 @@ void CBufferWriter::write(const void* data, size_t size)
 }
 
 template <>
-CBufferWriter& CBufferWriter::operator<<(const bool& data)
-{
-	return *this << (data ? 1 : 0);
-}
-
-template <>
 CBufferWriter& CBufferWriter::operator<<(const int32_t& data)
 {
 	write(&data, sizeof(int32_t));

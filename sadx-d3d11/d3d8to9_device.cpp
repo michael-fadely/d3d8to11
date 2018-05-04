@@ -243,6 +243,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		result.push_back({ "RS_ALPHA", "1" });
 	}
 
+	if (flags & ShaderFlags::rs_fog)
+	{
+		result.push_back({ "RS_FOG", "1" });
+	}
+
 	result.push_back({});
 	return result;
 }
@@ -451,7 +456,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("manual depth buffer not supported");
 	}
 
-	palette_flag  = SupportsPalettes();
+	palette_flag = SupportsPalettes();
 
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
@@ -542,7 +547,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth = 1280; // hard-coded because reasons
+	cbuf_desc.ByteWidth = 1168; // hard-coded because reasons
 	cbuf_desc.StructureByteStride = cbuf_desc.ByteWidth;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
@@ -551,9 +556,18 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-model CreateBuffer failed");
 	}
 
+	cbuf_desc.ByteWidth = 48;
+	cbuf_desc.StructureByteStride = 48;
+
+	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_pixel_cbuf);
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("per-pixel CreateBuffer failed");
+	}
+
 	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
-	context->PSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
 	oit_load_shaders();
 	oit_init();
@@ -661,7 +675,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8 *pCaps)
 	pCaps->MaxTextureWidth = UINT_MAX;
 	pCaps->MaxTextureHeight = UINT_MAX;
 
-	/*pCaps->Caps2                    = 0xFFFFFFFF;
+	pCaps->Caps2                    = 0xFFFFFFFF;
 	pCaps->Caps3                    = 0xFFFFFFFF;
 	pCaps->PresentationIntervals    = 0xFFFFFFFF;
 	pCaps->DevCaps                  = 0xFFFFFFFF;
@@ -671,9 +685,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8 *pCaps)
 	pCaps->SrcBlendCaps             = 0xFFFFFFFF;
 	pCaps->DestBlendCaps            = 0xFFFFFFFF;
 	pCaps->AlphaCmpCaps             = 0xFFFFFFFF;
-	pCaps->ShadeCaps                = 0xFFFFFFFF;*/
+	pCaps->ShadeCaps                = 0xFFFFFFFF;
 	pCaps->TextureCaps              = D3DPTEXTURECAPS_MIPMAP | D3DPTEXTURECAPS_ALPHA;
-	/*pCaps->TextureFilterCaps        = 0xFFFFFFFF;
+	pCaps->TextureFilterCaps        = 0xFFFFFFFF;
 	pCaps->CubeTextureFilterCaps    = 0xFFFFFFFF;
 	pCaps->VolumeTextureFilterCaps  = 0xFFFFFFFF;
 	pCaps->TextureAddressCaps       = 0xFFFFFFFF;
@@ -685,7 +699,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8 *pCaps)
 	pCaps->StencilCaps              = 0xFFFFFFFF;
 	pCaps->FVFCaps                  = 0xFFFFFFFF;
 	pCaps->TextureOpCaps            = 0xFFFFFFFF;
-	pCaps->MaxActiveLights          = 8;*/
+	pCaps->MaxActiveLights          = LIGHT_COUNT;
 
 	return D3D_OK;
 }
@@ -2770,6 +2784,53 @@ bool Direct3DDevice8::update_input_layout()
 	return true;
 }
 
+void Direct3DDevice8::commit_per_pixel()
+{
+	auto& src_blend   = render_state_values[D3DRS_SRCBLEND];
+	auto& dest_blend  = render_state_values[D3DRS_DESTBLEND];
+	auto& fog_mode    = render_state_values[D3DRS_FOGTABLEMODE];
+	auto& fog_start   = render_state_values[D3DRS_FOGSTART];
+	auto& fog_end     = render_state_values[D3DRS_FOGEND];
+	auto& fog_density = render_state_values[D3DRS_FOGDENSITY];
+	auto& fog_color   = render_state_values[D3DRS_FOGCOLOR];
+
+	if (!src_blend.dirty() && !dest_blend.dirty() &&
+		!fog_mode.dirty() && !fog_start.dirty() && !fog_end.dirty() &&
+		!fog_density.dirty() && !fog_color.dirty())
+	{
+		return;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mapped {};
+	context->Map(per_pixel_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+
+	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+
+	writer << src_blend << dest_blend << fog_mode
+		<< *reinterpret_cast<const float*>(&fog_start.data())
+		<< *reinterpret_cast<const float*>(&fog_end.data())
+		<< *reinterpret_cast<const float*>(&fog_density.data());
+
+	DWORD fcolor = fog_color.data();
+	Vector4 color;
+
+	color.x = ((fcolor >> 16) & 0xFF) / 255.0f;
+	color.y = ((fcolor >> 8) & 0xFF) / 255.0f;
+	color.z = (fcolor & 0xFF) / 255.0f;
+	color.w = ((fcolor >> 24) & 0xFF) / 255.0f;
+
+	writer << color;
+	context->Unmap(per_pixel_cbuf.Get(), 0);
+
+	src_blend.clear();
+	dest_blend.clear();
+	fog_mode.clear();
+	fog_start.clear();
+	fog_end.clear();
+	fog_density.clear();
+	fog_color.clear();
+}
+
 void Direct3DDevice8::commit_per_model()
 {
 	bool light_dirty = false;
@@ -2783,11 +2844,7 @@ void Direct3DDevice8::commit_per_model()
 		}
 	}
 
-	auto& src_blend = render_state_values[D3DRS_SRCBLEND];
-	auto& dest_blend = render_state_values[D3DRS_DESTBLEND];
-
-	if (!t_world.dirty() && !light_dirty && !material.dirty()
-		&& !src_blend.dirty() && !dest_blend.dirty())
+	if (!t_world.dirty() && !light_dirty && !material.dirty())
 	{
 		return;
 	}
@@ -2807,17 +2864,8 @@ void Direct3DDevice8::commit_per_model()
 	writer.start_new(); // pads out the end of the last light structure
 	writer << Material(material.data());
 
-	uint32_t src = src_blend.data();
-	uint32_t dest = dest_blend.data();
-
-	//writer.start_new();
-	writer << src;
-	writer << dest;
-
 	material.clear();
 	t_world.clear();
-	src_blend.clear();
-	dest_blend.clear();
 
 	for (auto& light : lights)
 	{
@@ -2906,6 +2954,19 @@ void Direct3DDevice8::update_sampler()
 
 void Direct3DDevice8::update_shaders()
 {
+	auto& fog_enable = render_state_values[D3DRS_FOGENABLE];
+
+	if (fog_enable.data() != 0)
+	{
+		shader_flags |= ShaderFlags::rs_fog;
+	}
+	else
+	{
+		shader_flags &= ~ShaderFlags::rs_fog;
+	}
+
+	fog_enable.clear();
+
 	auto& tci = texture_state_values[0][D3DTSS_TEXCOORDINDEX];
 
 	if (tci.data() != 0 && shader_flags & ShaderFlags::fvf_tex1)
@@ -2986,6 +3047,7 @@ bool Direct3DDevice8::update()
 	update_sampler();
 	commit_per_scene();
 	commit_per_model();
+	commit_per_pixel();
 	return update_input_layout();
 }
 

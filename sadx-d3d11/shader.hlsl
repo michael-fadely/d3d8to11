@@ -64,6 +64,7 @@ struct VS_OUTPUT
 	float4 specular : COLOR1;
 	float2 tex      : TEXCOORD0;
 	float2 depth    : TEXCOORD1;
+	float  fog      : FOG;
 };
 
 static const matrix textureTransform = {
@@ -87,14 +88,46 @@ cbuffer PerModelBuffer : register(b1)
 
 	Light lights[LIGHT_COUNT];
 	Material material;
-
-	// TODO: separate constant buffer for pixel shader?
-	uint srcBlend;
-	uint destBlend;
 };
 
-Texture2D<float4> DiffuseMap : register(t0);
-SamplerState DiffuseSampler : register(s0);
+cbuffer PerPixelBuffer : register(b2)
+{
+	uint   srcBlend;
+	uint   destBlend;
+	uint   fogMode;
+	float  fogStart;
+	float  fogEnd;
+	float  fogDensity;
+	float4 fogColor;
+};
+
+Texture2D<float4> DiffuseMap     : register(t0);
+SamplerState      DiffuseSampler : register(s0);
+
+// From FixedFuncEMU.fx
+// Copyright (c) 2005 Microsoft Corporation. All rights reserved.
+//
+// Calculates fog factor based upon distance
+//
+float CalcFogFactor(float d)
+{
+	float fogCoeff = 1.0;
+
+	if (FOGMODE_LINEAR == fogMode)
+	{
+		fogCoeff = (fogEnd - d) / (fogEnd - fogStart);
+	}
+	else if (FOGMODE_EXP == fogMode)
+	{
+		fogCoeff = 1.0 / pow(E, d*fogDensity);
+	}
+	else if (FOGMODE_EXP2 == fogMode)
+	{
+		fogCoeff = 1.0 / pow(E, d * d * fogDensity * fogDensity);
+	}
+
+	return clamp(fogCoeff, 0, 1);
+}
 
 VS_OUTPUT vs_main(VS_INPUT input)
 {
@@ -114,6 +147,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	result.position = mul(worldMatrix, result.position);
 	result.position = mul(viewMatrix, result.position);
+
+	result.fog = result.position.z;
+
 	result.position = mul(projectionMatrix, result.position);
 #endif
 
@@ -200,6 +236,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	result *= input.diffuse;
 	result += input.specular;
+
+#ifdef RS_FOG
+	float factor = CalcFogFactor(input.fog);
+	result.rgb = (factor * result + (1.0 - factor) * fogColor).rgb;
+#endif
 
 #ifdef RS_ALPHA
 	uint newIndex = FragListNodes.IncrementCounter();

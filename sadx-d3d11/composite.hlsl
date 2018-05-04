@@ -25,27 +25,27 @@ float4 get_blend_factor(uint mode, float4 source, float4 destination)
 	{
 		default: // error state
 			return float4(1, 0, 0, 1);
-		case D3DBLEND_ZERO:
+		case BLEND_ZERO:
 			return float4(0, 0, 0, 0);
-		case D3DBLEND_ONE:
+		case BLEND_ONE:
 			return float4(1, 1, 1, 1);
-		case D3DBLEND_SRCCOLOR:
+		case BLEND_SRCCOLOR:
 			return source;
-		case D3DBLEND_INVSRCCOLOR:
+		case BLEND_INVSRCCOLOR:
 			return 1.0f - source;
-		case D3DBLEND_SRCALPHA:
+		case BLEND_SRCALPHA:
 			return source.aaaa;
-		case D3DBLEND_INVSRCALPHA:
+		case BLEND_INVSRCALPHA:
 			return 1.0f - source.aaaa;
-		case D3DBLEND_DESTALPHA:
+		case BLEND_DESTALPHA:
 			return destination.aaaa;
-		case D3DBLEND_INVDESTALPHA:
+		case BLEND_INVDESTALPHA:
 			return 1.0f - destination.aaaa;
-		case D3DBLEND_DESTCOLOR:
+		case BLEND_DESTCOLOR:
 			return destination;
-		case D3DBLEND_INVDESTCOLOR:
+		case BLEND_INVDESTCOLOR:
 			return 1.0f - destination;
-		case D3DBLEND_SRCALPHASAT:
+		case BLEND_SRCALPHASAT:
 			float f = min(source.a, 1 - destination.a);
 			return float4(f, f, f, 1);
 	}

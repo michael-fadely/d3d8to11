@@ -62,17 +62,18 @@ struct ShaderFlags
 	enum T
 	{
 		none,
-		fvf_rhw     = 0b00000001,
-		fvf_normal  = 0b00000010,
-		fvf_diffuse = 0b00000100,
-		fvf_tex1    = 0b00001000,
-		tci_envmap  = 0b00010000,
-		rs_lighting = 0b00100000,
-		rs_specular = 0b01000000,
-		rs_alpha    = 0b10000000,
+		fvf_rhw     = 0b000000001,
+		fvf_normal  = 0b000000010,
+		fvf_diffuse = 0b000000100,
+		fvf_tex1    = 0b000001000,
+		tci_envmap  = 0b000010000,
+		rs_lighting = 0b000100000,
+		rs_specular = 0b001000000,
+		rs_alpha    = 0b010000000,
+		rs_fog      = 0b100000000,
 
-		fvf_mask    = 0b00001111,
-		mask        = 0b11111111,
+		fvf_mask    = 0b000001111,
+		mask        = 0b111111111,
 
 		count
 	};
@@ -81,7 +82,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
-	static constexpr auto ps_mask = fvf_tex1 | rs_alpha;
+	static constexpr auto ps_mask = fvf_tex1 | rs_alpha | rs_fog;
 #endif
 };
 
@@ -278,6 +279,7 @@ public:
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const;
 	bool update_input_layout();
+	void commit_per_pixel();
 	void commit_per_model();
 	void commit_per_scene();
 	void update_sampler();
@@ -344,7 +346,7 @@ protected:
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
 
-	ComPtr<ID3D11Buffer> per_scene_cbuf, per_model_cbuf;
+	ComPtr<ID3D11Buffer> per_scene_cbuf, per_model_cbuf, per_pixel_cbuf;
 
 	INT CurrentBaseVertexIndex = 0;
 	//const BOOL ZBufferDiscarding = FALSE;
