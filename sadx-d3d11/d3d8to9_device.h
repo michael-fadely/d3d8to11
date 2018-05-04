@@ -8,9 +8,9 @@
 #include "Unknown.h"
 #include "dirty_t.h"
 #include "simple_math.h"
-
-constexpr auto LIGHT_COUNT = 8;
-constexpr auto MAX_FRAGMENTS = 32;
+#include "Shader.h"
+#include "cbuffers.h"
+#include "defs.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -27,35 +27,6 @@ using Microsoft::WRL::ComPtr;
 
 bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs);
 bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
-
-#pragma pack(push, 4)
-
-struct Light
-{
-	bool    Enabled      = false; /* Light enabled state */
-	int     Type         = 0;     /* Type of light source */
-	Vector4 Diffuse      = {};    /* Diffuse color of light */
-	Vector4 Specular     = {};    /* Specular color of light */
-	Vector4 Ambient      = {};    /* Ambient color of light */
-	Vector3 Position     = {};    /* Position in world space */
-	Vector3 Direction    = {};    /* Direction in world space */
-	float   Range        = 0.0f;  /* Cutoff range */
-	float   Falloff      = 0.0f;  /* Falloff */
-	float   Attenuation0 = 0.0f;  /* Constant attenuation */
-	float   Attenuation1 = 0.0f;  /* Linear attenuation */
-	float   Attenuation2 = 0.0f;  /* Quadratic attenuation */
-	float   Theta        = 0.0f;  /* Inner angle of spotlight cone */
-	float   Phi          = 0.0f;  /* Outer angle of spotlight cone */
-
-	Light() = default;
-	explicit Light(const D3DLIGHT8& rhs);
-
-	Light& operator=(const D3DLIGHT8& rhs);
-	bool operator==(const Light& rhs) const;
-	bool operator!=(const Light& rhs) const;
-};
-
-#pragma pack(pop)
 
 struct ShaderFlags
 {
@@ -118,49 +89,6 @@ struct StreamPair
 	Direct3DVertexBuffer8* buffer;
 	UINT stride;
 };
-
-template <typename T>
-struct Shader
-{
-	ComPtr<T> shader;
-	ComPtr<ID3DBlob> blob;
-
-	Shader() = default;
-	~Shader() = default;
-
-	Shader(Shader&& other) noexcept
-	{
-		*this = std::move(other);
-	}
-
-	Shader(const Shader& other)
-	{
-		*this = other;
-	}
-
-	Shader(ComPtr<T> shader, ComPtr<ID3DBlob> blob)
-	{
-		this->shader = shader;
-		this->blob = blob;
-	}
-
-	Shader& operator=(Shader&& other) noexcept
-	{
-		shader = std::move(other.shader);
-		blob = std::move(other.blob);
-		return *this;
-	}
-
-	Shader& operator=(const Shader& other)
-	{
-		shader = other.shader;
-		blob = other.blob;
-		return *this;
-	}
-};
-
-using VertexShader = Shader<ID3D11VertexShader>;
-using PixelShader = Shader<ID3D11PixelShader>;
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 class Direct3DDevice8 : public Unknown
@@ -309,8 +237,8 @@ public:
 protected:
 	Direct3D8 *const d3d;
 
-	ComPtr<ID3D11VertexShader> composite_vs;
-	ComPtr<ID3D11PixelShader> composite_ps;
+	VertexShader composite_vs;
+	PixelShader composite_ps;
 
 	ComPtr<ID3D11Texture2D>           FragListHeadB;
 	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
@@ -347,6 +275,9 @@ protected:
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
 
 	ComPtr<ID3D11Buffer> per_scene_cbuf, per_model_cbuf, per_pixel_cbuf;
+	PerSceneBuffer per_scene {};
+	PerModelBuffer per_model {};
+	PerPixelBuffer per_pixel {};
 
 	INT CurrentBaseVertexIndex = 0;
 	//const BOOL ZBufferDiscarding = FALSE;
@@ -358,14 +289,6 @@ protected:
 	float StoredClipPlanes[MAX_CLIP_PLANES][4] = {};
 	//DWORD ClipPlaneRenderState = 0;
 
-	dirty_t<matrix> t_view;
-	dirty_t<matrix> t_projection;
-	dirty_t<matrix> t_world;
-	dirty_t<matrix> t_texture;
-
 	D3D11_VIEWPORT viewport {};
-
-	dirty_t<D3DMATERIAL8> material {};
-
-	std::array<dirty_t<Light>, LIGHT_COUNT> lights {};
+	D3DMATERIAL8 material {};
 };

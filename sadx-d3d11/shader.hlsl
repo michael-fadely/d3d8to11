@@ -78,7 +78,7 @@ cbuffer PerSceneBuffer : register(b0)
 cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
-	matrix textureTransform;
+	matrix textureMatrix;
 
 	Light lights[LIGHT_COUNT];
 	Material material;
@@ -208,7 +208,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		// also this is producing incorrect output when the object rotates
 		matrix wvMatrixInvT = mul(transpose(worldMatrix), transpose(viewMatrix));
 		result.tex = (float2)mul(wvMatrixInvT, float4(input.normal, 1));
-		result.tex = (float2)mul(textureTransform, float4(result.tex, 0, 1));
+		result.tex = (float2)mul(textureMatrix, float4(result.tex, 0, 1));
 	#else
 		result.tex = input.tex;
 	#endif

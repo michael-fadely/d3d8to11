@@ -4,13 +4,11 @@
 #include <SimpleMath.h>
 #include "typedefs.h"
 
-using namespace DirectX::SimpleMath;
-
-using float2   = Vector2;
-using float3   = Vector3;
-using float4   = Vector4;
-using matrix   = Matrix;
-using float4x4 = Matrix;
+using float2   = DirectX::SimpleMath::Vector2;
+using float3   = DirectX::SimpleMath::Vector3;
+using float4   = DirectX::SimpleMath::Vector4;
+using matrix   = DirectX::SimpleMath::Matrix;
+using float4x4 = DirectX::SimpleMath::Matrix;
 using int2     = std::array<int, 2>;
 using int3     = std::array<int, 3>;
 using int4     = std::array<int, 4>;

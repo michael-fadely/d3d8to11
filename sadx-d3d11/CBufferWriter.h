@@ -92,13 +92,13 @@ CBufferBase& CBufferBase::operator<<(const uint32_t& data);
 template <>
 CBufferBase& CBufferBase::operator<<(const float& data);
 template <>
-CBufferBase& CBufferBase::operator<<(const Matrix& data);
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Matrix& data);
 template <>
-CBufferBase& CBufferBase::operator<<(const Vector2& data);
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector2& data);
 template <>
-CBufferBase& CBufferBase::operator<<(const Vector3& data);
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector3& data);
 template <>
-CBufferBase& CBufferBase::operator<<(const Vector4& data);
+CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector4& data);
 template <>
 CBufferBase& CBufferBase::operator<<(const gsl::span<float>& data);
 template <>

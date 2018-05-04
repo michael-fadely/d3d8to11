@@ -123,6 +123,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h" />
+    <ClInclude Include="cbuffers.h" />
     <ClInclude Include="CBufferWriter.h" />
     <ClInclude Include="d3d8to9.hpp" />
     <ClInclude Include="d3d8to9_base.h" />
@@ -133,10 +134,14 @@
     <ClInclude Include="d3d8to9_texture.h" />
     <ClInclude Include="d3d8to9_vertex_buffer.h" />
     <ClInclude Include="d3d8types.hpp" />
+    <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
     <ClInclude Include="int_multiple.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="PolyBuff11.h" />
     <ClInclude Include="safe_release.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="typedefs.h" />
@@ -144,6 +149,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp" />
+    <ClCompile Include="cbuffers.cpp" />
     <ClCompile Include="CBufferWriter.cpp" />
     <ClCompile Include="d3d8to9.cpp" />
     <ClCompile Include="d3d8to9_base.cpp" />
@@ -155,6 +161,8 @@
     <ClCompile Include="d3d8to9_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to9_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
+    <ClCompile Include="Light.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="PolyBuff11.cpp" />
     <ClCompile Include="sadx-d3d11.cpp" />
     <ClCompile Include="stdafx.cpp">

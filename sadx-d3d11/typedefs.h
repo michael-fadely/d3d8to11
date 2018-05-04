@@ -14,3 +14,9 @@ using uint64 = uint64_t;
 using ushort = uint16_t;
 using uint   = uint32_t;
 using ulong  = unsigned long;
+
+template <typename T>
+bool operator!=(const T& lhs, const T& rhs)
+{
+	return !(lhs == rhs);
+}

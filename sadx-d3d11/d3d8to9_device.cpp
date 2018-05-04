@@ -15,6 +15,7 @@
 #include "SimpleMath.h"
 #include "int_multiple.h"
 #include "CBufferWriter.h"
+#include "Material.h"
 
 using namespace Microsoft::WRL;
 
@@ -31,70 +32,6 @@ struct OitNode
 	uint  flags; // source blend, destination blend, blend operation
 	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
-
-#pragma pack(push, 4)
-
-struct Material
-{
-	float4 Diffuse  = {};   /* Diffuse color RGBA */
-	float4 Ambient  = {};   /* Ambient color RGB */
-	float4 Specular = {};   /* Specular 'shininess' */
-	float4 Emissive = {};   /* Emissive color RGB */
-	float  Power    = 0.0f; /* Sharpness if specular highlight */
-
-	Material() = default;
-
-	explicit Material(const D3DMATERIAL8& rhs)
-	{
-		Diffuse  = float4(rhs.Diffuse.r, rhs.Diffuse.g, rhs.Diffuse.b , rhs.Diffuse.a);
-		Ambient  = float4(rhs.Ambient.r, rhs.Ambient.g, rhs.Ambient.b , rhs.Ambient.a);
-		Specular = float4(rhs.Specular.r, rhs.Specular.g, rhs.Specular.b , rhs.Specular.a);
-		Emissive = float4(rhs.Emissive.r, rhs.Emissive.g, rhs.Emissive.b , rhs.Emissive.a);
-		Power    = rhs.Power;
-	}
-
-	Material& operator=(const D3DMATERIAL8& rhs)
-	{
-		*this = Material(rhs);
-		return *this;
-	}
-};
-
-class PerSceneBuffer : public ICBuffer
-{
-public:
-	matrix viewMatrix;
-	matrix projectionMatrix;
-	float2 screenDimensions;
-	float3 viewPosition;
-
-	void write(CBufferBase& cbuf) const override;
-};
-
-class PerModelBuffer : public ICBuffer
-{
-public:
-	matrix                         worldMatrix;
-	matrix                         textureTransform;
-	std::array<dirty_t<Light>, LIGHT_COUNT> lights;
-	Material                       material;
-
-	void write(CBufferBase& cbuf) const override;
-};
-
-class PerPixelBuffer : public ICBuffer
-{
-public:
-	uint   srcBlend;
-	uint   destBlend;
-	uint   fogMode;
-	float  fogStart;
-	float  fogEnd;
-	float  fogDensity;
-	float4 fogColor;
-};
-
-#pragma pack(pop)
 
 bool operator==(const D3DCOLORVALUE& lhs, const D3DCOLORVALUE& rhs)
 {
@@ -135,104 +72,6 @@ bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs)
 		   lhs.Attenuation2 == rhs.Attenuation2 &&
 		   lhs.Theta        == rhs.Theta &&
 		   lhs.Phi          == rhs.Phi;
-}
-
-template <typename T>
-bool operator!=(const T& lhs, const T& rhs)
-{
-	return !(lhs == rhs);
-}
-
-Light::Light(const D3DLIGHT8& rhs)
-{
-	this->Type         = rhs.Type;
-	this->Diffuse      = float4(rhs.Diffuse.r, rhs.Diffuse.g, rhs.Diffuse.b, rhs.Diffuse.a);
-	this->Specular     = float4(rhs.Specular.r, rhs.Specular.g, rhs.Specular.b, rhs.Specular.a);
-	this->Ambient      = float4(rhs.Ambient.r, rhs.Ambient.g, rhs.Ambient.b, rhs.Ambient.a);
-	this->Position     = float3(rhs.Position.x, rhs.Position.y, rhs.Position.z);
-	this->Direction    = float3(rhs.Direction.x, rhs.Direction.y, rhs.Direction.z);
-	this->Range        = rhs.Range;
-	this->Falloff      = rhs.Falloff;
-	this->Attenuation0 = rhs.Attenuation0;
-	this->Attenuation1 = rhs.Attenuation1;
-	this->Attenuation2 = rhs.Attenuation2;
-	this->Theta        = rhs.Theta;
-	this->Phi          = rhs.Phi;
-}
-
-Light& Light::operator=(const D3DLIGHT8& rhs)
-{
-	*this = Light(rhs);
-	return *this;
-}
-
-bool Light::operator==(const Light& rhs) const
-{
-	return Enabled      == rhs.Enabled &&
-		   Type         == rhs.Type &&
-		   Diffuse      == rhs.Diffuse &&
-		   Specular     == rhs.Specular &&
-		   Ambient      == rhs.Ambient &&
-		   Position     == rhs.Position &&
-		   Direction    == rhs.Direction &&
-		   Range        == rhs.Range &&
-		   Falloff      == rhs.Falloff &&
-		   Attenuation0 == rhs.Attenuation0 &&
-		   Attenuation1 == rhs.Attenuation1 &&
-		   Attenuation2 == rhs.Attenuation2 &&
-		   Theta        == rhs.Theta &&
-		   Phi          == rhs.Phi;
-}
-
-bool Light::operator!=(const Light& rhs) const
-{
-	return !(*this == rhs);
-}
-
-CBufferBase& operator<<(CBufferBase& writer, const Light& l)
-{
-	return writer
-		   << l.Enabled
-		   << l.Type
-		   << l.Diffuse
-		   << l.Specular
-		   << l.Ambient
-		   << l.Position
-		   << l.Direction
-		   << l.Range
-		   << l.Falloff
-		   << l.Attenuation0
-		   << l.Attenuation1
-		   << l.Attenuation2
-		   << l.Theta
-		   << l.Phi;
-}
-
-CBufferBase& operator<<(CBufferBase& writer, const Material& material)
-{
-	return writer
-		   << material.Diffuse
-		   << material.Ambient
-		   << material.Specular
-		   << material.Emissive
-		   << material.Power;
-}
-
-void PerSceneBuffer::write(CBufferBase& cbuf) const
-{
-	cbuf << this->viewMatrix << this->projectionMatrix << this->screenDimensions << this->viewPosition;
-}
-
-void PerModelBuffer::write(CBufferBase& cbuf) const
-{
-	cbuf << worldMatrix << textureTransform;
-
-	for (const auto& light : lights)
-	{
-		cbuf << CBufferAlign() << light;
-	}
-
-	cbuf << CBufferAlign() << material;
 }
 
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
@@ -555,7 +394,7 @@ void Direct3DDevice8::create_native()
 
 	D3D11_BUFFER_DESC cbuf_desc {};
 
-	auto cbuffer_size = ICBuffer::cbuffer_size<PerSceneBuffer>();
+	auto cbuffer_size = per_scene.cbuffer_size();
 
 	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
 	cbuf_desc.Usage               = D3D11_USAGE_DYNAMIC;
@@ -569,7 +408,7 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuffer_size = ICBuffer::cbuffer_size<PerModelBuffer>();
+	cbuffer_size = per_model.cbuffer_size();
 
 	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
 	cbuf_desc.StructureByteStride = cbuffer_size;
@@ -580,8 +419,10 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-model CreateBuffer failed");
 	}
 
-	cbuf_desc.ByteWidth           = 48;
-	cbuf_desc.StructureByteStride = 48;
+	cbuffer_size = per_pixel.cbuffer_size();
+
+	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+	cbuf_desc.StructureByteStride = cbuffer_size;
 
 	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_pixel_cbuf);
 	if (FAILED(hr))
@@ -890,8 +731,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT *pSourceRect, cons
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
 	// Switches to the composite to begin the sorting process.
-	context->PSSetShader(composite_ps.Get(), nullptr, 0);
-	context->VSSetShader(composite_vs.Get(), nullptr, 0);
+	context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
+	context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
 
 	// Unbinds UAV read/write buffers and binds their read-only
 	// shader resource views.
@@ -1540,19 +1381,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			t_view = *pMatrix;
+			per_scene.viewMatrix = *pMatrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			t_projection = *pMatrix;
+			per_scene.projectionMatrix = *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			t_texture = *pMatrix;
+			per_model.textureMatrix = *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			t_world = *pMatrix;
+			per_model.worldMatrix = *pMatrix;
 			break;
 
 		default:
@@ -1572,19 +1413,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE St
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			*pMatrix = t_view;
+			*pMatrix = per_scene.viewMatrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			*pMatrix = t_projection;
+			*pMatrix = per_scene.projectionMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			*pMatrix = t_texture;
+			*pMatrix = per_model.textureMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			*pMatrix = t_world;
+			*pMatrix = per_model.worldMatrix;
 			break;
 
 		default:
@@ -1604,19 +1445,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::MultiplyTransform(D3DTRANSFORMSTATETY
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			t_view = t_view * *pMatrix;
+			per_scene.viewMatrix = per_scene.viewMatrix * *pMatrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			t_projection = t_projection * *pMatrix;
+			per_scene.projectionMatrix = per_scene.projectionMatrix * *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			t_texture = t_texture * *pMatrix;
+			per_model.textureMatrix = per_model.textureMatrix * *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			t_world = t_world * *pMatrix;
+			per_model.worldMatrix = per_model.worldMatrix * *pMatrix;
 			break;
 
 		default:
@@ -1673,6 +1514,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetMaterial(const D3DMATERIAL8 *pMate
 	}
 
 	material = *pMaterial;
+	per_model.material = Material(material);
 	return D3D_OK;
 }
 
@@ -1694,12 +1536,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetLight(DWORD Index, const D3DLIGHT8
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= lights.size())
+	if (Index >= per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	lights[Index] = Light(*pLight);
+	per_model.lights[Index] = Light(*pLight);
 	return D3D_OK;
 }
 
@@ -1710,12 +1552,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8 *pLig
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= lights.size())
+	if (Index >= per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const auto& light = lights[Index].data();
+	const auto& light = per_model.lights[Index].data();
 
 	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.Type);
 	pLight->Diffuse      = { light.Diffuse.x, light.Diffuse.y, light.Diffuse.z, light.Diffuse.w };
@@ -1736,14 +1578,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8 *pLig
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::LightEnable(DWORD Index, BOOL Enable)
 {
-	if (Index >= lights.size())
+	if (Index >= per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	Light light = lights[Index].data();
+	Light light = per_model.lights[Index].data();
 	light.Enabled = Enable == TRUE;
-	lights[Index] = light;
+	per_model.lights[Index] = light;
 	return D3D_OK;
 }
 
@@ -1754,12 +1596,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLightEnable(DWORD Index, BOOL *pEn
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= lights.size())
+	if (Index >= per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pEnable = lights[Index].data().Enabled;
+	*pEnable = per_model.lights[Index].data().Enabled;
 	return D3D_OK;
 }
 
@@ -2826,65 +2668,32 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_per_pixel()
 {
-	auto& src_blend   = render_state_values[D3DRS_SRCBLEND];
-	auto& dest_blend  = render_state_values[D3DRS_DESTBLEND];
-	auto& fog_mode    = render_state_values[D3DRS_FOGTABLEMODE];
-	auto& fog_start   = render_state_values[D3DRS_FOGSTART];
-	auto& fog_end     = render_state_values[D3DRS_FOGEND];
-	auto& fog_density = render_state_values[D3DRS_FOGDENSITY];
-	auto& fog_color   = render_state_values[D3DRS_FOGCOLOR];
+	per_pixel.srcBlend   = render_state_values[D3DRS_SRCBLEND];
+	per_pixel.destBlend  = render_state_values[D3DRS_DESTBLEND];
+	per_pixel.fogMode    = render_state_values[D3DRS_FOGTABLEMODE];
+	per_pixel.fogStart   = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGSTART].data());
+	per_pixel.fogEnd     = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGEND].data());
+	per_pixel.fogDensity = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGDENSITY].data());
 
-	if (!src_blend.dirty() && !dest_blend.dirty() &&
-		!fog_mode.dirty() && !fog_start.dirty() && !fog_end.dirty() &&
-		!fog_density.dirty() && !fog_color.dirty())
+	if (!per_pixel.dirty() && !render_state_values[D3DRS_FOGCOLOR].dirty())
 	{
 		return;
 	}
+
+	per_pixel.set_color(render_state_values[D3DRS_FOGCOLOR]);
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_pixel_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-
-	writer << src_blend << dest_blend << fog_mode
-		<< *reinterpret_cast<const float*>(&fog_start.data())
-		<< *reinterpret_cast<const float*>(&fog_end.data())
-		<< *reinterpret_cast<const float*>(&fog_density.data());
-
-	DWORD fcolor = fog_color.data();
-	float4 color;
-
-	color.x = ((fcolor >> 16) & 0xFF) / 255.0f;
-	color.y = ((fcolor >> 8) & 0xFF) / 255.0f;
-	color.z = (fcolor & 0xFF) / 255.0f;
-	color.w = ((fcolor >> 24) & 0xFF) / 255.0f;
-
-	writer << color;
+	per_pixel.write(writer);
 	context->Unmap(per_pixel_cbuf.Get(), 0);
-
-	src_blend.clear();
-	dest_blend.clear();
-	fog_mode.clear();
-	fog_start.clear();
-	fog_end.clear();
-	fog_density.clear();
-	fog_color.clear();
+	per_pixel.clear();
 }
 
 void Direct3DDevice8::commit_per_model()
 {
-	bool light_dirty = false;
-
-	for (const auto& light : lights)
-	{
-		if (light.dirty())
-		{
-			light_dirty = true;
-			break;
-		}
-	}
-
-	if (!t_world.dirty() && !t_texture.dirty() && !light_dirty && !material.dirty())
+	if (!per_model.dirty())
 	{
 		return;
 	}
@@ -2894,30 +2703,27 @@ void Direct3DDevice8::commit_per_model()
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 
-	PerModelBuffer buffer;
-
-	buffer.worldMatrix      = t_world;
-	buffer.textureTransform = t_texture;
-	buffer.lights           = lights;
-	buffer.material         = material;
-
-	buffer.write(writer);
-
-	material.clear();
-	t_world.clear();
-	t_texture.clear();
-
-	for (auto& light : lights)
-	{
-		light.clear();
-	}
+	per_model.write(writer);
+	per_model.clear();
 	
 	context->Unmap(per_model_cbuf.Get(), 0);
 }
 
 void Direct3DDevice8::commit_per_scene()
 {
-	if (!t_view.dirty() && !t_projection.dirty())
+	per_scene.screenDimensions = { viewport.Width, viewport.Height };
+
+	if (Camera_Data1)
+	{
+		const NJS_VECTOR& position = Camera_Data1->Position;
+		per_scene.viewPosition = { position.x, position.y, position.z };
+	}
+	else
+	{
+		per_scene.viewPosition = per_scene.viewMatrix.data().Translation();
+	}
+
+	if (!per_scene.dirty())
 	{
 		return;
 	}
@@ -2926,27 +2732,11 @@ void Direct3DDevice8::commit_per_scene()
 	context->Map(per_scene_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	per_scene.write(writer);
 
-	writer << t_view << t_projection;
+	writer << per_scene.viewMatrix << per_scene.projectionMatrix;
 
-	float vp_dimensions[] = { viewport.Width, viewport.Height };
-	writer << vp_dimensions;
-
-	if (Camera_Data1)
-	{
-		const NJS_VECTOR& position = Camera_Data1->Position;
-		float3 vector = { position.x, position.y, position.z };
-		writer << vector;
-	}
-	else
-	{
-		auto translation = t_view.data().Translation();
-		writer << translation;
-	}
-
-	t_view.clear();
-	t_projection.clear();
-
+	per_scene.clear();
 	context->Unmap(per_scene_cbuf.Get(), 0);
 }
 
@@ -3126,7 +2916,7 @@ void Direct3DDevice8::oit_load_shaders()
 		throw std::runtime_error(str);
 	}
 
-	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs);
+	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs.shader);
 
 	if (FAILED(hr))
 	{
@@ -3141,7 +2931,7 @@ void Direct3DDevice8::oit_load_shaders()
 		throw std::runtime_error(str);
 	}
 
-	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps);
+	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps.shader);
 
 	if (FAILED(hr))
 	{
