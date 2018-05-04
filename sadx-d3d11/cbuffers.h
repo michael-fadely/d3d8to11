@@ -29,6 +29,8 @@ public:
 	dirty_t<matrix>                         textureMatrix;
 	std::array<dirty_t<Light>, LIGHT_COUNT> lights;
 	dirty_t<Material>                       material;
+	dirty_t<uint>                           diffuseSource;
+	dirty_t<bool>                           colorVertex;
 
 	void write(CBufferBase& cbuf) const override;
 

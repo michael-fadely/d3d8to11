@@ -80,6 +80,9 @@ cbuffer PerModelBuffer : register(b1)
 	matrix worldMatrix;
 	matrix textureMatrix;
 
+	uint diffuseSource;
+	bool colorVertex;
+
 	Light lights[LIGHT_COUNT];
 	Material material;
 };
@@ -152,10 +155,29 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #ifdef FVF_DIFFUSE
-	result.diffuse = input.diffuse;
+	if (colorVertex == true)
+	{
+		result.diffuse = input.diffuse;
+	}
+	else
+	{
+		result.diffuse = float4(1, 1, 1, 1);
+	}
 #else
 	result.diffuse = float4(1, 1, 1, 1);
 #endif
+
+	if (diffuseSource == CS_MATERIAL)
+	{
+		if (colorVertex == true)
+		{
+			result.diffuse *= material.Diffuse;
+		}
+		else
+		{
+			result.diffuse = material.Diffuse;
+		}
+	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
 	float4 diffuse  = float4(0, 0, 0, 0);

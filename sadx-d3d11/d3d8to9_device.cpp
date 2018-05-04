@@ -25,55 +25,6 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-struct OitNode
-{
-	float depth; // fragment depth
-	uint  color; // 32-bit packed fragment color
-	uint  flags; // source blend, destination blend, blend operation
-	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
-};
-
-bool operator==(const D3DCOLORVALUE& lhs, const D3DCOLORVALUE& rhs)
-{
-	return lhs.r == rhs.r &&
-		   lhs.g == rhs.g &&
-		   lhs.b == rhs.b &&
-		   lhs.a == rhs.a;
-}
-
-bool operator==(const D3DMATERIAL8& lhs, const D3DMATERIAL8& rhs)
-{
-	return lhs.Diffuse  == rhs.Diffuse &&
-		   lhs.Ambient  == rhs.Ambient &&
-		   lhs.Specular == rhs.Specular &&
-		   lhs.Emissive == rhs.Emissive &&
-		   lhs.Power    == rhs.Power;
-}
-
-bool operator==(const D3DVECTOR& lhs, const D3DVECTOR& rhs)
-{
-	return lhs.x == rhs.x &&
-		   lhs.y == rhs.y &&
-		   lhs.z == rhs.z;
-}
-
-bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs)
-{
-	return lhs.Type         == rhs.Type &&
-		   lhs.Diffuse      == rhs.Diffuse &&
-		   lhs.Specular     == rhs.Specular &&
-		   lhs.Ambient      == rhs.Ambient &&
-		   lhs.Position     == rhs.Position &&
-		   lhs.Direction    == rhs.Direction &&
-		   lhs.Range        == rhs.Range &&
-		   lhs.Falloff      == rhs.Falloff &&
-		   lhs.Attenuation0 == rhs.Attenuation0 &&
-		   lhs.Attenuation1 == rhs.Attenuation1 &&
-		   lhs.Attenuation2 == rhs.Attenuation2 &&
-		   lhs.Theta        == rhs.Theta &&
-		   lhs.Phi          == rhs.Phi;
-}
-
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 {
 	std::vector<D3D_SHADER_MACRO> result;
@@ -1648,18 +1599,34 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	auto& ref = render_state_values[State];
 	ref = Value;
 
-	if (State == D3DRS_ZWRITEENABLE && ref.dirty())
+	switch (State)
 	{
-		ref.clear();
+		default:
+			break;
 
-		if (Value)
-		{
-			context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
-		}
-		else
-		{
-			context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
-		}
+		case D3DRS_ZWRITEENABLE:
+			if (ref.dirty())
+			{
+				ref.clear();
+
+				if (Value)
+				{
+					context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
+				}
+				else
+				{
+					context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
+				}
+			}
+			break;
+
+		case D3DRS_DIFFUSEMATERIALSOURCE:
+			per_model.diffuseSource = Value;
+			break;
+
+		case D3DRS_COLORVERTEX:
+			per_model.colorVertex = !!Value;
+			break;
 	}
 
 	return D3D_OK;
@@ -2733,9 +2700,6 @@ void Direct3DDevice8::commit_per_scene()
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	per_scene.write(writer);
-
-	writer << per_scene.viewMatrix << per_scene.projectionMatrix;
-
 	per_scene.clear();
 	context->Unmap(per_scene_cbuf.Get(), 0);
 }

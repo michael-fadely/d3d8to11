@@ -10,7 +10,6 @@
 #include "simple_math.h"
 #include "Shader.h"
 #include "cbuffers.h"
-#include "defs.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -88,6 +87,14 @@ struct StreamPair
 {
 	Direct3DVertexBuffer8* buffer;
 	UINT stride;
+};
+
+struct OitNode
+{
+	float depth; // fragment depth
+	uint  color; // 32-bit packed fragment color
+	uint  flags; // source blend, destination blend, blend operation
+	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;

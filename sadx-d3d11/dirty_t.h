@@ -36,11 +36,6 @@ public:
 		_data = initial_value;
 	}
 
-	explicit dirty_t(T initial_value)
-	{
-		_data = initial_value;
-	}
-
 	bool dirty() const
 	{
 		return _dirty;
