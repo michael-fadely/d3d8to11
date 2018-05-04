@@ -223,6 +223,7 @@ public:
 	void update_shaders();
 	bool update();
 	void free_shaders();
+	void update_wv_inv_t();
 
 	void oit_load_shaders();
 	void oit_release();

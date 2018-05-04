@@ -26,6 +26,7 @@ class PerModelBuffer : public ICBuffer, dirty_impl
 {
 public:
 	dirty_t<matrix>                         worldMatrix;
+	dirty_t<matrix>                         wvMatrixInvT;
 	dirty_t<matrix>                         textureMatrix;
 	std::array<dirty_t<Light>, LIGHT_COUNT> lights;
 	dirty_t<Material>                       material;

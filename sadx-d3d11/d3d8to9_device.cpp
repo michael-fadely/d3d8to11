@@ -1334,6 +1334,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT *pRe
 	return D3D_OK;
 }
 
+void Direct3DDevice8::update_wv_inv_t()
+{
+	matrix m = per_model.worldMatrix.data() * per_scene.viewMatrix.data();
+	m = m.Invert();
+
+	// don't need to transpose for reasons
+	per_model.wvMatrixInvT = m;
+}
+
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE State, const matrix *pMatrix)
 {
 	if (!pMatrix)
@@ -1345,6 +1354,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 	{
 		case D3DTS_VIEW:
 			per_scene.viewMatrix = *pMatrix;
+			update_wv_inv_t();
 			break;
 
 		case D3DTS_PROJECTION:
@@ -1357,6 +1367,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 
 		case D3DTS_WORLD:
 			per_model.worldMatrix = *pMatrix;
+			update_wv_inv_t();
 			break;
 
 		default:

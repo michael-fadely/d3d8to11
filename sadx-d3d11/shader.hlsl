@@ -78,6 +78,7 @@ cbuffer PerSceneBuffer : register(b0)
 cbuffer PerModelBuffer : register(b1)
 {
 	matrix worldMatrix;
+	matrix wvMatrixInvT;
 	matrix textureMatrix;
 
 	uint diffuseSource;
@@ -226,10 +227,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 #ifdef FVF_TEX1
 	#ifdef TCI_CAMERASPACENORMAL
-		// this is kinda gross but the preshader should handle it
-		// also this is producing incorrect output when the object rotates
-		matrix wvMatrixInvT = mul(transpose(worldMatrix), transpose(viewMatrix));
-		result.tex = (float2)mul(wvMatrixInvT, float4(input.normal, 1));
+		result.tex = (float2)mul(float4(input.normal, 1), wvMatrixInvT);
 		result.tex = (float2)mul(textureMatrix, float4(result.tex, 0, 1));
 	#else
 		result.tex = input.tex;

@@ -30,9 +30,8 @@ void PerSceneBuffer::mark()
 
 void PerModelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << worldMatrix << textureMatrix;
-
-	cbuf << diffuseSource << colorVertex;
+	cbuf << worldMatrix << wvMatrixInvT << textureMatrix
+		<< diffuseSource << colorVertex;
 
 	for (const auto& light : lights)
 	{
@@ -52,7 +51,7 @@ bool PerModelBuffer::dirty() const
 		}
 	}
 
-	return worldMatrix.dirty() || textureMatrix.dirty() ||
+	return worldMatrix.dirty() || wvMatrixInvT.dirty() || textureMatrix.dirty() ||
 		material.dirty() || diffuseSource.dirty() || colorVertex.dirty();
 }
 
@@ -64,6 +63,7 @@ void PerModelBuffer::clear()
 	}
 
 	worldMatrix.clear();
+	wvMatrixInvT.clear();
 	textureMatrix.clear();
 	material.clear();
 	diffuseSource.clear();
@@ -78,6 +78,7 @@ void PerModelBuffer::mark()
 	}
 
 	worldMatrix.mark();
+	wvMatrixInvT.mark();
 	textureMatrix.mark();
 	material.mark();
 	diffuseSource.mark();
