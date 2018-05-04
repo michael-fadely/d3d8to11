@@ -2858,7 +2858,7 @@ void Direct3DDevice8::commit_per_model()
 	for (const auto& light : lights)
 	{
 		writer.start_new();
-		writer << light.data();
+		writer << light;
 	}
 
 	writer.start_new(); // pads out the end of the last light structure
@@ -2888,7 +2888,7 @@ void Direct3DDevice8::commit_per_scene()
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 
-	writer << t_view.data() << t_projection.data();
+	writer << t_view << t_projection;
 
 	float vp_dimensions[] = { viewport.Width, viewport.Height };
 	writer << vp_dimensions;
