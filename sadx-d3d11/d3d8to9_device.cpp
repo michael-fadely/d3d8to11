@@ -449,7 +449,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8 *d3d, const D3DPRESENT_PARAMETERS8& p
 	render_state_values[D3DRS_SRCBLEND]         = D3DBLEND_ONE;
 	render_state_values[D3DRS_DESTBLEND]        = D3DBLEND_ZERO;
 	render_state_values[D3DRS_CULLMODE]         = D3DCULL_CCW;
-	render_state_values[D3DRS_ZFUNC]            = D3DCMP_LESSEQUAL;
+	render_state_values[D3DRS_ZFUNC]            = D3DCMP_LESS;
 	render_state_values[D3DRS_ALPHAFUNC]        = D3DCMP_ALWAYS;
 	render_state_values[D3DRS_ALPHABLENDENABLE] = FALSE;
 	render_state_values[D3DRS_FOGENABLE]        = FALSE;

@@ -257,7 +257,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
-	if (srcBlend == BLEND_SRCALPHA && destBlend == BLEND_INVSRCALPHA)
+	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) && (destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
 		if (result.a < 1.0 / 255.0)
 		{
@@ -265,11 +265,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 			discard;
 		}
 
-		if (result.a > 254.0 / 255.0)
-		{
-			//return float4(0, 0, 0.5, 1);
-			return result;
-		}
+		//if (result.a > 254.0 / 255.0)
+		//{
+		//	//return float4(0, 0, 0.5, 1);
+		//	return result;
+		//}
 	}
 
 	//return float4(0, 0.5, 0, 1);
