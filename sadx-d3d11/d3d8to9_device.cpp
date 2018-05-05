@@ -82,7 +82,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 
-	auto it = vertex_shaders.find(flags);
+	const auto it = vertex_shaders.find(flags);
 
 	if (it != vertex_shaders.end())
 	{
@@ -100,7 +100,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 
 	if (FAILED(hr))
 	{
-		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
 		throw std::runtime_error(str);
 	}
 
@@ -120,7 +120,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-	auto it = pixel_shaders.find(flags);
+	const auto it = pixel_shaders.find(flags);
 
 	if (it != pixel_shaders.end())
 	{
@@ -138,7 +138,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 
 	if (FAILED(hr))
 	{
-		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
 		throw std::runtime_error(str);
 	}
 
@@ -158,13 +158,13 @@ void Direct3DDevice8::create_depth_stencil()
 {
 	D3D11_TEXTURE2D_DESC depth_tdesc {};
 
+	const DXGI_FORMAT format = to_dxgi(present_params.AutoDepthStencilFormat);
+
 	depth_tdesc.Width      = present_params.BackBufferWidth;
 	depth_tdesc.Height     = present_params.BackBufferHeight;
 	depth_tdesc.MipLevels  = 1;
 	depth_tdesc.ArraySize  = 1;
-	// TODO: determine typeless equivalent of provided depth format automatically
-	//depth_tdesc.Format     = to_dxgi(present_params.AutoDepthStencilFormat);
-	depth_tdesc.Format     = DXGI_FORMAT_R32_TYPELESS;
+	depth_tdesc.Format     = to_typeless(format); // set texture format to typeless so we can make an SRV
 	depth_tdesc.SampleDesc = { 1, 0 };
 	depth_tdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
@@ -206,7 +206,7 @@ void Direct3DDevice8::create_depth_stencil()
 	context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depth_vdesc {};
-	depth_vdesc.Format        = DXGI_FORMAT_D32_FLOAT;
+	depth_vdesc.Format        = typeless_to_depth(depth_tdesc.Format);
 	depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 
 	if (FAILED(device->CreateDepthStencilView(depth_texture.Get(), &depth_vdesc, &depth_view)))
@@ -216,7 +216,16 @@ void Direct3DDevice8::create_depth_stencil()
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-	srv_desc.Format                    = DXGI_FORMAT_R32_FLOAT;
+	// create a shader resource view with a readable pixel format
+	auto srv_format = typeless_to_float(depth_tdesc.Format);
+
+	// if float didn't work, it's probably int we want
+	if (srv_format == DXGI_FORMAT_UNKNOWN)
+	{
+		srv_format = typeless_to_unorm(depth_tdesc.Format);
+	}
+
+	srv_desc.Format                    = srv_format;
 	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;

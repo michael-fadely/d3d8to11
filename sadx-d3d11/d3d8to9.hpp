@@ -23,9 +23,16 @@
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion);
 
-DXGI_FORMAT              to_dxgi(D3DFORMAT         value);
-D3DFORMAT                to_d3d8(DXGI_FORMAT       value);
-D3D11_PRIMITIVE_TOPOLOGY to_d3d11(D3DPRIMITIVETYPE value);
+DXGI_FORMAT              to_dxgi(D3DFORMAT             value);
+D3DFORMAT                to_d3d8(DXGI_FORMAT           value);
+D3D11_PRIMITIVE_TOPOLOGY to_d3d11(D3DPRIMITIVETYPE     value);
+DXGI_FORMAT              to_typeless(DXGI_FORMAT       format);
+DXGI_FORMAT              typeless_to_depth(DXGI_FORMAT format);
+DXGI_FORMAT              typeless_to_uint(DXGI_FORMAT  format);
+DXGI_FORMAT              typeless_to_sint(DXGI_FORMAT  format);
+DXGI_FORMAT              typeless_to_snorm(DXGI_FORMAT format);
+DXGI_FORMAT              typeless_to_float(DXGI_FORMAT format);
+DXGI_FORMAT              typeless_to_unorm(DXGI_FORMAT format, bool srgb = false);
 
 #ifndef D3D8TO9NOLOG
 #include <fstream>

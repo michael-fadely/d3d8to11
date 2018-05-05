@@ -29,7 +29,7 @@ bool operator==(const D3DLIGHT8& lhs, const D3DLIGHT8& rhs);
 
 struct ShaderFlags
 {
-	enum T
+	enum T : uint32_t
 	{
 		none,
 		fvf_rhw     = 0b000000001,
@@ -51,8 +51,8 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
-	static constexpr auto ps_mask = fvf_tex1 | rs_alpha | rs_fog;
+	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
+	static constexpr uint32_t ps_mask = fvf_tex1 | rs_alpha | rs_fog;
 #endif
 
 	static uint32_t sanitize(uint32_t flags);
