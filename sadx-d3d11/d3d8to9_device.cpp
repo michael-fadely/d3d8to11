@@ -2054,12 +2054,25 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 			count *= 3;
 			break;
 
-		case D3DPT_TRIANGLEFAN:
-			return D3DERR_INVALIDCALL;
-
 		case D3DPT_TRIANGLESTRIP:
 			count += 2;
 			break;
+
+		case D3DPT_POINTLIST:
+			PrintDebug(__FUNCTION__ ": D3DPT_POINTLIST not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_LINELIST:
+			PrintDebug(__FUNCTION__ ": D3DPT_LINELIST not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_LINESTRIP:
+			PrintDebug(__FUNCTION__ ": D3DPT_LINESTRIP not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_TRIANGLEFAN:
+			PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
+			return D3DERR_INVALIDCALL;
 
 		default:
 			return D3DERR_INVALIDCALL;
@@ -2095,6 +2108,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 {
 #if 1
 	// TODO
+	PrintDebug(__FUNCTION__ " not implemented\n");
 	return D3DERR_INVALIDCALL;
 #else
 	ApplyClipPlanes();
@@ -2122,12 +2136,25 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 			size *= 3;
 			break;
 
-		case D3DPT_TRIANGLEFAN:
-			return D3DERR_INVALIDCALL;
-
 		case D3DPT_TRIANGLESTRIP:
 			size += 2;
 			break;
+
+		case D3DPT_POINTLIST:
+			PrintDebug(__FUNCTION__ ": D3DPT_POINTLIST not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_LINELIST:
+			PrintDebug(__FUNCTION__ ": D3DPT_LINELIST not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_LINESTRIP:
+			PrintDebug(__FUNCTION__ ": D3DPT_LINESTRIP not implemented\n");
+			return D3DERR_INVALIDCALL;
+
+		case D3DPT_TRIANGLEFAN:
+			//PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
+			return D3DERR_INVALIDCALL;
 
 		default:
 			return D3DERR_INVALIDCALL;
