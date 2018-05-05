@@ -12,6 +12,7 @@ public:
 	Direct3DIndexBuffer8 &operator=(const Direct3DIndexBuffer8 &) = delete;
 
 	void create_native();
+
 	Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
 	~Direct3DIndexBuffer8() = default;
 

@@ -11,7 +11,7 @@
 std::ofstream LOG;
 #endif
 
-extern "C" Direct3D8 *WINAPI Direct3DCreate8(UINT SDKVersion)
+extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {
 #ifndef D3D8TO9NOLOG
 	static bool LogMessageFlag = true;
@@ -48,7 +48,7 @@ extern "C" Direct3D8 *WINAPI Direct3DCreate8(UINT SDKVersion)
 
 DXGI_FORMAT to_dxgi(D3DFORMAT value)
 {
-	switch (value)
+	switch (static_cast<uint32_t>(value))
 	{
 		default:
 			return DXGI_FORMAT_UNKNOWN;

@@ -15,9 +15,9 @@ using namespace Microsoft::WRL;
 static const D3DFORMAT ADAPTER_FORMATS[] = {
 	D3DFMT_A8R8G8B8,
 	D3DFMT_X8R8G8B8,
-	/*D3DFMT_R5G6B5,
+	D3DFMT_R5G6B5,
 	D3DFMT_X1R5G5B5,
-	D3DFMT_A1R5G5B5*/
+	D3DFMT_A1R5G5B5
 };
 
 void Direct3D8::create_native()
@@ -29,7 +29,8 @@ void Direct3D8::create_native()
 		throw std::runtime_error("CreateDXGIFactory failed");
 	}
 
-	HRESULT     result        = S_OK;
+	HRESULT result = S_OK;
+
 	for (size_t adapter_index = 0; adapter_index < MaxAdapters && result == S_OK; adapter_index++)
 	{
 		ComPtr<IDXGIAdapter> adapter;
@@ -51,7 +52,7 @@ void Direct3D8::create_native()
 
 		for (auto format : ADAPTER_FORMATS)
 		{
-			auto dxgi = to_dxgi(format);
+			const DXGI_FORMAT dxgi = to_dxgi(format);
 
 			UINT count;
 			auto hr = output->GetDisplayModeList(dxgi, 0, &count, nullptr);
@@ -82,7 +83,7 @@ void Direct3D8::create_native()
 	}
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3D8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -121,7 +122,7 @@ ULONG STDMETHODCALLTYPE Direct3D8::Release()
 	return LastRefCount;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::RegisterSoftwareDevice(void *pInitializeFunction)
+HRESULT STDMETHODCALLTYPE Direct3D8::RegisterSoftwareDevice(void* pInitializeFunction)
 {
 	//return ProxyInterface->RegisterSoftwareDevice(pInitializeFunction);
 	// TODO
@@ -133,7 +134,7 @@ UINT STDMETHODCALLTYPE Direct3D8::GetAdapterCount()
 	return CurrentAdapterCount;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterIdentifier(UINT Adapter, DWORD Flags, D3DADAPTER_IDENTIFIER8 *pIdentifier)
+HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterIdentifier(UINT Adapter, DWORD Flags, D3DADAPTER_IDENTIFIER8* pIdentifier)
 {
 #if 1
 	// TODO
@@ -173,7 +174,7 @@ UINT STDMETHODCALLTYPE Direct3D8::GetAdapterModeCount(UINT Adapter)
 	return CurrentAdapterModeCount[Adapter];
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::EnumAdapterModes(UINT Adapter, UINT Mode, D3DDISPLAYMODE *pMode)
+HRESULT STDMETHODCALLTYPE Direct3D8::EnumAdapterModes(UINT Adapter, UINT Mode, D3DDISPLAYMODE* pMode)
 {
 	if (pMode == nullptr || !(Adapter < CurrentAdapterCount && Mode < CurrentAdapterModeCount[Adapter]))
 	{
@@ -190,7 +191,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::EnumAdapterModes(UINT Adapter, UINT Mode, D
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterDisplayMode(UINT Adapter, D3DDISPLAYMODE *pMode)
+HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterDisplayMode(UINT Adapter, D3DDISPLAYMODE* pMode)
 {
 	// TODO
 	return D3DERR_INVALIDCALL;
@@ -247,7 +248,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDepthStencilMatch(UINT Adapter, D3DDEV
 	//return ProxyInterface->CheckDepthStencilMatch(Adapter, DeviceType, AdapterFormat, RenderTargetFormat, DepthStencilFormat);
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::GetDeviceCaps(UINT Adapter, D3DDEVTYPE DeviceType, D3DCAPS8 *pCaps)
+HRESULT STDMETHODCALLTYPE Direct3D8::GetDeviceCaps(UINT Adapter, D3DDEVTYPE DeviceType, D3DCAPS8* pCaps)
 {
 	if (pCaps == nullptr)
 	{
@@ -280,10 +281,8 @@ HMONITOR STDMETHODCALLTYPE Direct3D8::GetAdapterMonitor(UINT Adapter)
 	//return ProxyInterface->GetAdapterMonitor(Adapter);
 }
 
-HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT              Adapter, D3DDEVTYPE DeviceType,
-												  HWND              hFocusWindow,
-												  DWORD             BehaviorFlags, D3DPRESENT_PARAMETERS8* pPresentationParameters,
-												  Direct3DDevice8** ppReturnedDeviceInterface)
+HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags,
+                                                  D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DDevice8** ppReturnedDeviceInterface)
 {
 #ifndef D3D8TO9NOLOG
 	LOG << "Redirecting '" << "IDirect3D8::CreateDevice" << "(" << this << ", " << Adapter << ", " << DeviceType << ", " <<
@@ -298,10 +297,10 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT              Adapter, D3D
 
 	*ppReturnedDeviceInterface = nullptr;
 
-	D3DPRESENT_PARAMETERS8 PresentParams = *pPresentationParameters;
+	const D3DPRESENT_PARAMETERS8 present_params = *pPresentationParameters;
 
 	// Get multisample quality level
-	if (PresentParams.MultiSampleType != D3DMULTISAMPLE_NONE)
+	if (present_params.MultiSampleType != D3DMULTISAMPLE_NONE)
 	{
 	#if 1
 		throw;
@@ -319,7 +318,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT              Adapter, D3D
 	#endif
 	}
 
-	auto device = new Direct3DDevice8(this, PresentParams);
+	auto device = new Direct3DDevice8(this, present_params);
 
 	try
 	{
@@ -334,7 +333,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT              Adapter, D3D
 	}
 
 	// Set default vertex declaration
-	(*ppReturnedDeviceInterface)->SetVertexShader(D3DFVF_XYZ);
+	device->SetVertexShader(D3DFVF_XYZ);
 
 	return D3D_OK;
 }

@@ -9,6 +9,7 @@ class Direct3DDevice8;
 class Direct3DSurface8;
 
 class __declspec(uuid("B4211CFA-51B9-4A9F-AB78-DB99B2BB678E")) Direct3DBaseTexture8;
+
 class Direct3DBaseTexture8 : public Direct3DResource8
 {
 public:
@@ -18,23 +19,25 @@ public:
 };
 
 class __declspec(uuid("E4CDD575-2866-4F01-B12E-7EECE1EC9358")) Direct3DTexture8;
+
 class Direct3DTexture8 : public Direct3DBaseTexture8
 {
 public:
-	Direct3DTexture8(const Direct3DTexture8 &) = delete;
-	Direct3DTexture8 &operator=(const Direct3DTexture8 &) = delete;
+	Direct3DTexture8(const Direct3DTexture8&) = delete;
+	Direct3DTexture8& operator=(const Direct3DTexture8&) = delete;
 
 	void create_native();
+
 	Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
 	~Direct3DTexture8() = default;
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObj) override;
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;
 	virtual ULONG STDMETHODCALLTYPE Release() override;
 
-	virtual HRESULT STDMETHODCALLTYPE GetDevice(Direct3DDevice8 **ppDevice) override;
-	virtual HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) override;
-	virtual HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData) override;
+	virtual HRESULT STDMETHODCALLTYPE GetDevice(Direct3DDevice8** ppDevice) override;
+	virtual HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags) override;
+	virtual HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData) override;
 	virtual HRESULT STDMETHODCALLTYPE FreePrivateData(REFGUID refguid) override;
 	virtual DWORD STDMETHODCALLTYPE SetPriority(DWORD PriorityNew) override;
 	virtual DWORD STDMETHODCALLTYPE GetPriority() override;
@@ -45,11 +48,11 @@ public:
 	virtual DWORD STDMETHODCALLTYPE GetLOD() override;
 	virtual DWORD STDMETHODCALLTYPE GetLevelCount() override;
 
-	virtual HRESULT STDMETHODCALLTYPE GetLevelDesc(UINT Level, D3DSURFACE_DESC8 *pDesc);
-	virtual HRESULT STDMETHODCALLTYPE GetSurfaceLevel(UINT Level, Direct3DSurface8 **ppSurfaceLevel);
-	virtual HRESULT STDMETHODCALLTYPE LockRect(UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags);
+	virtual HRESULT STDMETHODCALLTYPE GetLevelDesc(UINT Level, D3DSURFACE_DESC8* pDesc);
+	virtual HRESULT STDMETHODCALLTYPE GetSurfaceLevel(UINT Level, Direct3DSurface8** ppSurfaceLevel);
+	virtual HRESULT STDMETHODCALLTYPE LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags);
 	virtual HRESULT STDMETHODCALLTYPE UnlockRect(UINT Level);
-	virtual HRESULT STDMETHODCALLTYPE AddDirtyRect(const RECT *pDirtyRect);
+	virtual HRESULT STDMETHODCALLTYPE AddDirtyRect(const RECT* pDirtyRect);
 
 	ComPtr<ID3D11Texture2D> texture;
 	ComPtr<ID3D11ShaderResourceView> srv;
@@ -62,7 +65,8 @@ public:
 	D3DPOOL Pool;
 
 private:
-	Direct3DDevice8 * const Device;
+	bool convert(UINT Level);
+	Direct3DDevice8* const Device;
 	D3D11_TEXTURE2D_DESC desc {};
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;

@@ -8,10 +8,10 @@ class Direct3DTexture8;
 class __declspec(uuid("B96EEBCA-B326-4EA5-882F-2FF5BAE021DD")) Direct3DSurface8;
 class Direct3DSurface8 : public Unknown
 {
+public:
 	Direct3DSurface8(const Direct3DSurface8 &) = delete;
 	Direct3DSurface8 &operator=(const Direct3DSurface8 &) = delete;
 
-public:
 	Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_);
 	~Direct3DSurface8() = default;
 

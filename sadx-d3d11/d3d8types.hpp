@@ -488,6 +488,7 @@ struct D3DVOLUME_DESC8
 	UINT Size;
 	UINT Width, Height, Depth;
 };
+
 struct D3DSURFACE_DESC8
 {
 	D3DFORMAT Format;
@@ -514,6 +515,5 @@ struct D3DPRESENT_PARAMETERS8
 	UINT FullScreen_RefreshRateInHz, FullScreen_PresentationInterval;
 };
 
-UINT CalcTextureSize(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format);
-UINT CalcTexturePitch(UINT Width, D3DFORMAT Format);
-bool SupportsPalettes();
+UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format);
+bool supports_palettes();

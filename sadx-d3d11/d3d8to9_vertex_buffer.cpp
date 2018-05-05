@@ -26,8 +26,8 @@ void Direct3DVertexBuffer8::create_native()
 	buffer.shrink_to_fit();
 }
 // IDirect3DVertexBuffer8
-Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8 *Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool) :
-	Device(Device)
+Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool)
+	: Device(Device)
 {
 	desc8.Type  = D3DRTYPE_VERTEXBUFFER;
 	desc8.Size  = Length;
@@ -36,7 +36,7 @@ Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8 *Device, UINT Lengt
 	desc8.Pool  = Pool;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -44,8 +44,8 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::QueryInterface(REFIID riid, voi
 	}
 
 	if (riid == __uuidof(this) ||
-		riid == __uuidof(IUnknown) ||
-		riid == __uuidof(Direct3DResource8))
+	    riid == __uuidof(IUnknown) ||
+	    riid == __uuidof(Direct3DResource8))
 	{
 		AddRef();
 
@@ -76,7 +76,7 @@ ULONG STDMETHODCALLTYPE Direct3DVertexBuffer8::Release()
 	return result;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDevice(Direct3DDevice8 **ppDevice)
+HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDevice(Direct3DDevice8** ppDevice)
 {
 	if (ppDevice == nullptr)
 	{
@@ -90,7 +90,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDevice(Direct3DDevice8 **ppD
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
 #if 1
 	// not needed for SADX
@@ -100,7 +100,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::SetPrivateData(REFGUID refguid,
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
+HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
 #if 1
 	// not needed for SADX
@@ -205,7 +205,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDesc(D3DVERTEXBUFFER_DESC *pDesc)
+HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDesc(D3DVERTEXBUFFER_DESC* pDesc)
 {
 	if (!pDesc)
 	{

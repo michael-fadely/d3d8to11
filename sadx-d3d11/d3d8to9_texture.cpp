@@ -7,7 +7,7 @@
 #include <iomanip>
 #include "d3d8to9.hpp"
 
-// TODO: instead of storing in map/vector, let d3d do the work if possible
+ // TODO: instead of storing in map/vector, let d3d do the work if possible
 
 void Direct3DTexture8::create_native()
 {
@@ -17,7 +17,7 @@ void Direct3DTexture8::create_native()
 	if (!Levels)
 	{
 		++Levels;
-		auto width  = Width;
+		auto width = Width;
 		auto height = Height;
 
 		while (width != 1 && height != 1)
@@ -92,8 +92,8 @@ void Direct3DTexture8::create_native()
 	}
 }
 // IDirect3DTexture8
-Direct3DTexture8::Direct3DTexture8(Direct3DDevice8 *device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool) :
-	Device(device_)
+Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
+	: Device(device_)
 {
 	this->Width  = Width;
 	this->Height = Height;
@@ -103,7 +103,7 @@ Direct3DTexture8::Direct3DTexture8(Direct3DDevice8 *device_, UINT Width, UINT He
 	this->Pool   = Pool;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -111,9 +111,9 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::QueryInterface(REFIID riid, void **p
 	}
 
 	if (riid == __uuidof(this) ||
-		riid == __uuidof(IUnknown) ||
-		riid == __uuidof(Direct3DResource8) ||
-		riid == __uuidof(Direct3DBaseTexture8))
+	    riid == __uuidof(IUnknown) ||
+	    riid == __uuidof(Direct3DResource8) ||
+	    riid == __uuidof(Direct3DBaseTexture8))
 	{
 		AddRef();
 
@@ -144,7 +144,7 @@ ULONG STDMETHODCALLTYPE Direct3DTexture8::Release()
 	return result;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetDevice(Direct3DDevice8 **ppDevice)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetDevice(Direct3DDevice8** ppDevice)
 {
 	if (ppDevice == nullptr)
 	{
@@ -152,13 +152,11 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetDevice(Direct3DDevice8 **ppDevice
 	}
 
 	Device->AddRef();
-
 	*ppDevice = Device;
-
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
 #if 1
 	// not used in SADX
@@ -168,7 +166,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::SetPrivateData(REFGUID refguid, cons
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
 #if 1
 	// not used in SADX
@@ -246,19 +244,19 @@ DWORD STDMETHODCALLTYPE Direct3DTexture8::GetLevelCount()
 	return desc.MipLevels;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_DESC8 *pDesc)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_DESC8* pDesc)
 {
 	if (pDesc == nullptr || Level > GetLevelCount())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width = Width;
+	auto width  = Width;
 	auto height = Height;
 
 	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
 	{
-		width = std::max(1u, width / 2);
+		width  = std::max(1u, width / 2);
 		height = std::max(1u, height / 2);
 	}
 
@@ -266,7 +264,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 	pDesc->Type            = GetType();
 	pDesc->Usage           = Usage;
 	pDesc->Pool            = Pool;
-	pDesc->Size            = CalcTextureSize(width, height, 1, Format);
+	pDesc->Size            = calc_texture_size(width, height, 1, Format);
 	pDesc->MultiSampleType = D3DMULTISAMPLE_NONE;
 	pDesc->Width           = width;
 	pDesc->Height          = height;
@@ -274,7 +272,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3DSurface8 **ppSurfaceLevel)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3DSurface8** ppSurfaceLevel)
 {
 	if (!ppSurfaceLevel)
 	{
@@ -300,7 +298,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	if (pRect)
 	{
@@ -317,17 +315,17 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT 
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width = Width;
+	auto width  = Width;
 	auto height = Height;
 
 	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
 	{
-		width = std::max(1u, width / 2);
+		width  = std::max(1u, width / 2);
 		height = std::max(1u, height / 2);
 	}
 
 	D3DLOCKED_RECT rect;
-	rect.Pitch = CalcTextureSize(width, 1, 1, Format);
+	rect.Pitch = calc_texture_size(width, 1, 1, Format);
 
 	auto it = texture_levels.find(Level);
 
@@ -338,7 +336,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT 
 	}
 	else
 	{
-		std::vector<uint8_t> v(CalcTextureSize(width, height, 1, Format));
+		std::vector<uint8_t> v(calc_texture_size(width, height, 1, Format));
 		rect.pBits = v.data();
 		texture_levels[Level] = std::move(v);
 	}
@@ -360,123 +358,16 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 	auto& rect = it->second;
 	auto context = Device->context;
 
-	if (!IsWindows8OrGreater())
-	{
-		D3DSURFACE_DESC8 level_desc {};
-		GetLevelDesc(Level, &level_desc);
-
-		auto& buffer = texture_levels[Level];
-		auto format = to_dxgi(Format);
-
-		std::vector<uint32_t> rgba;
-
-		switch (format)
-		{
-			case DXGI_FORMAT_B5G6R5_UNORM:
-			{
-				rgba.resize(buffer.size() / 2);
-
-				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
-				auto b32 = rgba.data();
-				auto length = rgba.size();
-
-				for (size_t i = 0; i < length; ++i)
-				{
-					auto p16 = b16[i];
-					auto& p32 = b32[i];
-
-					auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
-					auto g = static_cast<uint8_t>(((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
-					auto r = static_cast<uint8_t>(((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
-
-					p32 = 255 << 24 | b << 16 | g << 8 | r;
-				}
-				break;
-			}
-
-			case DXGI_FORMAT_B5G5R5A1_UNORM:
-			{
-				rgba.resize(buffer.size() / 2);
-
-				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
-				auto b32 = rgba.data();
-				auto length = rgba.size();
-
-				for (size_t i = 0; i < length; ++i)
-				{
-					auto p16 = b16[i];
-					auto& p32 = b32[i];
-
-					auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
-					auto g = static_cast<uint8_t>(((p16 >> 5) & 0b011111) / 32.0f * 255.0f);
-					auto r = static_cast<uint8_t>(((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
-					auto a = static_cast<uint8_t>(p16 & (1 << 15) ? 255 : 0);
-
-					p32 = a << 24 | b << 16 | g << 8 | r;
-				}
-				break;
-			}
-
-			case DXGI_FORMAT_B4G4R4A4_UNORM:
-			{
-				rgba.resize(buffer.size() / 2);
-
-				auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
-				auto b32 = rgba.data();
-				auto length = rgba.size();
-
-				for (size_t i = 0; i < length; ++i)
-				{
-					auto p16 = b16[i];
-					auto& p32 = b32[i];
-
-					auto b = static_cast<uint8_t>((p16 & 0xF) / 15.0f * 255.0f);
-					auto g = static_cast<uint8_t>(((p16 >> 4) & 0xF) / 15.0f * 255.0f);
-					auto r = static_cast<uint8_t>(((p16 >> 8) & 0xF) / 15.0f * 255.0f);
-					auto a = static_cast<uint8_t>(((p16 >> 12) & 0xF) / 15.0f * 255.0f);
-
-					p32 = a << 24 | b << 16 | g << 8 | r;
-				}
-				break;
-			}
-
-			case DXGI_FORMAT_B8G8R8A8_UNORM:
-			{
-				rgba.resize(buffer.size() / 4);
-
-				auto bgr = reinterpret_cast<uint32_t*>(buffer.data());
-				auto b32 = rgba.data();
-				auto length = rgba.size();
-
-				for (size_t i = 0; i < length; ++i)
-				{
-					auto a = bgr[i];
-					auto& b = b32[i];
-
-					b = (a & 0xFF000000) | ((a >> 16) & 0xFF) | ((a >> 8) & 0xFF) << 8 | (a & 0xFF) << 16;
-				}
-
-				break;
-			}
-
-			default:
-				context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
-				goto DONE;
-		}
-
-		context->UpdateSubresource(texture.Get(), Level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
-	}
-	else
+	if (!convert(Level))
 	{
 		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 	}
 
-DONE:
 	locked_rects.erase(it);
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT *pDirtyRect)
+HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 {
 #if 1
 	return D3DERR_INVALIDCALL;
@@ -485,10 +376,122 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT *pDirtyRect)
 #endif
 }
 
+bool Direct3DTexture8::convert(UINT Level)
+{
+	if (IsWindows8OrGreater())
+	{
+		return false;
+	}
+
+	D3DSURFACE_DESC8 level_desc {};
+	GetLevelDesc(Level, &level_desc);
+
+	std::vector<uint8_t>& buffer = texture_levels[Level];
+	const DXGI_FORMAT format = to_dxgi(Format);
+
+	std::vector<uint32_t> rgba;
+
+	switch (format)
+	{
+		case DXGI_FORMAT_B5G6R5_UNORM:
+		{
+			rgba.resize(buffer.size() / 2);
+
+			auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+			uint32_t* b32 = rgba.data();
+			const size_t length = rgba.size();
+
+			for (size_t i = 0; i < length; ++i)
+			{
+				auto p16 = b16[i];
+				auto& p32 = b32[i];
+
+				auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
+				auto g = static_cast<uint8_t>(((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
+				auto r = static_cast<uint8_t>(((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
+
+				p32 = 255 << 24 | b << 16 | g << 8 | r;
+			}
+			break;
+		}
+
+		case DXGI_FORMAT_B5G5R5A1_UNORM:
+		{
+			rgba.resize(buffer.size() / 2);
+
+			auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+			uint32_t* b32 = rgba.data();
+			auto length = rgba.size();
+
+			for (size_t i = 0; i < length; ++i)
+			{
+				auto p16 = b16[i];
+				auto& p32 = b32[i];
+
+				auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
+				auto g = static_cast<uint8_t>(((p16 >> 5) & 0b011111) / 32.0f * 255.0f);
+				auto r = static_cast<uint8_t>(((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
+				auto a = static_cast<uint8_t>(p16 & (1 << 15) ? 255 : 0);
+
+				p32 = a << 24 | b << 16 | g << 8 | r;
+			}
+			break;
+		}
+
+		case DXGI_FORMAT_B4G4R4A4_UNORM:
+		{
+			rgba.resize(buffer.size() / 2);
+
+			auto b16 = reinterpret_cast<uint16_t*>(buffer.data());
+			uint32_t* b32 = rgba.data();
+			auto length = rgba.size();
+
+			for (size_t i = 0; i < length; ++i)
+			{
+				auto p16 = b16[i];
+				auto& p32 = b32[i];
+
+				auto b = static_cast<uint8_t>((p16 & 0xF) / 15.0f * 255.0f);
+				auto g = static_cast<uint8_t>(((p16 >> 4) & 0xF) / 15.0f * 255.0f);
+				auto r = static_cast<uint8_t>(((p16 >> 8) & 0xF) / 15.0f * 255.0f);
+				auto a = static_cast<uint8_t>(((p16 >> 12) & 0xF) / 15.0f * 255.0f);
+
+				p32 = a << 24 | b << 16 | g << 8 | r;
+			}
+			break;
+		}
+
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+		{
+			rgba.resize(buffer.size() / 4);
+
+			auto bgr = reinterpret_cast<uint32_t*>(buffer.data());
+			uint32_t* b32 = rgba.data();
+			auto length = rgba.size();
+
+			for (size_t i = 0; i < length; ++i)
+			{
+				auto a = bgr[i];
+				auto& b = b32[i];
+
+				b = (a & 0xFF000000) | ((a >> 16) & 0xFF) | ((a >> 8) & 0xFF) << 8 | (a & 0xFF) << 16;
+			}
+
+			break;
+		}
+
+		default:
+			return false;
+	}
+
+	Device->context->UpdateSubresource(texture.Get(), Level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
+	return true;
+}
+
 #if 0
 // IDirect3DCubeTexture8
-Direct3DCubeTexture8::Direct3DCubeTexture8(Direct3DDevice8 *device, IDirect3DCubeTexture9 *ProxyInterface) :
-	ProxyInterface(ProxyInterface),
+Direct3DCubeTexture8::Direct3DCubeTexture8(Direct3DDevice8* device, IDirect3DCubeTexture9* ProxyInterface)
+	: ProxyInterface(ProxyInterface),
 	Device(device)
 {
 	Device->address_table->SaveAddress(this, ProxyInterface);
@@ -498,7 +501,7 @@ Direct3DCubeTexture8::~Direct3DCubeTexture8()
 {
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -530,7 +533,7 @@ ULONG STDMETHODCALLTYPE Direct3DCubeTexture8::Release()
 	return ProxyInterface->Release();
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetDevice(Direct3DDevice8 **ppDevice)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetDevice(Direct3DDevice8** ppDevice)
 {
 	if (ppDevice == nullptr)
 	{
@@ -544,12 +547,12 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetDevice(Direct3DDevice8 **ppDe
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
 	return ProxyInterface->SetPrivateData(refguid, pData, SizeOfData, Flags);
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
 	return ProxyInterface->GetPrivateData(refguid, pData, pSizeOfData);
 }
@@ -594,7 +597,7 @@ DWORD STDMETHODCALLTYPE Direct3DCubeTexture8::GetLevelCount()
 	return ProxyInterface->GetLevelCount();
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetLevelDesc(UINT Level, D3DSURFACE_DESC8 *pDesc)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetLevelDesc(UINT Level, D3DSURFACE_DESC8* pDesc)
 {
 	if (pDesc == nullptr)
 	{
@@ -615,7 +618,7 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetLevelDesc(UINT Level, D3DSURF
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetCubeMapSurface(D3DCUBEMAP_FACES FaceType, UINT Level, Direct3DSurface8 **ppCubeMapSurface)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetCubeMapSurface(D3DCUBEMAP_FACES FaceType, UINT Level, Direct3DSurface8** ppCubeMapSurface)
 {
 	if (ppCubeMapSurface == nullptr)
 	{
@@ -624,7 +627,7 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetCubeMapSurface(D3DCUBEMAP_FAC
 
 	*ppCubeMapSurface = nullptr;
 
-	IDirect3DSurface9 *SurfaceInterface = nullptr;
+	IDirect3DSurface9* SurfaceInterface = nullptr;
 
 	const HRESULT hr = ProxyInterface->GetCubeMapSurface(FaceType, Level, &SurfaceInterface);
 
@@ -638,7 +641,7 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::GetCubeMapSurface(D3DCUBEMAP_FAC
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::LockRect(D3DCUBEMAP_FACES FaceType, UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::LockRect(D3DCUBEMAP_FACES FaceType, UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	return ProxyInterface->LockRect(FaceType, Level, pLockedRect, pRect, Flags);
 }
@@ -648,7 +651,7 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::UnlockRect(D3DCUBEMAP_FACES Face
 	return ProxyInterface->UnlockRect(FaceType, Level);
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::AddDirtyRect(D3DCUBEMAP_FACES FaceType, const RECT *pDirtyRect)
+HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::AddDirtyRect(D3DCUBEMAP_FACES FaceType, const RECT* pDirtyRect)
 {
 	return ProxyInterface->AddDirtyRect(FaceType, pDirtyRect);
 }
