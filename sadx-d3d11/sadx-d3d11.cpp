@@ -143,6 +143,7 @@ extern "C"
 		if (ControllerPointers[0] && ControllerPointers[0]->PressedButtons & Buttons_Z)
 		{
 			Direct3D_Device->free_shaders();
+			Direct3D_Device->oit_load_shaders();
 		}
 	}
 }
