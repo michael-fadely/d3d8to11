@@ -2058,7 +2058,7 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uin
 			break;
 
 		case D3DPT_TRIANGLEFAN:
-			PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
+			//PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
 			return false;
 
 		default:
