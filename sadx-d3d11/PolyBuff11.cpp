@@ -79,7 +79,7 @@ struct PolyBuffEx
 			}
 		}
 
-		PrintDebug("%s is allocating (%u + 1)\n", parent->name, free_buffers.size() + used_buffers.size());
+		PrintDebug("%s is allocating bytes (%u + 1): %u\n", parent->name, free_buffers.size() + used_buffers.size(), target_size);
 
 		Direct3DVertexBuffer8* result;
 		auto hr = Direct3D_Device->CreateVertexBuffer(int_multiple(target_size, 16), D3DUSAGE_DYNAMIC, parent->FVF, D3DPOOL_MANAGED, &result);
@@ -145,6 +145,7 @@ void __fastcall PolyBuff_Init(PolyBuff* _this, uint32_t count, uint32_t stride, 
 	_this->TotalSize   = stride * count;
 	_this->CurrentSize = stride * count;
 	_this->FVF         = FVF;
+	_this->name        = name;
 
 #if 0
 	Direct3D_Device->CreateVertexBuffer(
@@ -171,8 +172,6 @@ void __fastcall PolyBuff_Init(PolyBuff* _this, uint32_t count, uint32_t stride, 
 			--_count;
 		} while (_count);
 	}
-
-	_this->name = name;
 }
 
 void __fastcall PolyBuff_Free(PolyBuff* _this)
