@@ -2981,38 +2981,53 @@ void Direct3DDevice8::oit_load_shaders()
 		{}
 	};
 
-	ComPtr<ID3DBlob> errors;
-	ComPtr<ID3DBlob> blob;
+	int result;
 
-	auto hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
-
-	if (FAILED(hr))
+	do
 	{
-		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		throw std::runtime_error(str);
-	}
+		try
+		{
+			ComPtr<ID3DBlob> errors;
+			ComPtr<ID3DBlob> blob;
 
-	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs.shader);
+			auto hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("composite vertex shader creation failed");
-	}
+			if (FAILED(hr))
+			{
+				std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+				throw std::runtime_error(str);
+			}
 
-	hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs.shader);
 
-	if (FAILED(hr))
-	{
-		std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		throw std::runtime_error(str);
-	}
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("composite vertex shader creation failed");
+			}
 
-	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps.shader);
+			hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("composite pixel shader creation failed");
-	}
+			if (FAILED(hr))
+			{
+				std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+				throw std::runtime_error(str);
+			}
+
+			hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps.shader);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("composite pixel shader creation failed");
+			}
+			break;
+		}
+		catch (std::exception& ex)
+		{
+			print_info_queue();
+			free_shaders();
+			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+		}
+	} while (result == IDRETRY);
 }
 
 void Direct3DDevice8::oit_release()
