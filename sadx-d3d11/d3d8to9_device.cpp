@@ -2034,6 +2034,40 @@ bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const
 	return false;
 }
 
+bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uint32_t& count)
+{
+	switch (PrimitiveType)
+	{
+		case D3DPT_TRIANGLELIST:
+			count *= 3;
+			break;
+
+		case D3DPT_TRIANGLESTRIP:
+			count += 2;
+			break;
+
+		case D3DPT_POINTLIST:
+			break;
+
+		case D3DPT_LINELIST:
+			count *= 2;
+			break;
+
+		case D3DPT_LINESTRIP:
+			++count;
+			break;
+
+		case D3DPT_TRIANGLEFAN:
+			PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
+			return false;
+
+		default:
+			return false;
+	}
+
+	return true;
+}
+
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
 	if (!set_primitive_type(PrimitiveType))
@@ -2048,34 +2082,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 	uint32_t count = PrimitiveCount;
 
-	switch (PrimitiveType)
+	if (!primitive_vertex_count(PrimitiveType, count))
 	{
-		case D3DPT_TRIANGLELIST:
-			count *= 3;
-			break;
-
-		case D3DPT_TRIANGLESTRIP:
-			count += 2;
-			break;
-
-		case D3DPT_POINTLIST:
-			PrintDebug(__FUNCTION__ ": D3DPT_POINTLIST not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_LINELIST:
-			PrintDebug(__FUNCTION__ ": D3DPT_LINELIST not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_LINESTRIP:
-			PrintDebug(__FUNCTION__ ": D3DPT_LINESTRIP not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_TRIANGLEFAN:
-			PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		default:
-			return D3DERR_INVALIDCALL;
+		return D3DERR_INVALIDCALL;
 	}
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
@@ -2128,39 +2137,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
-	size_t size = PrimitiveCount;
+	uint32_t count = PrimitiveCount;
 
-	switch (PrimitiveType)
+	if (!primitive_vertex_count(PrimitiveType, count))
 	{
-		case D3DPT_TRIANGLELIST:
-			size *= 3;
-			break;
-
-		case D3DPT_TRIANGLESTRIP:
-			size += 2;
-			break;
-
-		case D3DPT_POINTLIST:
-			PrintDebug(__FUNCTION__ ": D3DPT_POINTLIST not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_LINELIST:
-			PrintDebug(__FUNCTION__ ": D3DPT_LINELIST not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_LINESTRIP:
-			PrintDebug(__FUNCTION__ ": D3DPT_LINESTRIP not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		case D3DPT_TRIANGLEFAN:
-			//PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
-			return D3DERR_INVALIDCALL;
-
-		default:
-			return D3DERR_INVALIDCALL;
+		return D3DERR_INVALIDCALL;
 	}
 
-	size *= VertexStreamZeroStride;
+	auto size = count * VertexStreamZeroStride;
 
 	up_get(size);
 

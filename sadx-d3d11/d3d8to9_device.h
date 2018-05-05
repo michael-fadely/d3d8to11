@@ -217,6 +217,7 @@ public:
 	void create_render_target();
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const;
+	static bool primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uint32_t& count);
 	bool update_input_layout();
 	void commit_per_pixel();
 	void commit_per_model();
