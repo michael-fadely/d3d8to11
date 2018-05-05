@@ -54,6 +54,8 @@ struct ShaderFlags
 	static constexpr auto vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
 	static constexpr auto ps_mask = fvf_tex1 | rs_alpha | rs_fog;
 #endif
+
+	static uint32_t sanitize(uint32_t flags);
 };
 
 struct SamplerFlags
@@ -220,6 +222,7 @@ public:
 	void commit_per_model();
 	void commit_per_scene();
 	void update_sampler();
+	void compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
 	bool update();
 	void free_shaders();
@@ -234,8 +237,8 @@ public:
 	void FragListNodes_Init();
 
 	uint32_t shader_flags = ShaderFlags::none;
-	std::array<VertexShader, ShaderFlags::count> vertex_shaders;
-	std::array<PixelShader, ShaderFlags::count> pixel_shaders;
+	std::unordered_map<uint32_t, VertexShader> vertex_shaders;
+	std::unordered_map<uint32_t, PixelShader> pixel_shaders;
 
 	D3DPRESENT_PARAMETERS8 present_params {};
 	ComPtr<IDXGISwapChain> swap_chain;

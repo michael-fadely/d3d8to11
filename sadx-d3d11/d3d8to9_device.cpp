@@ -80,12 +80,16 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 
 VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 {
-	flags &= ShaderFlags::vs_mask;
+	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 
-	if (vertex_shaders[flags].shader != nullptr)
+	auto it = vertex_shaders.find(flags);
+
+	if (it != vertex_shaders.end())
 	{
-		return vertex_shaders[flags];
+		return it->second;
 	}
+
+	PrintDebug(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -114,12 +118,16 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 
 PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 {
-	flags &= ShaderFlags::ps_mask;
+	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-	if (pixel_shaders[flags].shader != nullptr)
+	auto it = pixel_shaders.find(flags);
+
+	if (it != pixel_shaders.end())
 	{
-		return pixel_shaders[flags];
+		return it->second;
 	}
+
+	PrintDebug(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -393,9 +401,42 @@ void Direct3DDevice8::create_native()
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
+	PrintDebug("precompiling shaders...\n");
+	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
+	{
+		VertexShader vs;
+		PixelShader ps;
+
+		compile_shaders(i, vs, ps);
+	}
+	printf("done\n");
+
 	oit_load_shaders();
 	oit_init();
 }
+
+uint32_t ShaderFlags::sanitize(uint32_t flags)
+{
+	flags &= mask;
+
+	if (flags & tci_envmap && (!(flags & fvf_tex1) || !(flags & fvf_normal)))
+	{
+		flags &= ~tci_envmap;
+	}
+
+	if (flags & rs_lighting && !(flags & fvf_normal))
+	{
+		flags &= ~rs_lighting;
+	}
+
+	if (flags & rs_specular && !(flags & rs_lighting))
+	{
+		flags &= ~rs_specular;
+	}
+
+	return flags;
+}
+
 // IDirect3DDevice8
 Direct3DDevice8::Direct3DDevice8(Direct3D8 *d3d, const D3DPRESENT_PARAMETERS8& parameters) :
 	present_params(parameters), d3d(d3d)
@@ -2810,6 +2851,26 @@ void Direct3DDevice8::update_sampler()
 	sampler_states[static_cast<SamplerFlags::T>(flags)] = sampler_state;
 }
 
+void Direct3DDevice8::compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps)
+{
+	int result;
+
+	do
+	{
+		try
+		{
+			vs = get_vs(flags);
+			ps = get_ps(flags);
+			break;
+		}
+		catch (std::exception& ex)
+		{
+			free_shaders();
+			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+		}
+	} while (result == IDRETRY);
+}
+
 void Direct3DDevice8::update_shaders()
 {
 	auto& fog_enable = render_state_values[D3DRS_FOGENABLE];
@@ -2878,22 +2939,7 @@ void Direct3DDevice8::update_shaders()
 	VertexShader vs;
 	PixelShader ps;
 
-	int result;
-
-	do
-	{
-		try
-		{
-			vs = get_vs(shader_flags);
-			ps = get_ps(shader_flags);
-			break;
-		}
-		catch (std::exception& ex)
-		{
-			free_shaders();
-			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
-		}
-	} while (result == IDRETRY);
+	compile_shaders(shader_flags, vs, ps);
 
 	context->VSSetShader(vs.shader.Get(), nullptr, 0);
 	context->PSSetShader(ps.shader.Get(), nullptr, 0);
@@ -2911,17 +2957,8 @@ bool Direct3DDevice8::update()
 
 void Direct3DDevice8::free_shaders()
 {
-	for (auto& it : vertex_shaders)
-	{
-		it.shader = nullptr;
-		it.blob = nullptr;
-	}
-
-	for (auto& it : pixel_shaders)
-	{
-		it.shader = nullptr;
-		it.blob = nullptr;
-	}
+	vertex_shaders.clear();
+	pixel_shaders.clear();
 }
 
 void Direct3DDevice8::oit_load_shaders()
