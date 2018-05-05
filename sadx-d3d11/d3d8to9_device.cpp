@@ -2075,7 +2075,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
 		GetRenderState(D3DRS_ZENABLE, &ZENABLE);
 
-		SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+		SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
 		SetRenderState(D3DRS_ZENABLE, TRUE);
 
 		context->Draw(count, StartVertex);

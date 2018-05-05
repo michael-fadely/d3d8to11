@@ -237,7 +237,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
-[earlydepthstencil]
+//[earlydepthstencil]
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
@@ -257,6 +257,23 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
+	if (srcBlend == BLEND_SRCALPHA && destBlend == BLEND_INVSRCALPHA)
+	{
+		if (result.a < 1.0 / 255.0)
+		{
+			//return float4(0.5, 0, 0, 1);
+			discard;
+		}
+
+		if (result.a > 254.0 / 255.0)
+		{
+			//return float4(0, 0, 0.5, 1);
+			return result;
+		}
+	}
+
+	//return float4(0, 0.5, 0, 1);
+
 	uint newIndex = FragListNodes.IncrementCounter();
 	if (newIndex == FRAGMENT_LIST_NULL)
 	{
