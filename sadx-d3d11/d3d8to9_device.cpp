@@ -311,6 +311,7 @@ void Direct3DDevice8::create_native()
 	desc.OutputWindow      = present_params.hDeviceWindow;
 	desc.SampleDesc.Count  = 1;
 	desc.Windowed          = present_params.Windowed;
+	desc.Flags             = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	auto feature_level = static_cast<D3D_FEATURE_LEVEL>(0);
 
@@ -325,14 +326,6 @@ void Direct3DDevice8::create_native()
 	                                           D3D11_SDK_VERSION, &desc, &swap_chain,
 	                                           &device, &feature_level, &context);
 
-	device->QueryInterface(__uuidof(ID3D11InfoQueue), &info_queue);
-
-	if (info_queue)
-	{
-		PrintDebug("D3D11 debug info queue enabled\n");
-		info_queue->SetMuteDebugOutput(FALSE);
-	}
-
 	if (feature_level < D3D_FEATURE_LEVEL_11_0)
 	{
 		std::string msg = "Device does not meet the minimum required feature level (D3D_FEATURE_LEVEL_11_0).";
@@ -345,6 +338,16 @@ void Direct3DDevice8::create_native()
 	{
 		throw std::runtime_error("Device creation failed with a known error that I'm too lazy to get the details of.");
 	}
+
+	device->QueryInterface(__uuidof(ID3D11InfoQueue), &info_queue);
+
+	if (info_queue)
+	{
+		PrintDebug("D3D11 debug info queue enabled\n");
+		info_queue->SetMuteDebugOutput(FALSE);
+	}
+
+	swap_chain->SetFullscreenState(!present_params.Windowed, nullptr);
 
 	D3D11_RASTERIZER_DESC raster {};
 
@@ -410,6 +413,7 @@ void Direct3DDevice8::create_native()
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
+#ifndef _DEBUG
 	PrintDebug("precompiling shaders...\n");
 	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
 	{
@@ -419,6 +423,7 @@ void Direct3DDevice8::create_native()
 		compile_shaders(i, vs, ps);
 	}
 	printf("done\n");
+#endif
 
 	oit_load_shaders();
 	oit_init();
@@ -707,15 +712,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 	}
 
 	// TODO: handle actual device lost state
-	// TODO: handle fullscreen toggle
+	// TODO: handle/fix fullscreen toggle
 
 	if (pPresentationParameters->BackBufferWidth != present_params.BackBufferWidth ||
-	    pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight)
+	    pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight ||
+		pPresentationParameters->Windowed != present_params.Windowed)
 	{
 		present_params = *pPresentationParameters;
 		render_target = nullptr;
 
-		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight, DXGI_FORMAT_UNKNOWN, 0);
+		swap_chain->ResizeBuffers(0, present_params.BackBufferWidth, present_params.BackBufferHeight, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
 		create_depth_stencil();
 		create_render_target();
