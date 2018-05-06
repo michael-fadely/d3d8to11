@@ -1687,7 +1687,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_ZWRITEENABLE:
-			if (ref.dirty())
+			// HACK: fixes opaque sprites which are being drawn directly to the backbuffer
+			// TODO: just patch the game code
+			/*if (ref.dirty())
 			{
 				ref.clear();
 
@@ -1699,7 +1701,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				{
 					context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
 				}
-			}
+			}*/
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:

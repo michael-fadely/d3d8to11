@@ -47,7 +47,7 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular | rs_alpha;
+	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
 	static constexpr uint32_t ps_mask = fvf_tex1 | rs_alpha | rs_fog;
 #endif
 

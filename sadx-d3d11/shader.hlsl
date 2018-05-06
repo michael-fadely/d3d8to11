@@ -151,9 +151,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.position = mul(projectionMatrix, result.position);
 #endif
 
-#ifdef RS_ALPHA
 	result.depth = result.position.zw;
-#endif
 
 #ifdef FVF_DIFFUSE
 	if (colorVertex == true)
@@ -257,11 +255,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
-	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) && (destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
+	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
+		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
 		if (result.a < 1.0 / 255.0)
 		{
-			//return float4(0.5, 0, 0, 1);
 			discard;
 		}
 
@@ -272,8 +270,6 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		//}
 	}
 
-	//return float4(0, 0.5, 0, 1);
-
 	uint newIndex = FragListNodes.IncrementCounter();
 	if (newIndex == FRAGMENT_LIST_NULL)
 	{
@@ -281,9 +277,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	}
 
 	uint oldIndex;
-	uint2 pos = uint2(input.position.xy);
-
-	InterlockedExchange(FragListHead[pos], newIndex, oldIndex);
+	InterlockedExchange(FragListHead[uint2(input.position.xy)], newIndex, oldIndex);
 
 	OitNode n;
 

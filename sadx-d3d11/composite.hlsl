@@ -53,8 +53,6 @@ float4 get_blend_factor(uint mode, float4 source, float4 destination)
 
 float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 destinationColor)
 {
-	float4 result;
-
 	float4 src = get_blend_factor(srcBlend, sourceColor, destinationColor);
 	float4 dst = get_blend_factor(dstBlend, sourceColor, destinationColor);
 	return (sourceColor * src) + (destinationColor * dst);
@@ -63,10 +61,8 @@ float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 des
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
 	float4 backBufferColor = BackBuffer[input.position.xy];
-	float opaqueDepth = DepthBuffer[input.position.xy].r;
 	
-	uint2 pos = uint2(input.position.xy);
-	uint head = FragListHead[pos];
+	uint head = FragListHead[input.position.xy];
 
 	if (head == FRAGMENT_LIST_NULL)
 	{
@@ -120,10 +116,11 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 #endif
 
 	float4 final = backBufferColor;
+	float opaqueDepth = DepthBuffer[input.position.xy].r;
 
 	for (int l = 0; l < count; l++)
 	{
-		if (fragments[l].depth >= opaqueDepth)
+		if (fragments[l].depth > opaqueDepth)
 		{
 			continue;
 		}
