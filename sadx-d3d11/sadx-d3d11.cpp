@@ -151,8 +151,17 @@ extern "C"
 			if (ControllerPointers[0]->PressedButtons & Buttons_C)
 			{
 				Direct3D_Device->oit_enabled = !Direct3D_Device->oit_enabled;
-				PrintDebug("OIT %s\n", Direct3D_Device->oit_enabled ? "ON" : "OFF");
 			}
 		}
+
+		auto color = DebugFontColor;
+		auto size = DebugFontSize;
+		DebugFontSize = 12.0f * std::min(HorizontalStretch, VerticalStretch);
+
+		SetDebugFontColor(Direct3D_Device->oit_enabled ? 0xFF00FF00 : 0xFFFF0000);
+		DisplayDebugStringFormatted(NJM_LOCATION(1,1), "OIT: %s", Direct3D_Device->oit_enabled ? "ON" : "OFF");
+
+		SetDebugFontColor(color.color);
+		DebugFontSize = size;
 	}
 }
