@@ -140,10 +140,19 @@ extern "C"
 
 	EXPORT void __cdecl OnFrame()
 	{
-		if (ControllerPointers[0] && ControllerPointers[0]->PressedButtons & Buttons_Z)
+		if (ControllerPointers[0])
 		{
-			Direct3D_Device->free_shaders();
-			Direct3D_Device->oit_load_shaders();
+			if (ControllerPointers[0]->PressedButtons & Buttons_Z)
+			{
+				Direct3D_Device->free_shaders();
+				Direct3D_Device->oit_load_shaders();
+			}
+
+			if (ControllerPointers[0]->PressedButtons & Buttons_C)
+			{
+				Direct3D_Device->oit_enabled = !Direct3D_Device->oit_enabled;
+				PrintDebug("OIT %s\n", Direct3D_Device->oit_enabled ? "ON" : "OFF");
+			}
 		}
 	}
 }

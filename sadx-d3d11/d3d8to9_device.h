@@ -223,6 +223,7 @@ public:
 	void update_sampler();
 	void compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
+	void update_blend();
 	bool update();
 	void free_shaders();
 	void update_wv_inv_t();
@@ -247,7 +248,10 @@ public:
 	ComPtr<ID3D11InfoQueue> info_queue;
 	ComPtr<ID3D11RasterizerState> raster_state;
 
+	bool oit_enabled = true;
+
 protected:
+	bool oit_enabled_ = true;
 	Direct3D8* const d3d;
 
 	VertexShader composite_vs;
@@ -268,6 +272,9 @@ protected:
 
 	dirty_t<uint32_t> sampler_flags;
 	std::unordered_map<SamplerFlags::T, ComPtr<ID3D11SamplerState>> sampler_states;
+
+	dirty_t<uint32_t> blend_flags;
+	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> blend_states;
 
 	Direct3DIndexBuffer8* index_buffer = nullptr;
 

@@ -254,7 +254,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result.rgb = (factor * result + (1.0 - factor) * fogColor).rgb;
 #endif
 
-#ifdef RS_ALPHA
+	// TODO: implement separate flag for OIT and move this back under RS_ALPHA
 	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
 		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
@@ -270,6 +270,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		//}
 	}
 
+#ifdef RS_ALPHA
 	uint newIndex = FragListNodes.IncrementCounter();
 	if (newIndex == FRAGMENT_LIST_NULL)
 	{

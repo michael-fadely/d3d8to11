@@ -19,6 +19,8 @@
 
 using namespace Microsoft::WRL;
 
+static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+
 static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 {
 	D3D_FEATURE_LEVEL_11_1,
@@ -457,6 +459,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	  d3d(d3d)
 {
 	sampler_flags = SamplerFlags::u_wrap | SamplerFlags::v_wrap | SamplerFlags::w_wrap;
+	blend_flags = BLEND_DEFAULT;
 
 	render_state_values[D3DRS_ZENABLE]          = TRUE;
 	render_state_values[D3DRS_ZWRITEENABLE]     = TRUE;
@@ -745,25 +748,38 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
-	// Switches to the composite to begin the sorting process.
-	context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
-	context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
+	if (oit_enabled_)
+	{
+		// Unbinds UAV read/write buffers and binds their read-only
+		// shader resource views.
+		oit_read();
+		// Switches to the composite to begin the sorting process.
+		context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
+		context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
 
-	// Unbinds UAV read/write buffers and binds their read-only
-	// shader resource views.
-	oit_read();
+		// Unbind the last vertex & index buffers (one of the cubes)...
+		context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+		context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Unbind the last vertex & index buffers (one of the cubes)...
-	context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// ...then draw 3 points. The composite shader uses SV_VertexID
+		// to generate a full screen triangle, so we don't need a buffer!
+		context->Draw(3, 0);
+	}
 
-	// ...then draw 3 points. The composite shader uses SV_VertexID
-	// to generate a full screen triangle, so we don't need a buffer!
-	context->Draw(3, 0);
+	if (!oit_enabled && oit_enabled_ != oit_enabled)
+	{
+		oit_enabled_ = oit_enabled;
+		oit_write();
+	}
 
-	// Restore R/W access to the UAV buffers from the shader.
-	oit_write();
+	oit_enabled_ = oit_enabled;
+
+	if (oit_enabled_)
+	{
+		// Restore R/W access to the UAV buffers from the shader.
+		oit_write();
+	}
 
 	try
 	{
@@ -1687,13 +1703,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_ZWRITEENABLE:
-			// HACK: fixes opaque sprites which are being drawn directly to the backbuffer
-			// TODO: just patch the game code
-			/*if (ref.dirty())
+			if (ref.dirty())
 			{
-				ref.clear();
-
-				if (Value)
+				// HACK: || oit_enabled_ forces zwrite on with OIT
+				// fixes opaque sprites which are being drawn directly to the backbuffer
+				// TODO: just patch the game code
+				if (Value || oit_enabled_)
 				{
 					context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
 				}
@@ -1701,7 +1716,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				{
 					context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
 				}
-			}*/
+
+				if (!oit_enabled_)
+				{
+					ref.clear();
+				}
+			}
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:
@@ -1710,6 +1730,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_COLORVERTEX:
 			per_model.colorVertex = !!Value;
+			break;
+
+		case D3DRS_SRCBLEND:
+			blend_flags = (blend_flags.data() & ~0x0F) | Value;
+			break;
+
+		case D3DRS_DESTBLEND:
+			blend_flags = (blend_flags.data() & ~0xF0) | (Value << 4);
+			break;
+
+		case D3DRS_ALPHABLENDENABLE:
+			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
+			break;
+
+		case D3DRS_BLENDOP:
+			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
 			break;
 	}
 
@@ -2088,6 +2124,7 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uin
 	return true;
 }
 
+// the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
 	if (!set_primitive_type(PrimitiveType))
@@ -2109,7 +2146,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
 
-	if (alpha.data() == TRUE)
+	if (alpha.data() == TRUE && oit_enabled_)
 	{
 		DWORD ZWRITEENABLE;
 		DWORD ZENABLE;
@@ -2117,6 +2154,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
 		GetRenderState(D3DRS_ZENABLE, &ZENABLE);
 
+		// force zwrite on to enable writing 100% opaque
+		// pixels to the real backbuffer and depth buffer.
 		SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
 		SetRenderState(D3DRS_ZENABLE, TRUE);
 
@@ -2956,7 +2995,8 @@ void Direct3DDevice8::update_shaders()
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
 
-	if (alpha.data() != 1)
+	// TODO: separate flag for OIT
+	if (!oit_enabled_ || alpha.data() != 1)
 	{
 		shader_flags &= ~ShaderFlags::rs_alpha;
 	}
@@ -2976,10 +3016,53 @@ void Direct3DDevice8::update_shaders()
 	context->PSSetShader(ps.shader.Get(), nullptr, 0);
 }
 
+void Direct3DDevice8::update_blend()
+{
+	if (!blend_flags.dirty())
+	{
+		return;
+	}
+
+	blend_flags.clear();
+
+	const auto it = blend_states.find(blend_flags.data());
+
+	if (it != blend_states.end())
+	{
+		context->OMSetBlendState(it->second.Get(), nullptr, 0xFFFFFFFF);
+		return;
+	}
+
+	D3D11_BLEND_DESC desc {};
+
+	auto flags = blend_flags.data();
+
+	desc.RenderTarget[0].BlendEnable           = flags >> 15 & 1;
+	desc.RenderTarget[0].SrcBlend              = static_cast<D3D11_BLEND>(flags & 0xF);
+	desc.RenderTarget[0].DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
+	desc.RenderTarget[0].BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	desc.RenderTarget[0].SrcBlendAlpha         = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlendAlpha        = D3D11_BLEND_ZERO;
+	desc.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
+
+	ComPtr<ID3D11BlendState> blend_state;
+	auto hr = device->CreateBlendState(&desc, &blend_state);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("CreateBlendState failed");
+	}
+
+	blend_states[flags] = blend_state;
+	context->OMSetBlendState(blend_state.Get(), nullptr, 0xFFFFFFFF);
+}
+
 bool Direct3DDevice8::update()
 {
 	update_shaders();
 	update_sampler();
+	update_blend();
 	commit_per_scene();
 	commit_per_model();
 	commit_per_pixel();
@@ -3054,7 +3137,7 @@ void Direct3DDevice8::oit_release()
 {
 	static ID3D11UnorderedAccessView* null[3] = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_view.GetAddressOf(), nullptr,
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
 	                                                   1, 3, &null[0], nullptr);
 
 	FragListHeadB    = nullptr;
@@ -3083,7 +3166,7 @@ void Direct3DDevice8::oit_write()
 	static const uint zero[2] = { 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, composite_view.GetAddressOf(), depth_view.Get(), 1, 2, &uavs[0], &zero[0]);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_enabled_ ? composite_view.GetAddressOf() : render_target.GetAddressOf(), depth_view.Get(), 1, 2, &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
