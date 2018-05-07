@@ -122,7 +122,7 @@
 extern "C"
 {
 	EXPORT ModInfo SADXModInfo = { ModLoaderVer, nullptr, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 };
-	EXPORT void __cdecl Init(const char *path, HelperFunctions& helpers)
+	EXPORT void __cdecl Init(const char* path, HelperFunctions& helpers)
 	{
 		globals::helper_functions = helpers;
 
