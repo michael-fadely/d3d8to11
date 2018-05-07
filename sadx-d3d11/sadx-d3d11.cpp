@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "globals.h"
 
 /*
 	 object:
@@ -121,8 +122,10 @@
 extern "C"
 {
 	EXPORT ModInfo SADXModInfo = { ModLoaderVer, nullptr, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 };
-	EXPORT void __cdecl Init(const char *path)
+	EXPORT void __cdecl Init(const char *path, HelperFunctions& helpers)
 	{
+		globals::helper_functions = helpers;
+
 		auto d3d9 = GetModuleHandle(L"d3d9.dll");
 		if (d3d9)
 		{

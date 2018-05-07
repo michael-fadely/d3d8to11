@@ -84,6 +84,12 @@
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">
     <ClCompile>
@@ -102,6 +108,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -120,6 +132,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h" />
@@ -136,6 +154,7 @@
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
+    <ClInclude Include="globals.h" />
     <ClInclude Include="int_multiple.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
@@ -161,6 +180,7 @@
     <ClCompile Include="d3d8to9_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to9_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
+    <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="PolyBuff11.cpp" />
@@ -179,6 +199,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="include.hlsli" />
+    <None Include="mod.ini" />
     <None Include="shader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">Compute</ShaderType>

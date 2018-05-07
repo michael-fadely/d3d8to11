@@ -96,6 +96,9 @@
     <ClInclude Include="defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="globals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -155,6 +158,9 @@
     <ClCompile Include="cbuffers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="include.hlsli">
@@ -165,6 +171,9 @@
     </None>
     <None Include="composite.hlsl">
       <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="mod.ini">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
 </Project>

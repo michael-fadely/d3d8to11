@@ -4,6 +4,7 @@
  */
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
+// TODO: load shader source into memory instead of from disk for every permutation
 
 #include "stdafx.h"
 
@@ -16,6 +17,7 @@
 #include "int_multiple.h"
 #include "CBufferWriter.h"
 #include "Material.h"
+#include "globals.h"
 
 using namespace Microsoft::WRL;
 
@@ -98,7 +100,9 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
-	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+
+	auto path = globals::get_system_path(L"shader.hlsl");
+	auto hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -136,7 +140,9 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
-	auto hr = D3DCompileFromFile(L"shader.hlsl", preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+
+	auto path = globals::get_system_path(L"shader.hlsl");
+	auto hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -3093,7 +3099,9 @@ void Direct3DDevice8::oit_load_shaders()
 			ComPtr<ID3DBlob> errors;
 			ComPtr<ID3DBlob> blob;
 
-			auto hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			auto path = globals::get_system_path(L"composite.hlsl");
+
+			auto hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -3108,7 +3116,7 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			hr = D3DCompileFromFile(L"composite.hlsl", &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{

@@ -285,7 +285,8 @@ protected:
 
 	dirty_t<DWORD> FVF;
 	ComPtr<ID3D11Texture2D> depth_texture;
-	ComPtr<ID3D11DepthStencilState> depth_state_rw, depth_state_ro;
+	ComPtr<ID3D11DepthStencilState> depth_state_rw;
+	ComPtr<ID3D11DepthStencilState> depth_state_ro;
 	ComPtr<ID3D11DepthStencilView> depth_view;
 	ComPtr<ID3D11ShaderResourceView> depth_srv;
 	ComPtr<ID3D11RenderTargetView> render_target;
@@ -294,7 +295,9 @@ protected:
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
 
-	ComPtr<ID3D11Buffer> per_scene_cbuf, per_model_cbuf, per_pixel_cbuf;
+	ComPtr<ID3D11Buffer> per_scene_cbuf;
+	ComPtr<ID3D11Buffer> per_model_cbuf;
+	ComPtr<ID3D11Buffer> per_pixel_cbuf;
 	PerSceneBuffer per_scene {};
 	PerModelBuffer per_model {};
 	PerPixelBuffer per_pixel {};
