@@ -760,6 +760,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	if (oit_enabled_)
 	{
+		auto blend_ = blend_flags.data();
+		blend_flags = BLEND_DEFAULT;
+		update_blend();
+
 		// Unbinds UAV read/write buffers and binds their read-only
 		// shader resource views.
 		oit_read();
@@ -775,6 +779,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		// ...then draw 3 points. The composite shader uses SV_VertexID
 		// to generate a full screen triangle, so we don't need a buffer!
 		context->Draw(3, 0);
+
+		blend_flags = blend_;
+		update_blend();
 	}
 
 	if (!oit_enabled && oit_enabled_ != oit_enabled)
@@ -1755,6 +1762,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_BLENDOP:
+			if (ref.dirty())
+			{
+				PrintDebug("RS_BLENDOP: %u\n", Value);
+			}
+
+			ref.clear();
+
 			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
 			break;
 	}
