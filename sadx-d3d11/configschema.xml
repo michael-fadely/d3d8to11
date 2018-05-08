@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ConfigSchema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.sonicretro.org">
+  <Groups>
+    <Group name="ppll" display="Order-Independent Transparency">
+      <Property name="maxFragCount" type="int" defaultvalue="32" display="Maximum fragment count">
+        <HelpText>The total number of allowed transparent fragments to be OIT-sorted per pixel. The Dreamcast uses 32.
+The higher the number, the more video memory is required. GPU horsepower is a must. At 1080p, 32 fragments per pixel requires an ADDITIONAL 1GB of video memory!</HelpText>
+      </Property>
+    </Group>
+  </Groups>
+</ConfigSchema>

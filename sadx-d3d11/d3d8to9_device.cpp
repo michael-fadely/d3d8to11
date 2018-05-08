@@ -3101,7 +3101,7 @@ void Direct3DDevice8::free_shaders()
 
 void Direct3DDevice8::oit_load_shaders()
 {
-	std::string fragments_str = std::to_string(MAX_FRAGMENTS);
+	std::string fragments_str = std::to_string(globals::max_fragments);
 
 	D3D_SHADER_MACRO preproc[] = {
 		{ "MAX_FRAGMENTS", fragments_str.c_str() },
@@ -3280,7 +3280,7 @@ void Direct3DDevice8::FragListNodes_Init()
 
 	descBuf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	descBuf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 	descBuf.StructureByteStride = sizeof(OitNode);
 
 	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &FragListNodesB)))
@@ -3292,7 +3292,7 @@ void Direct3DDevice8::FragListNodes_Init()
 
 	descRV.Format             = DXGI_FORMAT_UNKNOWN;
 	descRV.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
-	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 
 	if (FAILED(device->CreateShaderResourceView(FragListNodesB.Get(), &descRV, &FragListNodesSRV)))
 	{
@@ -3304,7 +3304,7 @@ void Direct3DDevice8::FragListNodes_Init()
 	descUAV.Format              = DXGI_FORMAT_UNKNOWN;
 	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
 	descUAV.Buffer.FirstElement = 0;
-	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * MAX_FRAGMENTS;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 	descUAV.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
 
 	if (FAILED(device->CreateUnorderedAccessView(FragListNodesB.Get(), &descUAV, &FragListNodesUAV)))

@@ -29,4 +29,6 @@ namespace globals
 		auto result = get_system_path(std::string(path.begin(), path.end()));
 		return std::wstring(result.begin(), result.end());
 	}
+
+	uint32_t max_fragments = 32;
 }

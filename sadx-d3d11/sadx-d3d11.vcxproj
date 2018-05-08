@@ -86,6 +86,7 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
@@ -110,6 +111,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
@@ -134,6 +136,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
@@ -214,6 +217,9 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <None Include="composite.hlsl">
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="configschema.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
