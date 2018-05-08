@@ -482,6 +482,10 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	render_state_values[D3DRS_COLORVERTEX]      = TRUE;
 	render_state_values[D3DRS_LOCALVIEWER]      = TRUE;
 	render_state_values[D3DRS_BLENDOP]          = D3DBLENDOP_ADD;
+
+	per_scene.mark();
+	per_model.mark();
+	per_pixel.mark();
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)
