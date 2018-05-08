@@ -60,9 +60,10 @@ float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 des
 
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
-	float4 backBufferColor = BackBuffer[input.position.xy];
-	
-	uint head = FragListHead[input.position.xy];
+	int2 pos = int2(input.position.xy);
+
+	float4 backBufferColor = BackBuffer[pos];
+	uint head = FragListHead[pos];
 
 	if (head == FRAGMENT_LIST_NULL)
 	{
@@ -71,13 +72,13 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	OitNode fragments[MAX_FRAGMENTS];
 
-	int count = 0;
+	uint count = 0;
 	uint index = head;
 
 	// Counts the number of stored fragments for this index
 	// until a null entry is found or we've reached the maximum
 	// allowed sortable fragments.
-	for (int i = 0; i < MAX_FRAGMENTS; i++)
+	for (uint i = 0; i < MAX_FRAGMENTS; i++)
 	{
 		fragments[count] = FragListNodes[index];
 
@@ -92,9 +93,9 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 #ifndef DISABLE_SORT
 	// Performs an insertion sort to sort the fragments by depth.
-	for (int k = 1; k < count; k++)
+	for (uint k = 1; k < count; k++)
 	{
-		int j = k;
+		uint j = k;
 		OitNode t = fragments[k];
 
 		while (fragments[j - 1].depth <= t.depth)
@@ -116,9 +117,9 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 #endif
 
 	float4 final = backBufferColor;
-	float opaqueDepth = DepthBuffer[input.position.xy].r;
+	float opaqueDepth = DepthBuffer[pos].r;
 
-	for (int l = 0; l < count; l++)
+	for (uint l = 0; l < count; l++)
 	{
 		if (fragments[l].depth > opaqueDepth)
 		{
