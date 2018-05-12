@@ -135,6 +135,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	float4 p = input.position;
 	float2 screen = screenDimensions - 0.5;
 
+	p.xy = round(p.xy);
 	p.x = ((p.x / screen.x) * 2) - 1;
 	p.y = -(((p.y / screen.y) * 2) - 1);
 
@@ -255,7 +256,6 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
-	// TODO: implement separate flag for OIT and move this back under RS_ALPHA
 	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
 		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
