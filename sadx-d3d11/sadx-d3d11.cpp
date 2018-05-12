@@ -36,7 +36,7 @@ extern "C"
 	{
 		if (ControllerPointers[0])
 		{
-			if (ControllerPointers[0]->PressedButtons & Buttons_Z)
+			if (ControllerPointers[0]->PressedButtons & Buttons_D)
 			{
 				Direct3D_Device->free_shaders();
 				Direct3D_Device->oit_load_shaders();
@@ -53,7 +53,7 @@ extern "C"
 		DebugFontSize = 12.0f * std::min(HorizontalStretch, VerticalStretch);
 
 		SetDebugFontColor(Direct3D_Device->oit_enabled ? 0xFF00FF00 : 0xFFFF0000);
-		DisplayDebugStringFormatted(NJM_LOCATION(1,1), "OIT: %s", Direct3D_Device->oit_enabled ? "ON" : "OFF");
+		DisplayDebugStringFormatted(NJM_LOCATION(1, 1), "OIT: %s", Direct3D_Device->oit_enabled ? "ON" : "OFF");
 
 		SetDebugFontColor(color.color);
 		DebugFontSize = size;
