@@ -259,36 +259,39 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
 		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
-		if (result.a < 1.0 / 255.0)
+		if (result.a < 1.0f / 255.0f)
 		{
 			discard;
 		}
 
-		//if (result.a > 254.0 / 255.0)
-		//{
-		//	//return float4(0, 0, 0.5, 1);
-		//	return result;
-		//}
+	#if !defined(FVF_RHW)
+		if (result.a > 254.0f / 255.0f)
+		{
+			return result;
+		}
+	#endif
 	}
 
-	uint newIndex = FragListNodes.IncrementCounter();
-	if (newIndex == FRAGMENT_LIST_NULL)
-	{
+	#ifdef OIT
+		uint newIndex = FragListNodes.IncrementCounter();
+		if (newIndex == FRAGMENT_LIST_NULL)
+		{
+			discard;
+		}
+
+		uint oldIndex;
+		InterlockedExchange(FragListHead[uint2(input.position.xy)], newIndex, oldIndex);
+
+		OitNode n;
+
+		n.depth = input.depth.x / input.depth.y;
+		n.color = float4_to_unorm(result);
+		n.flags = (srcBlend << 8) | destBlend;
+		n.next  = oldIndex;
+
+		FragListNodes[newIndex] = n;
 		discard;
-	}
-
-	uint oldIndex;
-	InterlockedExchange(FragListHead[uint2(input.position.xy)], newIndex, oldIndex);
-
-	OitNode n;
-
-	n.depth = input.depth.x / input.depth.y;
-	n.color = float4_to_unorm(result);
-	n.flags = (srcBlend << 8) | destBlend;
-	n.next  = oldIndex;
-
-	FragListNodes[newIndex] = n;
-	discard;
+	#endif
 #endif
 
 	return result;

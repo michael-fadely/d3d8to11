@@ -28,18 +28,19 @@ struct ShaderFlags
 	enum T : uint32_t
 	{
 		none,
-		fvf_rhw     = 0b000000001,
-		fvf_normal  = 0b000000010,
-		fvf_diffuse = 0b000000100,
-		fvf_tex1    = 0b000001000,
-		tci_envmap  = 0b000010000,
-		rs_lighting = 0b000100000,
-		rs_specular = 0b001000000,
-		rs_alpha    = 0b010000000,
-		rs_fog      = 0b100000000,
+		fvf_rhw     = 0b0000000001,
+		fvf_normal  = 0b0000000010,
+		fvf_diffuse = 0b0000000100,
+		fvf_tex1    = 0b0000001000,
+		tci_envmap  = 0b0000010000,
+		rs_lighting = 0b0000100000,
+		rs_specular = 0b0001000000,
+		rs_alpha    = 0b0010000000,
+		rs_fog      = 0b0100000000,
+		oit         = 0b1000000000,
 
-		fvf_mask = 0b000001111,
-		mask     = 0b111111111,
+		fvf_mask = 0b0000001111,
+		mask     = 0b1111111111,
 
 		count
 	};
@@ -48,7 +49,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
-	static constexpr uint32_t ps_mask = fvf_tex1 | rs_alpha | rs_fog;
+	static constexpr uint32_t ps_mask = fvf_rhw | fvf_tex1 | rs_alpha | rs_fog | oit;
 #endif
 
 	static uint32_t sanitize(uint32_t flags);

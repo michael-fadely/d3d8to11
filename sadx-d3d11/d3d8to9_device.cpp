@@ -73,6 +73,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		result.push_back({ "RS_ALPHA", "1" });
 	}
 
+	if (flags & ShaderFlags::oit)
+	{
+		result.push_back({ "OIT", "1" });
+	}
+
 	if (flags & ShaderFlags::rs_fog)
 	{
 		result.push_back({ "RS_FOG", "1" });
@@ -454,6 +459,11 @@ uint32_t ShaderFlags::sanitize(uint32_t flags)
 	if (flags & rs_specular && !(flags & rs_lighting))
 	{
 		flags &= ~rs_specular;
+	}
+
+	if (flags & oit && !(flags & rs_alpha))
+	{
+		flags &= ~oit;
 	}
 
 	return flags;
@@ -3019,8 +3029,7 @@ void Direct3DDevice8::update_shaders()
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
 
-	// TODO: separate flag for OIT
-	if (!oit_enabled_ || alpha.data() != 1)
+	if (alpha.data() != 1)
 	{
 		shader_flags &= ~ShaderFlags::rs_alpha;
 	}
@@ -3030,6 +3039,15 @@ void Direct3DDevice8::update_shaders()
 	}
 
 	alpha.clear();
+
+	if (oit_enabled_ && shader_flags & ShaderFlags::rs_alpha)
+	{
+		shader_flags |= ShaderFlags::oit;
+	}
+	else
+	{
+		shader_flags &= ~ShaderFlags::oit;
+	}
 
 	VertexShader vs;
 	PixelShader ps;
