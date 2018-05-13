@@ -739,12 +739,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 	if (pPresentationParameters->BackBufferWidth != present_params.BackBufferWidth ||
 	    pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight ||
-		pPresentationParameters->Windowed != present_params.Windowed)
+	    pPresentationParameters->Windowed != present_params.Windowed)
 	{
 		present_params = *pPresentationParameters;
 		render_target = nullptr;
 
-		swap_chain->ResizeBuffers(0, present_params.BackBufferWidth, present_params.BackBufferHeight, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+		swap_chain->ResizeBuffers(0, present_params.BackBufferWidth, present_params.BackBufferHeight,
+		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
 		create_depth_stencil();
 		create_render_target();
@@ -808,9 +809,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		oit_write();
 	}
 
+	auto interval = present_params.FullScreen_PresentationInterval;
+
+	if (interval == D3DPRESENT_INTERVAL_IMMEDIATE)
+	{
+		interval = 0;
+	}
+
 	try
 	{
-		if (FAILED(swap_chain->Present(1, 0)))
+		if (FAILED(swap_chain->Present(interval, 0)))
 		{
 			return D3DERR_INVALIDCALL;
 		}
