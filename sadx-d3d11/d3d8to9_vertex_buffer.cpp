@@ -54,9 +54,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::QueryInterface(REFIID riid, voi
 		return S_OK;
 	}
 
-	// TODO
-	throw;
-	//return ProxyInterface->QueryInterface(riid, ppvObj);
+	return E_NOINTERFACE;
 }
 
 ULONG STDMETHODCALLTYPE Direct3DVertexBuffer8::AddRef()

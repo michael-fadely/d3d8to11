@@ -581,9 +581,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** pp
 		return S_OK;
 	}
 
-	// TODO
-	throw;
-	//return ProxyInterface->QueryInterface(riid, ppvObj);
+	return E_NOINTERFACE;
 }
 
 ULONG STDMETHODCALLTYPE Direct3DDevice8::AddRef()

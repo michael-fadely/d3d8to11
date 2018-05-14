@@ -100,9 +100,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::QueryInterface(REFIID riid, void** ppvObj)
 		return S_OK;
 	}
 
-	//return ProxyInterface->QueryInterface(riid, ppvObj);
-	// TODO
-	throw;
+	return E_NOINTERFACE;
 }
 
 ULONG STDMETHODCALLTYPE Direct3D8::AddRef()
