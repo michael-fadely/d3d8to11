@@ -3458,9 +3458,11 @@ void Direct3DDevice8::FragListNodes_Init()
 
 void Direct3DDevice8::up_get(size_t target_size)
 {
+	auto rounded = round_pow2(target_size);
+
 	for (auto it = up_buffers.begin(); it != up_buffers.end(); ++it)
 	{
-		if ((*it)->desc8.Size >= target_size)
+		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
 		{
 			up_buffer = *it;
 			up_buffers.erase(it);
@@ -3468,5 +3470,6 @@ void Direct3DDevice8::up_get(size_t target_size)
 		}
 	}
 
-	CreateVertexBuffer(int_multiple(target_size, 16), D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
+	PrintDebug(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
+	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
 }

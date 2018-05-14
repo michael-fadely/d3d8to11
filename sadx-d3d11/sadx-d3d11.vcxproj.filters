@@ -66,9 +66,6 @@
     <ClInclude Include="dirty_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PolyBuff11.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h">
       <Filter>external</Filter>
     </ClInclude>

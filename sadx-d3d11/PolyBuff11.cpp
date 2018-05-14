@@ -2,7 +2,6 @@
 #include <deque>
 #include <stack>
 #include <Trampoline.h>
-#include "PolyBuff11.h"
 #include "int_multiple.h"
 
 #pragma pack(push, 1)
@@ -66,9 +65,11 @@ struct PolyBuffEx
 
 	Direct3DVertexBuffer8* get(uint32_t target_size)
 	{
+		auto rounded = round_pow2(target_size);
+
 		for (auto it = free_buffers.begin(); it != free_buffers.end(); ++it)
 		{
-			if ((*it)->desc8.Size >= target_size)
+			if ((*it)->desc8.Size >= target_size && (*it)->desc8.Size < 2 * rounded)
 			{
 				auto result = *it;
 				free_buffers.erase(it);
@@ -77,10 +78,11 @@ struct PolyBuffEx
 			}
 		}
 
-		PrintDebug("%s is allocating bytes (%u + 1): %u\n", parent->name, free_buffers.size() + used_buffers.size(), target_size);
+		PrintDebug("%s is allocating (%u + 1): %u rounded to %u bytes\n",
+		           parent->name, free_buffers.size() + used_buffers.size(), target_size, rounded);
 
 		Direct3DVertexBuffer8* result;
-		auto hr = Direct3D_Device->CreateVertexBuffer(int_multiple(target_size, 16), D3DUSAGE_DYNAMIC, parent->FVF, D3DPOOL_MANAGED, &result);
+		auto hr = Direct3D_Device->CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, parent->FVF, D3DPOOL_MANAGED, &result);
 
 		if (FAILED(hr))
 		{

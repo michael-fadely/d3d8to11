@@ -62,7 +62,6 @@
 #include "int_multiple.h"
 #include "Light.h"
 #include "Material.h"
-#include "PolyBuff11.h"
 #include "Shader.h"
 #include "simple_math.h"
 #include "SimpleMath.h"
