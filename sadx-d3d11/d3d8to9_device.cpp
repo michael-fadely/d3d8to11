@@ -3056,7 +3056,7 @@ void Direct3DDevice8::update_sampler()
 
 		D3D11_SAMPLER_DESC sampler_desc {};
 
-		sampler_desc.Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler_desc.Filter         = to_d3d11(setting.filter_min, setting.filter_mag, setting.filter_mip);;
 		sampler_desc.AddressU       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_u.data());
 		sampler_desc.AddressV       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_v.data());
 		sampler_desc.AddressW       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_w.data());
