@@ -5,8 +5,6 @@
 #include "PolyBuff11.h"
 #include "int_multiple.h"
 
-uint8_t dummy_buffer[65536] {};
-
 #pragma pack(push, 1)
 struct PolyBuff_RenderArgs
 {
