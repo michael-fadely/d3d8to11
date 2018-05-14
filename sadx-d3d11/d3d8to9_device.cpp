@@ -107,7 +107,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 	ComPtr<ID3D11VertexShader> shader;
 
 	auto path = globals::get_system_path(L"shader.hlsl");
-	auto hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -147,7 +147,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 	ComPtr<ID3D11PixelShader> shader;
 
 	auto path = globals::get_system_path(L"shader.hlsl");
-	auto hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -243,7 +243,7 @@ void Direct3DDevice8::create_depth_stencil()
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;
 
-	auto hr = device->CreateShaderResourceView(depth_texture.Get(), &srv_desc, &depth_srv);
+	HRESULT hr = device->CreateShaderResourceView(depth_texture.Get(), &srv_desc, &depth_srv);
 
 	if (FAILED(hr))
 	{
@@ -267,7 +267,7 @@ void Direct3DDevice8::create_render_target()
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
 	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	auto hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_texture);
+	HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_texture);
 
 	if (FAILED(hr))
 	{
@@ -394,7 +394,7 @@ void Direct3DDevice8::create_native()
 	cbuf_desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
 	cbuf_desc.StructureByteStride = cbuffer_size;
 
-	auto hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_scene_cbuf);
+	HRESULT hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_scene_cbuf);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-scene CreateBuffer failed");
@@ -469,12 +469,78 @@ uint32_t ShaderFlags::sanitize(uint32_t flags)
 	return flags;
 }
 
+SamplerSettings::SamplerSettings()
+{
+	address_u      = D3DTADDRESS_WRAP;
+	address_v      = D3DTADDRESS_WRAP;
+	address_w      = D3DTADDRESS_WRAP;
+	filter_mag     = D3DTEXF_POINT;
+	filter_min     = D3DTEXF_POINT;
+	filter_mip     = D3DTEXF_NONE;
+	mip_lod_bias   = 0.0f;
+	max_mip_level  = 0;
+	max_anisotropy = 1;
+}
+
+bool SamplerSettings::operator==(const SamplerSettings& s) const
+{
+	return
+		address_u.data()      == s.address_u.data() &&
+		address_v.data()      == s.address_v.data() &&
+		address_w.data()      == s.address_w.data() &&
+		filter_mag.data()     == s.filter_mag.data() &&
+		filter_min.data()     == s.filter_min.data() &&
+		filter_mip.data()     == s.filter_mip.data() &&
+		mip_lod_bias.data()   == s.mip_lod_bias.data() &&
+		max_mip_level.data()  == s.max_mip_level.data() &&
+		max_anisotropy.data() == s.max_anisotropy.data();
+}
+
+bool SamplerSettings::dirty() const
+{
+	return
+		address_u.dirty() ||
+		address_v.dirty() ||
+		address_w.dirty() ||
+		filter_mag.dirty() ||
+		filter_min.dirty() ||
+		filter_mip.dirty() ||
+		mip_lod_bias.dirty() ||
+		max_mip_level.dirty() ||
+		max_anisotropy.dirty();
+}
+
+void SamplerSettings::clear()
+{
+	address_u.clear();
+	address_v.clear();
+	address_w.clear();
+	filter_mag.clear();
+	filter_min.clear();
+	filter_mip.clear();
+	mip_lod_bias.clear();
+	max_mip_level.clear();
+	max_anisotropy.clear();
+}
+
+void SamplerSettings::mark()
+{
+	address_u.mark();
+	address_v.mark();
+	address_w.mark();
+	filter_mag.mark();
+	filter_min.mark();
+	filter_mip.mark();
+	mip_lod_bias.mark();
+	max_mip_level.mark();
+	max_anisotropy.mark();
+}
+
 // IDirect3DDevice8
 Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters)
 	: present_params(parameters),
 	  d3d(d3d)
 {
-	sampler_flags = SamplerFlags::u_wrap | SamplerFlags::v_wrap | SamplerFlags::w_wrap;
 	blend_flags = BLEND_DEFAULT;
 
 	render_state_values[D3DRS_ZENABLE]          = TRUE;
@@ -2011,32 +2077,78 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pValue = texture_state_values[Stage][Type];
+	switch (Type)
+	{
+		case D3DTSS_ADDRESSU:
+			*pValue = sampler_setting_values[Stage].address_u.data();
+			break;
+		case D3DTSS_ADDRESSV:
+			*pValue = sampler_setting_values[Stage].address_v.data();
+			break;
+		case D3DTSS_MAGFILTER:
+			*pValue = sampler_setting_values[Stage].filter_mag.data();
+			break;
+		case D3DTSS_MINFILTER:
+			*pValue = sampler_setting_values[Stage].filter_min.data();
+			break;
+		case D3DTSS_MIPFILTER:
+			*pValue = sampler_setting_values[Stage].filter_mip.data();
+			break;
+		case D3DTSS_MIPMAPLODBIAS:
+			*reinterpret_cast<float*>(pValue) = sampler_setting_values[Stage].mip_lod_bias.data();
+			break;
+		case D3DTSS_MAXMIPLEVEL:
+			*pValue = sampler_setting_values[Stage].max_mip_level.data();
+			break;
+		case D3DTSS_MAXANISOTROPY:
+			*pValue = sampler_setting_values[Stage].max_anisotropy.data();
+			break;
+		case D3DTSS_ADDRESSW:
+			*pValue = sampler_setting_values[Stage].address_u.data();
+			break;
+		default:
+			*pValue = texture_state_values[Stage][Type];
+			break;
+	}
+
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3DTEXTURESTAGESTATETYPE Type, DWORD Value)
 {
-	texture_state_values[Stage][Type] = Value;
-
 	switch (Type)
 	{
 		case D3DTSS_ADDRESSU:
-			sampler_flags = (sampler_flags.data() & ~SamplerFlags::u_mask) | Value;
+			sampler_setting_values[Stage].address_u = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
-
 		case D3DTSS_ADDRESSV:
-			sampler_flags = (sampler_flags.data() & ~SamplerFlags::v_mask) | (Value << 3);
+			sampler_setting_values[Stage].address_v = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
-
+		case D3DTSS_MAGFILTER:
+			sampler_setting_values[Stage].filter_mag = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			break;
+		case D3DTSS_MINFILTER:
+			sampler_setting_values[Stage].filter_min = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			break;
+		case D3DTSS_MIPFILTER:
+			sampler_setting_values[Stage].filter_mip = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			break;
+		case D3DTSS_MIPMAPLODBIAS:
+			sampler_setting_values[Stage].mip_lod_bias = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_MAXMIPLEVEL:
+			sampler_setting_values[Stage].max_mip_level = Value;
+			break;
+		case D3DTSS_MAXANISOTROPY:
+			sampler_setting_values[Stage].max_anisotropy = Value;
+			break;
 		case D3DTSS_ADDRESSW:
-			sampler_flags = (sampler_flags.data() & ~SamplerFlags::w_mask) | (Value << 6);
+			sampler_setting_values[Stage].address_w = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
-
 		default:
+			texture_state_values[Stage][Type] = Value;
 			break;
 	}
-
 	return D3D_OK;
 }
 
@@ -2836,7 +2948,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	ComPtr<ID3D11InputLayout> layout;
 
-	auto hr = device->CreateInputLayout(elements.data(), elements.size(), vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
+	HRESULT hr = device->CreateInputLayout(elements.data(), elements.size(), vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
 
 	if (FAILED(hr))
 	{
@@ -2923,44 +3035,47 @@ void Direct3DDevice8::commit_per_scene()
 
 void Direct3DDevice8::update_sampler()
 {
-	if (!sampler_flags.dirty())
+	for (auto& setting_it : sampler_setting_values)
 	{
-		return;
+		auto& setting = setting_it.second;
+
+		if (!setting.dirty())
+		{
+			continue;
+		}
+
+		setting.clear();
+
+		const auto it = sampler_states.find(setting);
+
+		if (it != sampler_states.end())
+		{
+			context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
+			return;
+		}
+
+		D3D11_SAMPLER_DESC sampler_desc {};
+
+		sampler_desc.Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler_desc.AddressU       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_u.data());
+		sampler_desc.AddressV       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_v.data());
+		sampler_desc.AddressW       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_w.data());
+		sampler_desc.MinLOD         = -std::numeric_limits<float>::max();
+		sampler_desc.MaxLOD         = std::numeric_limits<float>::max();
+		sampler_desc.MaxAnisotropy  = setting.max_anisotropy;
+		sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+
+		ComPtr<ID3D11SamplerState> sampler_state;
+		HRESULT hr = device->CreateSamplerState(&sampler_desc, &sampler_state);
+
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("CreateSamplerState failed");
+		}
+
+		context->PSSetSamplers(setting_it.first, 1, sampler_state.GetAddressOf());
+		sampler_states[setting] = sampler_state;
 	}
-
-	sampler_flags.clear();
-
-	const auto it = sampler_states.find(static_cast<SamplerFlags::T>(sampler_flags.data()));
-
-	if (it != sampler_states.end())
-	{
-		context->PSSetSamplers(0, 1, it->second.GetAddressOf());
-		return;
-	}
-
-	D3D11_SAMPLER_DESC sampler_desc {};
-
-	auto flags = sampler_flags.data();
-
-	sampler_desc.Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sampler_desc.AddressU       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(flags & 7u);
-	sampler_desc.AddressV       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(flags >> 3u & 7u);
-	sampler_desc.AddressW       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(flags >> 6u & 7u);
-	sampler_desc.MinLOD         = -std::numeric_limits<float>::max();
-	sampler_desc.MaxLOD         = std::numeric_limits<float>::max();
-	sampler_desc.MaxAnisotropy  = 1;
-	sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-
-	ComPtr<ID3D11SamplerState> sampler_state;
-	auto hr = device->CreateSamplerState(&sampler_desc, &sampler_state);
-
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("CreateSamplerState failed");
-	}
-
-	context->PSSetSamplers(0, 1, sampler_state.GetAddressOf());
-	sampler_states[static_cast<SamplerFlags::T>(flags)] = sampler_state;
 }
 
 void Direct3DDevice8::compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps)
@@ -2998,7 +3113,9 @@ void Direct3DDevice8::update_shaders()
 
 	fog_enable.clear();
 
-	auto& tci = texture_state_values[0][D3DTSS_TEXCOORDINDEX];
+	auto& sampler_0 = texture_state_values[0];
+
+	auto& tci = sampler_0[D3DTSS_TEXCOORDINDEX];
 
 	if (tci.data() != 0 && shader_flags & ShaderFlags::fvf_tex1)
 	{
@@ -3097,7 +3214,7 @@ void Direct3DDevice8::update_blend()
 	desc.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
 
 	ComPtr<ID3D11BlendState> blend_state;
-	auto hr = device->CreateBlendState(&desc, &blend_state);
+	HRESULT hr = device->CreateBlendState(&desc, &blend_state);
 
 	if (FAILED(hr))
 	{
@@ -3145,7 +3262,7 @@ void Direct3DDevice8::oit_load_shaders()
 
 			auto path = globals::get_system_path(L"composite.hlsl");
 
-			auto hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			HRESULT hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{

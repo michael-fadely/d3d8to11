@@ -158,6 +158,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
     <ClInclude Include="globals.h" />
+    <ClInclude Include="hash_combine.h" />
     <ClInclude Include="int_multiple.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />

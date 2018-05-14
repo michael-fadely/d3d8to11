@@ -10,6 +10,7 @@
 #include "simple_math.h"
 #include "Shader.h"
 #include "cbuffers.h"
+#include "hash_combine.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -55,33 +56,44 @@ struct ShaderFlags
 	static uint32_t sanitize(uint32_t flags);
 };
 
-// TODO: align to 4 bits just 'cause
-struct SamplerFlags
+struct SamplerSettings : dirty_impl
 {
-	enum T
-	{
-		none,
-		u_wrap,
-		u_mirror,
-		u_clamp,
-		u_border,
-		u_mirror_once,
-		v_wrap        = u_wrap << 3,
-		v_mirror      = u_mirror << 3,
-		v_clamp       = u_clamp << 3,
-		v_border      = u_border << 3,
-		v_mirror_once = u_mirror_once << 3,
-		w_wrap        = v_wrap << 3,
-		w_mirror      = v_mirror << 3,
-		w_clamp       = v_clamp << 3,
-		w_border      = v_border << 3,
-		w_mirror_once = v_mirror_once << 3
-	};
+	dirty_t<D3DTEXTUREADDRESS> address_u, address_v, address_w;
+	dirty_t<D3DTEXTUREFILTERTYPE> filter_mag, filter_min, filter_mip;
+	dirty_t<float> mip_lod_bias;
+	dirty_t<uint32_t> max_mip_level, max_anisotropy;
 
-	static constexpr auto u_mask = 0b000000111;
-	static constexpr auto v_mask = 0b000111000;
-	static constexpr auto w_mask = 0b111000000;
+	SamplerSettings();
+
+	bool operator==(const SamplerSettings& s) const;
+
+	bool dirty() const override;
+	void clear() override;
+	void mark() override;
 };
+
+namespace std
+{
+	template <>
+	struct hash<SamplerSettings>
+	{
+		std::size_t operator()(const SamplerSettings& s) const
+		{
+			size_t h = std::hash<size_t>()(s.address_u.data());
+
+			hash_combine(h, (size_t)s.address_v.data());
+			hash_combine(h, (size_t)s.address_w.data());
+			hash_combine(h, (size_t)s.filter_mag.data());
+			hash_combine(h, (size_t)s.filter_min.data());
+			hash_combine(h, (size_t)s.filter_mip.data());
+			hash_combine(h, s.mip_lod_bias.data());
+			hash_combine(h, (size_t)s.max_mip_level.data());
+			hash_combine(h, (size_t)s.max_anisotropy.data());
+
+			return h;
+		}
+	};
+}
 
 struct StreamPair
 {
@@ -267,12 +279,12 @@ protected:
 
 	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
 	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
+	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
 	std::array<dirty_t<DWORD>, 174> render_state_values;
 	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
 	std::unordered_map<DWORD, StreamPair> stream_sources;
 
-	dirty_t<uint32_t> sampler_flags;
-	std::unordered_map<SamplerFlags::T, ComPtr<ID3D11SamplerState>> sampler_states;
+	std::unordered_map<SamplerSettings, ComPtr<ID3D11SamplerState>> sampler_states;
 
 	dirty_t<uint32_t> blend_flags;
 	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> blend_states;
