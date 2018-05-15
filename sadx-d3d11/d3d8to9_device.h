@@ -113,6 +113,8 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
 class Direct3DDevice8 : public Unknown
 {
+	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
+
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;
 	Direct3DDevice8& operator=(const Direct3DDevice8&) = delete;
@@ -222,6 +224,7 @@ public:
 	void print_info_queue() const;
 
 	static std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
+	const std::vector<uint8_t>& get_shader_source(const std::string& path);
 	VertexShader get_vs(uint32_t flags);
 	PixelShader get_ps(uint32_t flags);
 	void create_depth_stencil();

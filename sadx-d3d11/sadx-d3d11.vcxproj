@@ -164,6 +164,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClInclude Include="Material.h" />
     <ClInclude Include="safe_release.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="ShaderIncluder.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="typedefs.h" />
@@ -188,6 +189,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="PolyBuff11.cpp" />
     <ClCompile Include="sadx-d3d11.cpp" />
+    <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">Create</PrecompiledHeader>

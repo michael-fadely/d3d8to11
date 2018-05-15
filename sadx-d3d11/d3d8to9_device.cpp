@@ -4,13 +4,13 @@
  */
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
-// TODO: load shader source into memory instead of from disk for every permutation
 
 #include "stdafx.h"
 
 #include <d3d11_1.h>
 #include <DirectXMath.h>
 #include <cassert>
+#include <fstream>
 
 #include "d3d8to9.hpp"
 #include "SimpleMath.h"
@@ -18,6 +18,7 @@
 #include "CBufferWriter.h"
 #include "Material.h"
 #include "globals.h"
+#include "ShaderIncluder.h"
 
 using namespace Microsoft::WRL;
 
@@ -87,6 +88,26 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 	return result;
 }
 
+const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string& path)
+{
+	const auto it = shader_sources.find(path);
+
+	if (it == shader_sources.end())
+	{
+		std::ifstream file(path, std::ios::binary | std::ios::ate);
+		auto size = static_cast<size_t>(file.tellg());
+		file.seekg(0, std::ios::beg);
+		std::vector<uint8_t> buffer(size);
+		file.read(reinterpret_cast<char*>(buffer.data()), size);
+		file.close();
+
+		shader_sources[path] = std::move(buffer);
+		return shader_sources[path];
+	}
+
+	return it->second;
+}
+
 VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
@@ -106,8 +127,12 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
 
-	auto path = globals::get_system_path(L"shader.hlsl");
-	HRESULT hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+	ShaderIncluder includer(this);
+
+	auto path = globals::get_system_path("shader.hlsl");
+	const auto& src = get_shader_source(path);
+
+	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -146,8 +171,12 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
 
-	auto path = globals::get_system_path(L"shader.hlsl");
-	HRESULT hr = D3DCompileFromFile(path.c_str(), preproc.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+	ShaderIncluder includer(this);
+
+	auto path = globals::get_system_path("shader.hlsl");
+	const auto& src = get_shader_source(path);
+
+	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -3236,6 +3265,7 @@ bool Direct3DDevice8::update()
 
 void Direct3DDevice8::free_shaders()
 {
+	shader_sources.clear();
 	vertex_shaders.clear();
 	pixel_shaders.clear();
 }
