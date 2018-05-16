@@ -74,21 +74,28 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	uint count = 0;
 	uint index = head;
+	float opaqueDepth = DepthBuffer[pos].r;
 
 	// Counts the number of stored fragments for this index
 	// until a null entry is found or we've reached the maximum
 	// allowed sortable fragments.
-	for (uint i = 0; i < MAX_FRAGMENTS; i++)
+	while (count < MAX_FRAGMENTS && index != FRAGMENT_LIST_NULL)
 	{
 		fragments[count] = FragListNodes[index];
-
-		++count;
 		index = FragListNodes[index].next;
 
-		if (index == FRAGMENT_LIST_NULL)
+		// exclude occluded fragment from array to be sorted
+		if (fragments[count].depth > opaqueDepth)
 		{
-			break;
+			continue;
 		}
+
+		++count;
+	}
+
+	if (count == 0)
+	{
+		return backBufferColor;
 	}
 
 #ifndef DISABLE_SORT
@@ -117,15 +124,9 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 #endif
 
 	float4 final = backBufferColor;
-	float opaqueDepth = DepthBuffer[pos].r;
 
 	for (uint l = 0; l < count; l++)
 	{
-		if (fragments[l].depth > opaqueDepth)
-		{
-			continue;
-		}
-
 		uint blend = fragments[l].flags;
 
 		uint srcBlend = blend >> 8;
