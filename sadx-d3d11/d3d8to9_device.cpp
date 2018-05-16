@@ -2308,6 +2308,22 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uin
 // the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
+	if (PrimitiveType == D3DPT_TRIANGLEFAN)
+	{
+		auto stream = stream_sources[0]; // HACK
+		auto& buffer = stream.buffer;
+
+		auto point_count = PrimitiveCount + 2;
+		auto stride = buffer->desc8.Size / point_count;
+		auto offset = StartVertex * stride;
+
+		BYTE* data;
+		buffer->Lock(offset, buffer->desc8.Size - offset, &data, D3DLOCK_DISCARD);
+		auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
+		buffer->Unlock();
+		return result;
+	}
+
 	if (!set_primitive_type(PrimitiveType))
 	{
 		return D3DERR_INVALIDCALL;
@@ -2365,11 +2381,61 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 #endif
 }
 
+static std::vector<uint8_t> trifan_garbage; // HACK
+
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
 	if (!update() || !pVertexStreamZeroData)
 	{
 		return D3DERR_INVALIDCALL;
+	}
+
+	if (PrimitiveType == D3DPT_TRIANGLEFAN)
+	{
+		const auto data = reinterpret_cast<const uint8_t*>(pVertexStreamZeroData);
+		const auto stride = VertexStreamZeroStride;
+
+		trifan_garbage.resize(3 * stride * PrimitiveCount);
+
+		size_t x = 0;
+		size_t y = 0;
+
+		bool flip = false;
+
+		do
+		{
+			const auto v0 = &data[0];
+			const auto v1 = &data[y * stride];
+			const auto v2 = &data[(y + 1) * stride];
+
+			if (!flip)
+			{
+				memcpy(&trifan_garbage.data()[x], v2, stride);
+				x += stride;
+
+				memcpy(&trifan_garbage.data()[x], v1, stride);
+				x += stride;
+
+				memcpy(&trifan_garbage.data()[x], v0 , stride);
+				x += stride;
+			}
+			else
+			{
+				memcpy(&trifan_garbage.data()[x], v2, stride);
+				x += stride;
+
+				memcpy(&trifan_garbage.data()[x], v0, stride);
+				x += stride;
+
+				memcpy(&trifan_garbage.data()[x], v1, stride);
+				x += stride;
+			}
+
+			flip = !flip;
+			++y;
+		} while (x < trifan_garbage.size());
+
+		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, 3 * PrimitiveCount, trifan_garbage.data(), stride);
 	}
 
 	if (!set_primitive_type(PrimitiveType))
