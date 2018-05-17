@@ -13,4 +13,5 @@ namespace globals
 	std::wstring get_system_path(const std::wstring& path);
 
 	extern uint32_t max_fragments;
+	extern bool allow_d32;
 }

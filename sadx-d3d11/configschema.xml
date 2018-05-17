@@ -3,8 +3,12 @@
   <Groups>
     <Group name="ppll" display="Order-Independent Transparency">
       <Property name="maxFragCount" type="int" defaultvalue="32" display="Maximum fragment count">
-        <HelpText>The total number of allowed transparent fragments to be OIT-sorted per pixel. The Dreamcast uses 32.
-The higher the number, the more video memory is required. GPU horsepower is a must. At 1080p, 32 fragments per pixel requires an ADDITIONAL 1GB of video memory!</HelpText>
+        <HelpText>The total number of allowed transparent fragments to be OIT-sorted per pixel. The Dreamcast uses 32. The higher the number, the more video memory is required. GPU horsepower is a must. At 1080p, 32 fragments per pixel requires an ADDITIONAL 1GB of video memory!</HelpText>
+      </Property>
+    </Group>
+    <Group name="misc" display="Misc.">
+      <Property name="allowDepth32" type="bool" defaultvalue="false" display="Allow 32-bit Depth Buffer">
+        <HelpText>Allows for a higher precision depth buffer at the potential cost of performance.</HelpText>
       </Property>
     </Group>
   </Groups>

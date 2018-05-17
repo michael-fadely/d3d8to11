@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "globals.h"
+#include <IniFile.hpp>
 
 extern "C"
 {
@@ -22,11 +23,21 @@ extern "C"
 
 		std::string inipath(path);
 		inipath.append("\\config.ini");
-		globals::max_fragments = GetPrivateProfileIntA("ppll", "maxFragCount", MAX_FRAGMENTS_DEFAULT, inipath.c_str());
+
+		IniFile ini(inipath);
+
+		globals::max_fragments = ini.getInt("ppll", "maxFragmentCount", MAX_FRAGMENTS_DEFAULT);
 
 		if (globals::max_fragments != MAX_FRAGMENTS_DEFAULT)
 		{
 			PrintDebug("Maximum fragments: %u\n", globals::max_fragments);
+		}
+
+		globals::allow_d32 = ini.getBool("misc", "allowDepth32", false);
+
+		if (globals::allow_d32)
+		{
+			PrintDebug("Allowing 32-bit depth buffer.\n");
 		}
 
 		WriteJump(reinterpret_cast<void*>(0x007C235E), Direct3DCreate8);

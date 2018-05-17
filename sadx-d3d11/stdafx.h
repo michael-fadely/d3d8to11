@@ -42,6 +42,7 @@
 #include <SADXModLoader.h>
 #include <MemAccess.h>
 #include <Trampoline.h>
+#include <IniFile.hpp>
 
 // Local
 #include "cbuffers.h"

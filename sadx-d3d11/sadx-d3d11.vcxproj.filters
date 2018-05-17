@@ -22,6 +22,12 @@
     <Filter Include="Source Files\shaders">
       <UniqueIdentifier>{b4aa43bf-d368-4bbe-ae56-d00ef9cea08e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="external\libmodutils">
+      <UniqueIdentifier>{459639e4-a1b9-4747-b2ab-af7366592e91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mod-loader-common">
+      <UniqueIdentifier>{768f3e88-7c8a-4030-acbe-6955c071f3c6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -66,9 +72,6 @@
     <ClInclude Include="dirty_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h">
-      <Filter>external</Filter>
-    </ClInclude>
     <ClInclude Include="int_multiple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -101,6 +104,15 @@
     </ClInclude>
     <ClInclude Include="ShaderIncluder.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h">
+      <Filter>external\libmodutils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.hpp">
+      <Filter>external\mod-loader-common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.hpp">
+      <Filter>external\mod-loader-common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -146,9 +158,6 @@
     <ClCompile Include="PolyBuff11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp">
-      <Filter>external</Filter>
-    </ClCompile>
     <ClCompile Include="CBufferWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -166,6 +175,15 @@
     </ClCompile>
     <ClCompile Include="ShaderIncluder.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp">
+      <Filter>external\libmodutils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.cpp">
+      <Filter>external\mod-loader-common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.cpp">
+      <Filter>external\mod-loader-common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
