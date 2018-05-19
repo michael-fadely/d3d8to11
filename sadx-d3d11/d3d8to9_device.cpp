@@ -1836,25 +1836,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_ZWRITEENABLE:
-			if (ref.dirty())
+			if (!ref.dirty())
 			{
-				// HACK: || oit_enabled_ forces zwrite on with OIT
-				// fixes opaque sprites which are being drawn directly to the backbuffer
-				// TODO: just patch the game code
-				if (Value || oit_enabled_)
-				{
-					context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
-				}
-				else
-				{
-					context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
-				}
-
-				if (!oit_enabled_)
-				{
-					ref.clear();
-				}
+				break;
 			}
+
+			if (Value)
+			{
+				context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
+			}
+			else
+			{
+				context->OMSetDepthStencilState(depth_state_ro.Get(), 0);
+			}
+
+			ref.clear();
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:
@@ -2359,7 +2355,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		// force zwrite on to enable writing 100% opaque
 		// pixels to the real backbuffer and depth buffer.
 		SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-		SetRenderState(D3DRS_ZENABLE, TRUE);
+		SetRenderState(D3DRS_ZENABLE, TRUE); // this does nothing right now, but good practice!
 
 		context->Draw(count, StartVertex);
 
@@ -2402,45 +2398,29 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 		trifan_garbage.resize(3 * stride * PrimitiveCount);
 
-		size_t x = 0;
-		size_t y = 0;
+		auto buffer = trifan_garbage.data();
 
-		bool flip = false;
+		const auto v0 = &data[0];
+		auto vx = &data[stride];
 
-		do
+		for (size_t i = 0; i < PrimitiveCount; i++)
 		{
-			const auto v0 = &data[0];
-			const auto v1 = &data[y * stride];
-			const auto v2 = &data[(y + 1) * stride];
 
-			if (!flip)
-			{
-				memcpy(&trifan_garbage.data()[x], v2, stride);
-				x += stride;
+			// 0
+			memcpy(buffer, v0, stride);
+			buffer += stride;
 
-				memcpy(&trifan_garbage.data()[x], v1, stride);
-				x += stride;
+			// last (or second from 0) vertex
+			memcpy(buffer, vx, stride);
+			buffer += stride;
 
-				memcpy(&trifan_garbage.data()[x], v0 , stride);
-				x += stride;
-			}
-			else
-			{
-				memcpy(&trifan_garbage.data()[x], v2, stride);
-				x += stride;
+			// next vertex
+			vx += stride;
+			memcpy(buffer, vx, stride);
+			buffer += stride;
+		}
 
-				memcpy(&trifan_garbage.data()[x], v0, stride);
-				x += stride;
-
-				memcpy(&trifan_garbage.data()[x], v1, stride);
-				x += stride;
-			}
-
-			flip = !flip;
-			++y;
-		} while (x < trifan_garbage.size());
-
-		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, 3 * PrimitiveCount, trifan_garbage.data(), stride);
+		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, PrimitiveCount, trifan_garbage.data(), stride);
 	}
 
 	if (!set_primitive_type(PrimitiveType))

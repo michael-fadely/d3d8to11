@@ -41,9 +41,6 @@ extern "C"
 		}
 
 		WriteJump(reinterpret_cast<void*>(0x007C235E), Direct3DCreate8);
-
-		// HACK: I sure am glad SADX draws a triangle fan over the screen every frame with which it does literally nothing
-		WriteData<5>(reinterpret_cast<void*>(0x0078B922), 0x90i8);
 	}
 
 	EXPORT void __cdecl OnFrame()
