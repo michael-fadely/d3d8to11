@@ -26,7 +26,7 @@ extern "C"
 
 		IniFile ini(inipath);
 
-		globals::max_fragments = ini.getInt("ppll", "maxFragmentCount", MAX_FRAGMENTS_DEFAULT);
+		globals::max_fragments = ini.getInt("ppll", "maxFragCount", MAX_FRAGMENTS_DEFAULT);
 
 		if (globals::max_fragments != MAX_FRAGMENTS_DEFAULT)
 		{
