@@ -38,11 +38,7 @@ struct Light
 
 struct VS_INPUT
 {
-#ifdef FVF_RHW
-	float4 position : POSITIONT;
-#else
 	float4 position : POSITION;
-#endif
 
 #ifdef FVF_NORMAL
 	float3 normal   : NORMAL;

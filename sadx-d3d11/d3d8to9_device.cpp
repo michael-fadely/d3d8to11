@@ -2981,7 +2981,7 @@ bool Direct3DDevice8::update_input_layout()
 			break;
 
 		case D3DFVF_XYZRHW:
-			pos_element.SemanticName = "POSITIONT";
+			pos_element.SemanticName = "POSITION";
 			pos_element.Format       = DXGI_FORMAT_R32G32B32A32_FLOAT;
 			break;
 
