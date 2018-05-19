@@ -256,21 +256,21 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
+	if (result.a < 1.0f / 255.0f)
+	{
+		discard;
+	}
+
+	#if !defined(FVF_RHW)
 	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
 		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
-		if (result.a < 1.0f / 255.0f)
-		{
-			discard;
-		}
-
-	#if !defined(FVF_RHW)
 		if (result.a > 254.0f / 255.0f)
 		{
 			return result;
 		}
-	#endif
 	}
+	#endif
 
 	#ifdef OIT
 		uint newIndex = FragListNodes.IncrementCounter();
