@@ -175,19 +175,20 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		}
 	}
 
-#if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
+#if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
 	float4 diffuse  = float4(0, 0, 0, 0);
 	float4 ambient  = float4(0, 0, 0, 0);
 	float4 specular = float4(0, 0, 0, 0);
 
-	float4 Cd = result.diffuse;
-	float3 N  = mul((float3x3)worldMatrix, input.normal);
+	float4 Cd = saturate(result.diffuse);
+	float3 N  = normalize(mul((float3x3)worldMatrix, input.normal));
 
 	#ifdef RS_SPECULAR
-		float4 Cs = material.Specular;
-		float P   = material.Power;
+		float4 Cs = max(0, material.Specular);
+		float P = max(0, material.Power);
 
 		float4 worldPosition = mul(worldMatrix, input.position);
+		float3 viewDir = normalize(viewPosition - worldPosition.xyz);
 	#endif
 
 	for (uint i = 0; i < LIGHT_COUNT; ++i)
@@ -202,19 +203,18 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		float NdotLdir = saturate(dot(N, Ldir));
 
 		ambient += lights[i].Ambient;
-		diffuse += (/*Cd * */Ld * NdotLdir); // applying Cd after the fact for better vertex color
+		diffuse += /*Cd * */Ld * NdotLdir; // applying Cd after the fact for better vertex color
 
 		#ifdef RS_SPECULAR
 			float4 Ls = lights[i].Specular;
-			float3 H = normalize(normalize(viewPosition - worldPosition) + Ldir);
-			specular += Ls * pow(saturate(dot(N, H)), P);
+			float3 H = normalize(viewDir + Ldir);
+			specular += Ls * pow(dot(N, H), P);
 		#endif
 	}
 
 	#ifdef RS_SPECULAR
-		specular *= Cs;
-		result.specular = saturate(specular);
-		result.specular.a = 0;
+		specular = saturate(specular) * saturate(Cs);
+		result.specular = float4(specular.rgb, 0);
 	#endif
 
 	result.diffuse.rgb = Cd.rgb * saturate(saturate(diffuse.rgb) + ambient.rgb);

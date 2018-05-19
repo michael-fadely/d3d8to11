@@ -452,7 +452,12 @@ void Direct3DDevice8::create_native()
 	}
 
 	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
+	context->PSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
+
 	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+	context->PSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+
+	context->VSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
 #ifndef _DEBUG
@@ -3234,13 +3239,13 @@ void Direct3DDevice8::update_shaders()
 
 	auto& specular = render_state_values[D3DRS_SPECULARENABLE];
 
-	if (specular.data() != 1 && shader_flags & ShaderFlags::rs_lighting)
+	if (specular.data() != 0 && shader_flags & ShaderFlags::rs_lighting)
 	{
-		shader_flags &= ~ShaderFlags::rs_specular;
+		shader_flags |= ShaderFlags::rs_specular;
 	}
 	else
 	{
-		shader_flags |= ShaderFlags::rs_specular;
+		shader_flags &= ~ShaderFlags::rs_specular;
 	}
 
 	specular.clear();
