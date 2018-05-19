@@ -2,6 +2,26 @@
 #include "globals.h"
 #include <IniFile.hpp>
 
+static void __cdecl njDrawSprite2D_DrawNow_r(NJS_SPRITE *sp, Int n, Float pri, NJD_SPRITE attr);
+static Trampoline njDrawSprite2D_DrawNow_t(0x0077E050, 0x0077E058, njDrawSprite2D_DrawNow_r);
+static void __cdecl njDrawSprite2D_DrawNow_r(NJS_SPRITE *sp, Int n, Float pri, NJD_SPRITE attr)
+{
+	auto original = reinterpret_cast<decltype(njDrawSprite2D_DrawNow_r)*>(njDrawSprite2D_DrawNow_t.Target());
+
+	if (!(attr & NJD_SPRITE_ALPHA))
+	{
+		DWORD value;
+		Direct3D_Device->GetRenderState(D3DRS_ZWRITEENABLE, &value);
+		Direct3D_Device->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+		original(sp, n, pri, attr);
+		Direct3D_Device->SetRenderState(D3DRS_ZWRITEENABLE, value);
+	}
+	else
+	{
+		original(sp, n, pri, attr);
+	}
+}
+
 extern "C"
 {
 	EXPORT ModInfo SADXModInfo = { ModLoaderVer, nullptr, nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0 };
