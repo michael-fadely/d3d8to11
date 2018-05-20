@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "globals.h"
+
+#include <chrono>
 #include <IniFile.hpp>
 
 static void __cdecl njDrawSprite2D_DrawNow_r(NJS_SPRITE *sp, Int n, Float pri, NJD_SPRITE attr);
@@ -21,6 +23,14 @@ static void __cdecl njDrawSprite2D_DrawNow_r(NJS_SPRITE *sp, Int n, Float pri, N
 		original(sp, n, pri, attr);
 	}
 }
+
+using namespace std::chrono;
+static auto frame_start = high_resolution_clock::now();
+static auto framerate_start = high_resolution_clock::now();
+
+static size_t frame_rate_count = 0;
+static double frame_rate_sum = 0.0;
+static double frame_rate_avg = 0.0;
 
 extern "C"
 {
@@ -85,6 +95,26 @@ extern "C"
 
 		SetDebugFontColor(Direct3D_Device->oit_enabled ? 0xFF00FF00 : 0xFFFF0000);
 		DisplayDebugStringFormatted(NJM_LOCATION(1, 1), "OIT: %s", Direct3D_Device->oit_enabled ? "ON" : "OFF");
+
+		auto now = high_resolution_clock::now();
+		duration<double, std::milli> frame_time = now - frame_start;
+
+		++frame_rate_count;
+		frame_rate_sum += 1000.0 / frame_time.count();
+
+		if (now - framerate_start >= 250ms)
+		{
+			frame_rate_avg = frame_rate_sum / frame_rate_count;
+			framerate_start = now;
+			frame_rate_count = 0;
+			frame_rate_sum = 0.0;
+		}
+
+		SetDebugFontColor(0xFF00FFFF);
+		DisplayDebugStringFormatted(NJM_LOCATION(1, 2), "FPS: %.3f (1/4)", static_cast<float>(frame_rate_avg));
+		DisplayDebugStringFormatted(NJM_LOCATION(2, 3),  "FT: %.3f", static_cast<float>(frame_time.count()));
+
+		frame_start = now;
 
 		SetDebugFontColor(color.color);
 		DebugFontSize = size;
