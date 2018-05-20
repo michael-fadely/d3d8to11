@@ -3,6 +3,8 @@
 #include <array>
 #include <deque>
 #include <unordered_map>
+
+#include <d3d11_1.h>
 #include <wrl/client.h>
 
 #include "Unknown.h"
@@ -105,7 +107,7 @@ struct OitNode
 {
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
-	uint  flags; // source blend, destination blend, blend operation
+	uint  flags; // source blend, destination blend
 	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
 
@@ -114,6 +116,7 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 class Direct3DDevice8 : public Unknown
 {
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
+	std::vector<uint8_t> trifan_buffer;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;

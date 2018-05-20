@@ -2382,8 +2382,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 #endif
 }
 
-static std::vector<uint8_t> trifan_garbage; // HACK
-
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
 	if (!update() || !pVertexStreamZeroData)
@@ -2396,16 +2394,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		const auto data = reinterpret_cast<const uint8_t*>(pVertexStreamZeroData);
 		const auto stride = VertexStreamZeroStride;
 
-		trifan_garbage.resize(3 * stride * PrimitiveCount);
+		trifan_buffer.resize(3 * stride * PrimitiveCount);
 
-		auto buffer = trifan_garbage.data();
+		auto buffer = trifan_buffer.data();
 
 		const auto v0 = &data[0];
 		auto vx = &data[stride];
 
 		for (size_t i = 0; i < PrimitiveCount; i++)
 		{
-
 			// 0
 			memcpy(buffer, v0, stride);
 			buffer += stride;
@@ -2420,7 +2417,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 			buffer += stride;
 		}
 
-		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, PrimitiveCount, trifan_garbage.data(), stride);
+		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, PrimitiveCount, trifan_buffer.data(), stride);
 	}
 
 	if (!set_primitive_type(PrimitiveType))
