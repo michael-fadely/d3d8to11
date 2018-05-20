@@ -63,9 +63,9 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	int2 pos = int2(input.position.xy);
 
 	float4 backBufferColor = BackBuffer[pos];
-	uint head = FragListHead[pos];
+	uint index = FragListHead[pos];
 
-	if (head == FRAGMENT_LIST_NULL)
+	if (index == FRAGMENT_LIST_NULL)
 	{
 		return backBufferColor;
 	}
@@ -73,7 +73,6 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	OitNode fragments[MAX_FRAGMENTS];
 
 	uint count = 0;
-	uint index = head;
 	float opaqueDepth = DepthBuffer[pos].r;
 
 	// Counts the number of stored fragments for this index
