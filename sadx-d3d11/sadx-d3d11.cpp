@@ -112,7 +112,7 @@ extern "C"
 
 		SetDebugFontColor(0xFF00FFFF);
 		DisplayDebugStringFormatted(NJM_LOCATION(1, 2), "FPS: %.3f (1/4)", static_cast<float>(frame_rate_avg));
-		DisplayDebugStringFormatted(NJM_LOCATION(2, 3),  "FT: %.3f", static_cast<float>(frame_time.count()));
+		DisplayDebugStringFormatted(NJM_LOCATION(2, 3),  "FT: %.3f ms", static_cast<float>(frame_time.count()));
 
 		frame_start = now;
 
