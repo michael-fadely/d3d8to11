@@ -270,7 +270,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	#ifdef OIT
 		uint newIndex = FragListNodes.IncrementCounter();
-		if (newIndex == FRAGMENT_LIST_NULL)
+
+		uint numStructs, stride;
+		FragListNodes.GetDimensions(numStructs, stride);
+
+		if (newIndex >= numStructs)
 		{
 			discard;
 		}
