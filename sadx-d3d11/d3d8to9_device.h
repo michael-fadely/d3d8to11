@@ -253,6 +253,7 @@ public:
 	void oit_read();
 	void oit_init();
 	void FragListHead_Init();
+	void FragListCount_Init();
 	void FragListNodes_Init();
 
 	uint32_t shader_flags = ShaderFlags::none;
@@ -276,10 +277,15 @@ protected:
 	VertexShader composite_vs;
 	PixelShader composite_ps;
 
-	ComPtr<ID3D11Texture2D>           FragListHeadB;
+	ComPtr<ID3D11Texture2D>           FragListHead;
 	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
 	ComPtr<ID3D11UnorderedAccessView> FragListHeadUAV;
-	ComPtr<ID3D11Buffer>              FragListNodesB;
+
+	ComPtr<ID3D11Texture2D>           FragListCount;
+	ComPtr<ID3D11ShaderResourceView>  FragListCountSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListCountUAV;
+
+	ComPtr<ID3D11Buffer>              FragListNodes;
 	ComPtr<ID3D11ShaderResourceView>  FragListNodesSRV;
 	ComPtr<ID3D11UnorderedAccessView> FragListNodesUAV;
 

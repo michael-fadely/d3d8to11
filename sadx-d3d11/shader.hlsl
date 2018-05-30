@@ -269,8 +269,20 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	#endif
 
 	#ifdef OIT
+		#ifndef DISABLE_PER_PIXEL_LIMIT
+			uint fragmentCount;
+			InterlockedAdd(FragListCount[uint2(input.position.xy)], 1, fragmentCount);
+
+			if (fragmentCount >= MAX_FRAGMENTS)
+			{
+				//InterlockedExchange(FragListCount[uint2(input.position.xy)], MAX_FRAGMENTS, fragmentCount);
+				discard;
+			}
+		#endif
+
 		uint newIndex = FragListNodes.IncrementCounter();
 
+		// if per-pixel fragment limiting is enabled, this check is unnecessary
 		uint numStructs, stride;
 		FragListNodes.GetDimensions(numStructs, stride);
 
