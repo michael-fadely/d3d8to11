@@ -69,6 +69,7 @@ cbuffer PerSceneBuffer : register(b0)
 	matrix projectionMatrix;
 	float2 screenDimensions;
 	float3 viewPosition;
+	uint   bufferLength;
 };
 
 cbuffer PerModelBuffer : register(b1)
@@ -283,10 +284,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		uint newIndex = FragListNodes.IncrementCounter();
 
 		// if per-pixel fragment limiting is enabled, this check is unnecessary
-		uint numStructs, stride;
-		FragListNodes.GetDimensions(numStructs, stride);
-
-		if (newIndex >= numStructs)
+		if (newIndex >= bufferLength)
 		{
 			discard;
 		}

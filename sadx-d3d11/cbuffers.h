@@ -10,10 +10,11 @@
 class PerSceneBuffer : public ICBuffer, dirty_impl
 {
 public:
-	dirty_t<matrix> viewMatrix;
-	dirty_t<matrix> projectionMatrix;
-	dirty_t<float2> screenDimensions;
-	dirty_t<float3> viewPosition;
+	dirty_t<matrix>   viewMatrix;
+	dirty_t<matrix>   projectionMatrix;
+	dirty_t<float2>   screenDimensions;
+	dirty_t<float3>   viewPosition;
+	dirty_t<uint32_t> bufferLength;
 
 	void write(CBufferBase& cbuf) const override;
 

@@ -3552,6 +3552,8 @@ void Direct3DDevice8::FragListNodes_Init()
 {
 	D3D11_BUFFER_DESC descBuf = {};
 
+	per_scene.bufferLength = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+
 	descBuf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	descBuf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
