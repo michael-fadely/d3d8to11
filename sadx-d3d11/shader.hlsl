@@ -269,14 +269,15 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	}
 	#endif
 
+#define DISABLE_PER_PIXEL_LIMIT
+
 	#ifdef OIT
 		#ifndef DISABLE_PER_PIXEL_LIMIT
 			uint fragmentCount;
-			InterlockedAdd(FragListCount[uint2(input.position.xy)], 1, fragmentCount);
+			InterlockedAdd(FragListCount[input.position.xy], 1, fragmentCount);
 
 			if (fragmentCount >= MAX_FRAGMENTS)
 			{
-				//InterlockedExchange(FragListCount[uint2(input.position.xy)], MAX_FRAGMENTS, fragmentCount);
 				discard;
 			}
 		#endif
@@ -290,7 +291,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		}
 
 		uint oldIndex;
-		InterlockedExchange(FragListHead[uint2(input.position.xy)], newIndex, oldIndex);
+		InterlockedExchange(FragListHead[input.position.xy], newIndex, oldIndex);
 
 		OitNode n;
 

@@ -117,6 +117,7 @@ class Direct3DDevice8 : public Unknown
 {
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
+	std::string fragments_str;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;
@@ -226,7 +227,7 @@ public:
 
 	void print_info_queue() const;
 
-	static std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
+	std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags) const;
 	const std::vector<uint8_t>& get_shader_source(const std::string& path);
 	VertexShader get_vs(uint32_t flags);
 	PixelShader get_ps(uint32_t flags);

@@ -30,9 +30,11 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags) const
 {
 	std::vector<D3D_SHADER_MACRO> result;
+
+	result.push_back({ "MAX_FRAGMENTS", fragments_str.c_str() });
 
 	if (flags & ShaderFlags::fvf_rhw)
 	{
@@ -575,6 +577,8 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	: present_params(parameters),
 	  d3d(d3d)
 {
+	fragments_str = std::to_string(globals::max_fragments);
+
 	blend_flags = BLEND_DEFAULT;
 
 	render_state_values[D3DRS_ZENABLE]          = TRUE;
@@ -3320,8 +3324,6 @@ void Direct3DDevice8::free_shaders()
 
 void Direct3DDevice8::oit_load_shaders()
 {
-	std::string fragments_str = std::to_string(globals::max_fragments);
-
 	D3D_SHADER_MACRO preproc[] = {
 		{ "MAX_FRAGMENTS", fragments_str.c_str() },
 		{}
