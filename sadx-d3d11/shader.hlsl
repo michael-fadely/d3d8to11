@@ -269,8 +269,6 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	}
 	#endif
 
-#define DISABLE_PER_PIXEL_LIMIT
-
 	#ifdef OIT
 		#ifndef DISABLE_PER_PIXEL_LIMIT
 			uint fragmentCount;
