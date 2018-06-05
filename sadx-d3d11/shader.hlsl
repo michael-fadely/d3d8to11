@@ -11,11 +11,11 @@
 
 struct Material
 {
-	float4 Diffuse;        /* Diffuse color RGBA */
-	float4 Ambient;        /* Ambient color RGB */
-	float4 Specular;       /* Specular 'shininess' */
-	float4 Emissive;       /* Emissive color RGB */
-	float  Power;          /* Sharpness if specular highlight */
+	float4 Diffuse;  /* Diffuse color RGBA */
+	float4 Ambient;  /* Ambient color RGB */
+	float4 Specular; /* Specular 'shininess' */
+	float4 Emissive; /* Emissive color RGB */
+	float  Power;    /* Sharpness if specular highlight */
 };
 
 struct Light
@@ -260,7 +260,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	#if !defined(FVF_RHW)
 	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
-		(destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
+	    (destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
 	{
 		if (result.a > 254.0f / 255.0f)
 		{
