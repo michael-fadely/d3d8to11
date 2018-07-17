@@ -94,20 +94,20 @@ const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string
 {
 	const auto it = shader_sources.find(path);
 
-	if (it == shader_sources.end())
+	if (it != shader_sources.end())
 	{
-		std::ifstream file(path, std::ios::binary | std::ios::ate);
-		auto size = static_cast<size_t>(file.tellg());
-		file.seekg(0, std::ios::beg);
-		std::vector<uint8_t> buffer(size);
-		file.read(reinterpret_cast<char*>(buffer.data()), size);
-		file.close();
-
-		shader_sources[path] = std::move(buffer);
-		return shader_sources[path];
+		return it->second;
 	}
 
-	return it->second;
+	std::ifstream file(path, std::ios::binary | std::ios::ate);
+	auto size = static_cast<size_t>(file.tellg());
+	file.seekg(0, std::ios::beg);
+	std::vector<uint8_t> buffer(size);
+	file.read(reinterpret_cast<char*>(buffer.data()), size);
+	file.close();
+
+	shader_sources[path] = std::move(buffer);
+	return shader_sources[path];
 }
 
 VertexShader Direct3DDevice8::get_vs(uint32_t flags)
