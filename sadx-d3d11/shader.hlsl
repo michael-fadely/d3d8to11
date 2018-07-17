@@ -165,7 +165,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 	else
 	{
-		result.diffuse = material.Diffuse;
+		result.diffuse = saturate(material.Diffuse);
 	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
