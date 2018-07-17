@@ -151,29 +151,21 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	result.depth = result.position.zw;
 
-#ifdef FVF_DIFFUSE
-	if (colorVertex == true)
+	if (colorVertex == true && diffuseSource == CS_COLOR1
+	#ifdef FVF_DIFFUSE
+		&& any(input.diffuse)
+	#endif
+		)
 	{
+	#ifdef FVF_DIFFUSE
 		result.diffuse = input.diffuse;
+	#else
+		result.diffuse = float4(1, 1, 1, 1);
+	#endif
 	}
 	else
 	{
-		result.diffuse = float4(1, 1, 1, 1);
-	}
-#else
-	result.diffuse = float4(1, 1, 1, 1);
-#endif
-
-	if (diffuseSource == CS_MATERIAL)
-	{
-		if (colorVertex == true)
-		{
-			result.diffuse *= material.Diffuse;
-		}
-		else
-		{
-			result.diffuse = material.Diffuse;
-		}
+		result.diffuse = material.Diffuse;
 	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
