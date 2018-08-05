@@ -391,6 +391,14 @@ void Direct3DDevice8::create_native()
 		info_queue->SetMuteDebugOutput(FALSE);
 	}
 
+	D3D11_QUERY_DESC query_desc { D3D11_QUERY_EVENT, 0 };
+
+	ComPtr<ID3D11Query> query_temp;
+
+	// TODO: error check
+	error = device->CreateQuery(&query_desc, &query_temp);
+	error = query_temp->QueryInterface(__uuidof(ID3D11Asynchronous), &query);
+
 	swap_chain->SetFullscreenState(!present_params.Windowed, nullptr);
 
 	D3D11_RASTERIZER_DESC raster {};
@@ -873,6 +881,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	if (oit_enabled_)
 	{
+		wait_query();
+
 		auto blend_ = blend_flags.data();
 		blend_flags = BLEND_DEFAULT;
 		update_blend();
@@ -892,6 +902,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		// ...then draw 3 points. The composite shader uses SV_VertexID
 		// to generate a full screen triangle, so we don't need a buffer!
 		context->Draw(3, 0);
+		wait_query();
 
 		blend_flags = blend_;
 		update_blend();
@@ -3588,6 +3599,30 @@ void Direct3DDevice8::FragListNodes_Init()
 	if (FAILED(device->CreateUnorderedAccessView(FragListNodes.Get(), &descUAV, &FragListNodesUAV)))
 	{
 		throw;
+	}
+}
+
+void Direct3DDevice8::wait_query() const
+{
+	context->End(query.Get());
+
+	while (true)
+	{
+		BOOL p_data = FALSE;
+		auto query_error = context->GetData(query.Get(), &p_data, sizeof(BOOL), 0);
+
+		if (query_error == DXGI_ERROR_INVALID_CALL)
+		{
+			print_info_queue();
+			break;
+		}
+
+		if (query_error == S_OK && p_data == TRUE)
+		{
+			break;
+		}
+
+		print_info_queue();
 	}
 }
 

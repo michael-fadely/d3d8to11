@@ -256,6 +256,7 @@ public:
 	void FragListHead_Init();
 	void FragListCount_Init();
 	void FragListNodes_Init();
+	void wait_query() const;
 
 	uint32_t shader_flags = ShaderFlags::none;
 	std::unordered_map<uint32_t, VertexShader> vertex_shaders;
@@ -267,6 +268,7 @@ public:
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
+	ComPtr<ID3D11Asynchronous> query;
 	ComPtr<ID3D11RasterizerState> raster_state;
 
 	bool oit_enabled = true;
