@@ -247,7 +247,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #ifdef RS_ALPHA
 	if (result.a < 1.0f / 255.0f)
 	{
-		discard;
+		clip(-1);
 	}
 
 	#if !defined(FVF_RHW)
@@ -268,7 +268,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 			if (fragmentCount >= MAX_FRAGMENTS)
 			{
-				discard;
+				clip(-1);
 			}
 		#endif
 
@@ -277,7 +277,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		// if per-pixel fragment limiting is enabled, this check is unnecessary
 		if (newIndex >= bufferLength)
 		{
-			discard;
+			clip(-1);
 		}
 
 		uint oldIndex;
@@ -290,9 +290,8 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		n.flags = (srcBlend << 8) | destBlend;
 		n.next  = oldIndex;
 
-		DeviceMemoryBarrier();
 		FragListNodes[newIndex] = n;
-		discard;
+		clip(-1);
 	#endif
 #endif
 
