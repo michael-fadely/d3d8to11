@@ -290,6 +290,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		n.flags = (srcBlend << 8) | destBlend;
 		n.next  = oldIndex;
 
+		DeviceMemoryBarrier();
 		FragListNodes[newIndex] = n;
 		discard;
 	#endif
