@@ -920,6 +920,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 		// Restore R/W access to the UAV buffers from the shader.
 		oit_write();
+		wait_query();
 	}
 
 	auto interval = present_params.FullScreen_PresentationInterval;
@@ -3613,6 +3614,7 @@ void Direct3DDevice8::wait_query() const
 
 		if (query_error == DXGI_ERROR_INVALID_CALL)
 		{
+			PrintDebug(__FUNCTION__ ": context->GetData failed!\n");
 			print_info_queue();
 			break;
 		}
