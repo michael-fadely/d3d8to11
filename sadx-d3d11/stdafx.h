@@ -27,7 +27,7 @@
 
 // DirectX 11
 #include <d3d11_1.h>
-#include <d3d8types.h>
+#include "d3d8types.h"
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
@@ -37,12 +37,6 @@
 // DirectXTK
 #include <wrl/client.h>
 #include <SimpleMath.h>
-
-// Mod Loader
-#include <SADXModLoader.h>
-#include <MemAccess.h>
-#include <Trampoline.h>
-#include <IniFile.hpp>
 
 // Local
 #include "cbuffers.h"
@@ -68,5 +62,3 @@
 #include "SimpleMath.h"
 #include "typedefs.h"
 #include "Unknown.h"
-
-DataPointer(Direct3DDevice8*, Direct3D_Device, 0x03D128B0);

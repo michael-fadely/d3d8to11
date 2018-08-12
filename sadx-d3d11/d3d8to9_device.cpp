@@ -121,7 +121,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 		return it->second;
 	}
 
-	PrintDebug(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
+	printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -131,10 +131,10 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 
 	ShaderIncluder includer(this);
 
-	auto path = globals::get_system_path("shader.hlsl");
+	constexpr auto path = "shader.hlsl";
 	const auto& src = get_shader_source(path);
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -165,7 +165,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 		return it->second;
 	}
 
-	PrintDebug(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
+	printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -175,10 +175,10 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 
 	ShaderIncluder includer(this);
 
-	auto path = globals::get_system_path("shader.hlsl");
+	constexpr auto path = "shader.hlsl";
 	const auto& src = get_shader_source(path);
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -387,7 +387,7 @@ void Direct3DDevice8::create_native()
 
 	if (info_queue)
 	{
-		PrintDebug("D3D11 debug info queue enabled\n");
+		printf("D3D11 debug info queue enabled\n");
 		info_queue->SetMuteDebugOutput(FALSE);
 	}
 
@@ -463,7 +463,7 @@ void Direct3DDevice8::create_native()
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
 #ifndef _DEBUG
-	PrintDebug("precompiling shaders...\n");
+	printf("precompiling shaders...\n");
 	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
 	{
 		VertexShader vs;
@@ -934,15 +934,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer)
 {
-#if 1
-	// not required for SADX
-	return D3DERR_INVALIDCALL;
-#else
 	if (ppBackBuffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
+#if 1
+	// TODO: required for LotR:RotK
+	*ppBackBuffer = nullptr;
+	return D3DERR_INVALIDCALL;
+#else
 	*ppBackBuffer = nullptr;
 
 	IDirect3DSurface9 *SurfaceInterface = nullptr;
@@ -1027,7 +1028,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	catch (std::exception& ex)
 	{
 		delete result;
-		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -1109,7 +1110,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	catch (std::exception& ex)
 	{
 		delete result;
-		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -1135,7 +1136,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	catch (std::exception& ex)
 	{
 		delete result;
-		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -1472,15 +1473,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderTarget(Direct3DSurface8** pp
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDepthStencilSurface(Direct3DSurface8** ppZStencilSurface)
 {
-#if 1
-	// not required for SADX
-	return D3DERR_INVALIDCALL;
-#else
 	if (ppZStencilSurface == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
+#if 1
+	// not required for SADX
+	*ppZStencilSurface = nullptr;
+	return D3DERR_INVALIDCALL;
+#else
 	IDirect3DSurface9 *SurfaceInterface = nullptr;
 
 	const HRESULT hr = ProxyInterface->GetDepthStencilSurface(&SurfaceInterface);
@@ -1880,7 +1882,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_BLENDOP:
 			if (ref.dirty())
 			{
-				PrintDebug("RS_BLENDOP: %u\n", Value);
+				printf("RS_BLENDOP: %u\n", Value);
 			}
 
 			ref.clear();
@@ -2300,7 +2302,7 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uin
 			break;
 
 		case D3DPT_TRIANGLEFAN:
-			//PrintDebug(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
+			//printf(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
 			return false;
 
 		default:
@@ -2323,7 +2325,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		auto offset = StartVertex * stride;
 
 		BYTE* data;
-		buffer->Lock(offset, buffer->desc8.Size - offset, &data, D3DLOCK_DISCARD);
+		if (FAILED(buffer->Lock(offset, buffer->desc8.Size - offset, &data, D3DLOCK_DISCARD)))
+		{
+			return D3DERR_INVALIDCALL;
+		}
 		auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
 		buffer->Unlock();
 		return result;
@@ -2378,7 +2383,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 {
 #if 1
 	// TODO
-	PrintDebug(__FUNCTION__ " not implemented\n");
+	printf(__FUNCTION__ " not implemented\n");
 	return D3DERR_INVALIDCALL;
 #else
 	ApplyClipPlanes();
@@ -2924,7 +2929,7 @@ void Direct3DDevice8::print_info_queue() const
 
 		if (hr == S_OK && pMessage->pDescription)
 		{
-			PrintDebug("%s\n", pMessage->pDescription);
+			printf("%s\n", pMessage->pDescription);
 		}
 
 		delete[] pMessage;
@@ -3019,7 +3024,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (fvf != 0)
 	{
-		PrintDebug("unsupported FVF\n");
+		printf("unsupported FVF\n");
 		return false;
 	}
 
@@ -3032,7 +3037,7 @@ bool Direct3DDevice8::update_input_layout()
 	if (FAILED(hr))
 	{
 		//throw std::runtime_error("CreateInputLayout failed");
-		PrintDebug("CreateInputLayout failed\n");
+		printf("CreateInputLayout failed\n");
 		return false;
 	}
 
@@ -3088,15 +3093,7 @@ void Direct3DDevice8::commit_per_scene()
 {
 	per_scene.screenDimensions = { viewport.Width, viewport.Height };
 
-	if (Camera_Data1)
-	{
-		const NJS_VECTOR& position = Camera_Data1->Position;
-		per_scene.viewPosition = { position.x, position.y, position.z };
-	}
-	else
-	{
-		per_scene.viewPosition = per_scene.viewMatrix.data().Translation();
-	}
+	per_scene.viewPosition = per_scene.viewMatrix.data().Translation();
 
 	if (!per_scene.dirty())
 	{
@@ -3172,7 +3169,7 @@ void Direct3DDevice8::compile_shaders(uint32_t flags, VertexShader& vs, PixelSha
 		catch (std::exception& ex)
 		{
 			free_shaders();
-			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+			result = MessageBoxA(/*WindowHandle*/ nullptr, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
 		}
 	} while (result == IDRETRY);
 }
@@ -3338,9 +3335,9 @@ void Direct3DDevice8::oit_load_shaders()
 			ComPtr<ID3DBlob> errors;
 			ComPtr<ID3DBlob> blob;
 
-			auto path = globals::get_system_path(L"composite.hlsl");
+			constexpr auto path = L"composite.hlsl";
 
-			HRESULT hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			HRESULT hr = D3DCompileFromFile(path, &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -3355,7 +3352,7 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			hr = D3DCompileFromFile(path.c_str(), &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = D3DCompileFromFile(path, &preproc[0], D3D_COMPILE_STANDARD_FILE_INCLUDE, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -3375,7 +3372,7 @@ void Direct3DDevice8::oit_load_shaders()
 		{
 			print_info_queue();
 			free_shaders();
-			result = MessageBoxA(WindowHandle, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+			result = MessageBoxA(/*WindowHandle*/ nullptr, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
 		}
 	} while (result == IDRETRY);
 }
@@ -3605,6 +3602,6 @@ void Direct3DDevice8::up_get(size_t target_size)
 		}
 	}
 
-	PrintDebug(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
+	printf(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
 	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
 }

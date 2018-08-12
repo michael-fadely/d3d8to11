@@ -60,16 +60,19 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>$(SolutionDir)obj\$(Configuration)\</IntDir>
+    <TargetName>d3d8</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>$(SolutionDir)obj\$(Configuration)\</IntDir>
+    <TargetName>d3d8</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>$(SolutionDir)obj\$(Configuration)\</IntDir>
+    <TargetName>d3d8</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -77,13 +80,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;$(SolutionDir)sadx-mod-loader\mod-loader-common\ModLoaderCommon;..\sadx-mod-loader\libmodutils;..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
@@ -99,7 +103,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;$(SolutionDir)sadx-mod-loader\mod-loader-common\ModLoaderCommon;..\sadx-mod-loader\libmodutils;..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -110,6 +114,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
@@ -127,7 +132,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)sadx-mod-loader\SADXModLoader\include;$(SolutionDir)sadx-mod-loader\mod-loader-common\ModLoaderCommon;..\sadx-mod-loader\libmodutils;..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -136,6 +141,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
@@ -146,9 +152,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h" />
-    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.hpp" />
-    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.hpp" />
     <ClInclude Include="cbuffers.h" />
     <ClInclude Include="CBufferWriter.h" />
     <ClInclude Include="d3d8to9.hpp" />
@@ -159,6 +162,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClInclude Include="d3d8to9_surface.h" />
     <ClInclude Include="d3d8to9_texture.h" />
     <ClInclude Include="d3d8to9_vertex_buffer.h" />
+    <ClInclude Include="d3d8types.h" />
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
@@ -176,9 +180,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClInclude Include="Unknown.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp" />
-    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.cpp" />
-    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.cpp" />
     <ClCompile Include="cbuffers.cpp" />
     <ClCompile Include="CBufferWriter.cpp" />
     <ClCompile Include="d3d8to9.cpp" />
@@ -194,8 +195,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
-    <ClCompile Include="PolyBuff11.cpp" />
-    <ClCompile Include="sadx-d3d11.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -210,6 +209,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="d3d8.def" />
     <None Include="include.hlsli" />
     <None Include="mod.ini" />
     <None Include="shader.hlsl">

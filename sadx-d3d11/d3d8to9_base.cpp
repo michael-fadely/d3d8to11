@@ -216,7 +216,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceType(UINT Adapter, D3DDEVTYPE Ch
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceFormat(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat, DWORD Usage, D3DRESOURCETYPE RType, D3DFORMAT CheckFormat)
 {
 #ifdef _DEBUG
-	//PrintDebug(__FUNCTION__ " RType: %u, CheckFormat: %u\n", RType, CheckFormat);
+	//printf(__FUNCTION__ " RType: %u, CheckFormat: %u\n", RType, CheckFormat);
 #endif
 
 	if (!globals::allow_d32 && CheckFormat == D3DFMT_D32)
@@ -247,7 +247,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceMultiSampleType(UINT Adapter, D3
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDepthStencilMatch(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT AdapterFormat, D3DFORMAT RenderTargetFormat, D3DFORMAT DepthStencilFormat)
 {
 	// TODO
-	return D3DERR_INVALIDCALL;
+	return D3D_OK; // HACK
 	//return ProxyInterface->CheckDepthStencilMatch(Adapter, DeviceType, AdapterFormat, RenderTargetFormat, DepthStencilFormat);
 }
 
@@ -260,6 +260,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetDeviceCaps(UINT Adapter, D3DDEVTYPE Devi
 
 #if 1
 	// TODO
+	memset(pCaps, 0xFF, sizeof(D3DCAPS8));
 	return D3D_OK;
 #else
 	D3DCAPS9 DeviceCaps;
@@ -331,7 +332,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT Adapter, D3DDEVTYPE Devic
 	catch (std::exception& ex)
 	{
 		delete device;
-		PrintDebug(__FUNCTION__ " %s\n", ex.what());
+		printf(__FUNCTION__ " %s\n", ex.what());
 		return D3DERR_INVALIDCALL;
 	}
 

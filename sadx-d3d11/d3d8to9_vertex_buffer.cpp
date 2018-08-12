@@ -158,7 +158,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (OffsetToLock + SizeToLock > buffer.size())
+	if ((uint64_t)OffsetToLock + (uint64_t)SizeToLock >= (uint64_t)buffer.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}

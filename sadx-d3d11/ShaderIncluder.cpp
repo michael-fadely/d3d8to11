@@ -9,8 +9,7 @@ ShaderIncluder::ShaderIncluder(Direct3DDevice8* device)
 
 HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
 {
-	std::string str = pFileName;
-	str = globals::get_system_path(str);
+	const std::string str = pFileName;
 
 	const auto& buffer = device->get_shader_source(str);
 	*ppData = reinterpret_cast<LPCVOID>(buffer.data());

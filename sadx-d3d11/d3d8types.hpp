@@ -1,6 +1,6 @@
 #pragma once
 
-#include <d3d8types.h>
+#include "d3d8types.h"
 
 /****************************************************************************
 * Flags for SetPrivateData method on all D3D8 interfaces

@@ -16,17 +16,8 @@
     <Filter Include="d3d8wrapper">
       <UniqueIdentifier>{b96e4119-bea6-4ad7-a5f9-40fed2942e2b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="external">
-      <UniqueIdentifier>{ae01d236-8557-4c0f-857f-cf19fc622e9c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\shaders">
       <UniqueIdentifier>{b4aa43bf-d368-4bbe-ae56-d00ef9cea08e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="external\libmodutils">
-      <UniqueIdentifier>{459639e4-a1b9-4747-b2ab-af7366592e91}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="external\mod-loader-common">
-      <UniqueIdentifier>{768f3e88-7c8a-4030-acbe-6955c071f3c6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,21 +96,12 @@
     <ClInclude Include="ShaderIncluder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\sadx-mod-loader\libmodutils\Trampoline.h">
-      <Filter>external\libmodutils</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.hpp">
-      <Filter>external\mod-loader-common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.hpp">
-      <Filter>external\mod-loader-common</Filter>
+    <ClInclude Include="d3d8types.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sadx-d3d11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="d3d8to9_index_buffer.cpp">
@@ -155,9 +137,6 @@
     <ClCompile Include="Uknown.cpp">
       <Filter>d3d8wrapper</Filter>
     </ClCompile>
-    <ClCompile Include="PolyBuff11.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CBufferWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -176,15 +155,6 @@
     <ClCompile Include="ShaderIncluder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\sadx-mod-loader\libmodutils\Trampoline.cpp">
-      <Filter>external\libmodutils</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\IniFile.cpp">
-      <Filter>external\mod-loader-common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sadx-mod-loader\mod-loader-common\ModLoaderCommon\TextConv.cpp">
-      <Filter>external\mod-loader-common</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="include.hlsli">
@@ -197,6 +167,9 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="mod.ini">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="d3d8.def">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
