@@ -31,28 +31,21 @@ struct ShaderFlags
 	enum T : uint32_t
 	{
 		none,
-		fvf_rhw     = 0b0000000001,
-		fvf_normal  = 0b0000000010,
-		fvf_diffuse = 0b0000000100,
-		fvf_tex1    = 0b0000001000,
-		tci_envmap  = 0b0000010000,
-		rs_lighting = 0b0000100000,
-		rs_specular = 0b0001000000,
-		rs_alpha    = 0b0010000000,
-		rs_fog      = 0b0100000000,
-		oit         = 0b1000000000,
-
-		fvf_mask = 0b0000001111,
-		mask     = 0b1111111111,
-
-		count
+		tci_envmap  = 0b00000000000000010000000000000000,
+		rs_lighting = 0b00000000000000100000000000000000,
+		rs_specular = 0b00000000000001000000000000000000,
+		rs_alpha    = 0b00000000000010000000000000000000,
+		rs_fog      = 0b00000000000100000000000000000000,
+		oit         = 0b00000000001000000000000000000000,
+		fvf_mask    = 0b00000000000000001111111111111111,
+		mask        = 0xFFFFFFFF
 	};
 
 #ifdef PER_PIXEL
 	// TODO
 #else
 	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
-	static constexpr uint32_t ps_mask = fvf_rhw | fvf_tex1 | rs_alpha | rs_fog | oit;
+	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog | oit;
 #endif
 
 	static uint32_t sanitize(uint32_t flags);
@@ -118,6 +111,7 @@ class Direct3DDevice8 : public Unknown
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string fragments_str;
+	std::string texcount_str;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;
@@ -227,7 +221,7 @@ public:
 
 	void print_info_queue() const;
 
-	std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags) const;
+	std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
 	const std::vector<uint8_t>& get_shader_source(const std::string& path);
 	VertexShader get_vs(uint32_t flags);
 	PixelShader get_ps(uint32_t flags);

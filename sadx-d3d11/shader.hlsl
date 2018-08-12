@@ -9,6 +9,10 @@
 #define LIGHT_COUNT 8
 #endif
 
+#ifndef FVF_TEXCOUNT
+	#define FVF_TEXCOUNT 0
+#endif
+
 struct Material
 {
 	float4 Diffuse;  /* Diffuse color RGBA */
@@ -36,6 +40,9 @@ struct Light
 	float  Phi;          /* Outer angle of spotlight cone */
 };
 
+#define MAKE_TEXN(N) \
+	float2 tex ## N : TEXCOORD ## N
+
 struct VS_INPUT
 {
 	float4 position : POSITION;
@@ -45,11 +52,36 @@ struct VS_INPUT
 #endif
 
 #ifdef FVF_DIFFUSE
-	float4 diffuse   : COLOR;
+	float4 diffuse : COLOR0;
 #endif
 
-#ifdef FVF_TEX1
-	float2 tex      : TEXCOORD;
+#ifdef FVF_SPECULAR
+	float4 specular : COLOR1;
+#endif
+
+#if FVF_TEXCOUNT >= 1
+	MAKE_TEXN(0);
+#endif
+#if FVF_TEXCOUNT >= 2
+	MAKE_TEXN(1);
+#endif
+#if FVF_TEXCOUNT >= 3
+	MAKE_TEXN(2);
+#endif
+#if FVF_TEXCOUNT >= 4
+	MAKE_TEXN(3);
+#endif
+#if FVF_TEXCOUNT >= 5
+	MAKE_TEXN(4);
+#endif
+#if FVF_TEXCOUNT >= 6
+	MAKE_TEXN(5);
+#endif
+#if FVF_TEXCOUNT >= 7
+	MAKE_TEXN(6);
+#endif
+#if FVF_TEXCOUNT >= 8
+	MAKE_TEXN(7);
 #endif
 };
 
@@ -58,9 +90,33 @@ struct VS_OUTPUT
 	float4 position : SV_POSITION;
 	float4 diffuse  : COLOR0;
 	float4 specular : COLOR1;
-	float2 tex      : TEXCOORD0;
-	float2 depth    : TEXCOORD1;
+	float2 depth    : DEPTH;
 	float  fog      : FOG;
+
+#if FVF_TEXCOUNT >= 1
+	MAKE_TEXN(0);
+#endif
+#if FVF_TEXCOUNT >= 2
+	MAKE_TEXN(1);
+#endif
+#if FVF_TEXCOUNT >= 3
+	MAKE_TEXN(2);
+#endif
+#if FVF_TEXCOUNT >= 4
+	MAKE_TEXN(3);
+#endif
+#if FVF_TEXCOUNT >= 5
+	MAKE_TEXN(4);
+#endif
+#if FVF_TEXCOUNT >= 6
+	MAKE_TEXN(5);
+#endif
+#if FVF_TEXCOUNT >= 7
+	MAKE_TEXN(6);
+#endif
+#if FVF_TEXCOUNT >= 8
+	MAKE_TEXN(7);
+#endif
 };
 
 cbuffer PerSceneBuffer : register(b0)
@@ -213,12 +269,12 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.diffuse.rgb = Cd.rgb * saturate(saturate(diffuse.rgb) + ambient.rgb);
 #endif
 
-#ifdef FVF_TEX1
+#if FVF_TEXCOUNT > 0
 	#ifdef TCI_CAMERASPACENORMAL
-		result.tex = (float2)mul(float4(input.normal, 1), wvMatrixInvT);
-		result.tex = (float2)mul(textureMatrix, float4(result.tex, 0, 1));
+		result.tex0 = (float2)mul(float4(input.normal, 1), wvMatrixInvT);
+		result.tex0 = (float2)mul(textureMatrix, float4(result.tex0, 0, 1));
 	#else
-		result.tex = input.tex;
+		result.tex0 = input.tex0;
 	#endif
 #endif
 
@@ -230,11 +286,13 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
 
-#ifdef FVF_TEX1
-	result = DiffuseMap.Sample(DiffuseSampler, input.tex);
+#if FVF_TEXCOUNT >= 1
+	result = DiffuseMap.Sample(DiffuseSampler, input.tex0);
 #else
-	result = float4(1, 1, 1, 1);
+	result = float4(1, 0, 0, 1);
 #endif
+
+	return result;
 
 	result *= input.diffuse;
 	result += input.specular;

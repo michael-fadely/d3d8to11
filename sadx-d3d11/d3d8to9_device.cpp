@@ -30,30 +30,31 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags) const
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 {
 	std::vector<D3D_SHADER_MACRO> result;
 
 	result.push_back({ "MAX_FRAGMENTS", fragments_str.c_str() });
 
-	if (flags & ShaderFlags::fvf_rhw)
+	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
 		result.push_back({ "FVF_RHW", "1" });
 	}
 
-	if (flags & ShaderFlags::fvf_normal)
+	if (flags & D3DFVF_NORMAL)
 	{
 		result.push_back({ "FVF_NORMAL", "1" });
 	}
 
-	if (flags & ShaderFlags::fvf_diffuse)
+	if (flags & D3DFVF_DIFFUSE)
 	{
 		result.push_back({ "FVF_DIFFUSE", "1" });
 	}
 
-	if (flags & ShaderFlags::fvf_tex1)
+	if (flags & D3DFVF_TEXCOUNT_MASK)
 	{
-		result.push_back({ "FVF_TEX1", "1" });
+		texcount_str = std::to_string((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
+		result.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
 	}
 
 	if (flags & ShaderFlags::tci_envmap)
@@ -482,12 +483,12 @@ uint32_t ShaderFlags::sanitize(uint32_t flags)
 {
 	flags &= mask;
 
-	if (flags & tci_envmap && (!(flags & fvf_tex1) || !(flags & fvf_normal)))
+	if (flags & tci_envmap && (!(flags & D3DFVF_TEXCOUNT_MASK) || !(flags & D3DFVF_NORMAL)))
 	{
 		flags &= ~tci_envmap;
 	}
 
-	if (flags & rs_lighting && !(flags & fvf_normal))
+	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
 	{
 		flags &= ~rs_lighting;
 	}
@@ -2513,26 +2514,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 		auto fvf = Handle;
 
 		shader_flags &= ~ShaderFlags::fvf_mask;
-
-		if (fvf & D3DFVF_XYZRHW)
-		{
-			shader_flags |= ShaderFlags::fvf_rhw;
-		}
-
-		if (fvf & D3DFVF_NORMAL)
-		{
-			shader_flags |= ShaderFlags::fvf_normal;
-		}
-
-		if (fvf & D3DFVF_DIFFUSE)
-		{
-			shader_flags |= ShaderFlags::fvf_diffuse;
-		}
-
-		if (fvf & D3DFVF_TEX1)
-		{
-			shader_flags |= ShaderFlags::fvf_tex1;
-		}
+		shader_flags |= fvf;
 
 		CurrentVertexShaderHandle = 0;
 		hr = D3D_OK;
@@ -3002,6 +2984,7 @@ bool Direct3DDevice8::update_input_layout()
 		D3D11_INPUT_ELEMENT_DESC e {};
 
 		e.SemanticName      = "COLOR";
+		e.SemanticIndex     = 0;
 		e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
 		e.Format            = DXGI_FORMAT_B8G8R8A8_UNORM;
 		e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
@@ -3009,17 +2992,129 @@ bool Direct3DDevice8::update_input_layout()
 		elements.push_back(e);
 	}
 
-	if (fvf & D3DFVF_TEX1)
+	if (fvf & D3DFVF_SPECULAR)
 	{
-		fvf ^= D3DFVF_TEX1;
+		fvf ^= D3DFVF_SPECULAR;
 		D3D11_INPUT_ELEMENT_DESC e {};
 
-		e.SemanticName      = "TEXCOORD";
+		e.SemanticName      = "COLOR";
+		e.SemanticIndex     = 1;
 		e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
-		e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+		e.Format            = DXGI_FORMAT_B8G8R8A8_UNORM;
 		e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
 		elements.push_back(e);
+	}
+
+	auto tex = (fvf & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT;
+
+	if (tex > 0)
+	{
+		fvf &= ~D3DFVF_TEXCOUNT_MASK;
+
+		if (tex >= 1)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 0;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 2)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 1;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 3)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 2;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 4)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 3;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 5)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 4;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 6)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 5;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex >= 7)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 6;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
+
+		if (tex == 8)
+		{
+			D3D11_INPUT_ELEMENT_DESC e {};
+
+			e.SemanticName      = "TEXCOORD";
+			e.SemanticIndex     = 7;
+			e.InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
+			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+
+			elements.push_back(e);
+		}
 	}
 
 	if (fvf != 0)
@@ -3193,7 +3288,7 @@ void Direct3DDevice8::update_shaders()
 
 	auto& tci = sampler_0[D3DTSS_TEXCOORDINDEX];
 
-	if (tci.data() != 0 && shader_flags & ShaderFlags::fvf_tex1)
+	if (tci.data() != 0 && shader_flags & D3DFVF_TEXCOUNT_MASK)
 	{
 		shader_flags |= ShaderFlags::tci_envmap;
 	}
@@ -3206,7 +3301,7 @@ void Direct3DDevice8::update_shaders()
 
 	auto lighting = render_state_values[D3DRS_LIGHTING].data();
 
-	if (lighting != 1 && shader_flags & ShaderFlags::fvf_normal)
+	if (lighting != 1 && shader_flags & D3DFVF_NORMAL)
 	{
 		shader_flags &= ~ShaderFlags::rs_lighting;
 	}
