@@ -885,9 +885,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
 		context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
 
-		// Unbind the last vertex & index buffers (one of the cubes)...
 		context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-		context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+		//context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		// ...then draw 3 points. The composite shader uses SV_VertexID
@@ -896,6 +895,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 		blend_flags = blend_;
 		update_blend();
+		oit_enabled = false;
 	}
 
 	if (!oit_enabled && oit_enabled_ != oit_enabled)
@@ -1413,7 +1413,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDes
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRenderTarget, Direct3DSurface8* pNewZStencil)
 {
 #if 1
-	// not required for SADX
+	// TODO: required for LotR: RotK
 	return D3DERR_INVALIDCALL;
 #else
 	HRESULT hr;
@@ -2748,7 +2748,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pInd
 	index_buffer->AddRef();
 
 	CurrentBaseVertexIndex = static_cast<INT>(BaseVertexIndex);
-	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), to_dxgi(index_buffer->desc8.Format), BaseVertexIndex);
+	auto dxgi = to_dxgi(index_buffer->desc8.Format);
+
+	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, BaseVertexIndex * dxgi_stride(dxgi));
 	return D3D_OK;
 }
 

@@ -33,6 +33,7 @@ DXGI_FORMAT typeless_to_sint(DXGI_FORMAT format);
 DXGI_FORMAT typeless_to_snorm(DXGI_FORMAT format);
 DXGI_FORMAT typeless_to_float(DXGI_FORMAT format);
 DXGI_FORMAT typeless_to_unorm(DXGI_FORMAT format, bool srgb = false);
+size_t dxgi_stride(DXGI_FORMAT format);
 D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
 
 #ifndef D3D8TO9NOLOG

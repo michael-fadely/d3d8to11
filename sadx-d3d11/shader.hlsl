@@ -286,13 +286,13 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
 
-#if FVF_TEXCOUNT >= 1
+#if FVF_TEXCOUNT > 0
 	result = DiffuseMap.Sample(DiffuseSampler, input.tex0);
 #else
 	result = float4(1, 0, 0, 1);
 #endif
 
-	return result;
+	return float4(result.rgb, 1); // HACK
 
 	result *= input.diffuse;
 	result += input.specular;
