@@ -941,7 +941,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 	}
 
 #if 1
-	// TODO: required for LotR:RotK
+	// TODO: required for LotR: RotK
 	*ppBackBuffer = nullptr;
 	return D3DERR_INVALIDCALL;
 #else
