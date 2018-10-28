@@ -1883,7 +1883,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_BLENDOP:
 			if (ref.dirty())
 			{
-				printf("RS_BLENDOP: %u\n", Value);
+				printf("RS_BLENDOP: %lu\n", Value);
 			}
 
 			ref.clear();
