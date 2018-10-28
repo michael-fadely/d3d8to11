@@ -463,7 +463,7 @@ void Direct3DDevice8::create_native()
 	context->VSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
-#ifndef _DEBUG
+#if 0
 	printf("precompiling shaders...\n");
 	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
 	{
