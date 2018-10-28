@@ -30,12 +30,12 @@ void Direct3DTexture8::create_native()
 
 	uint32_t usage = D3D11_USAGE_DEFAULT;
 
-	if (Usage == D3DUSAGE_DYNAMIC)
+	if (Usage & D3DUSAGE_DYNAMIC)
 	{
 		usage = D3D11_USAGE_DYNAMIC;
 	}
 
-	if (Usage == D3DUSAGE_RENDERTARGET)
+	if (Usage & D3DUSAGE_RENDERTARGET)
 	{
 		throw std::runtime_error("D3DUSAGE_RENDERTARGET not supported");
 	}
