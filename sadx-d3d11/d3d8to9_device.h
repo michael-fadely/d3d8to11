@@ -36,9 +36,8 @@ struct ShaderFlags
 		rs_specular = 0b00000000000001000000000000000000,
 		rs_alpha    = 0b00000000000010000000000000000000,
 		rs_fog      = 0b00000000000100000000000000000000,
-		oit         = 0b00000000001000000000000000000000,
 		fvf_mask    = 0b00000000000000001111111111111111,
-		mask        = 0b00000000001111111111111111111111,
+		mask        = 0b00000000000111111111111111111111,
 		count
 	};
 
@@ -46,7 +45,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
-	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog | oit;
+	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
 #endif
 
 	static uint32_t sanitize(uint32_t flags);
@@ -97,21 +96,12 @@ struct StreamPair
 	UINT stride;
 };
 
-struct OitNode
-{
-	float depth; // fragment depth
-	uint  color; // 32-bit packed fragment color
-	uint  flags; // source blend, destination blend
-	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
-};
-
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
 class Direct3DDevice8 : public Unknown
 {
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
-	std::string fragments_str;
 	std::string texcount_str;
 
 public:
@@ -243,15 +233,6 @@ public:
 	void free_shaders();
 	void update_wv_inv_t();
 
-	void oit_load_shaders();
-	void oit_release();
-	void oit_write();
-	void oit_read();
-	void oit_init();
-	void FragListHead_Init();
-	void FragListCount_Init();
-	void FragListNodes_Init();
-
 	uint32_t shader_flags = ShaderFlags::none;
 	std::unordered_map<uint32_t, VertexShader> vertex_shaders;
 	std::unordered_map<uint32_t, PixelShader> pixel_shaders;
@@ -264,26 +245,9 @@ public:
 	ComPtr<ID3D11InfoQueue> info_queue;
 	ComPtr<ID3D11RasterizerState> raster_state;
 
-	bool oit_enabled = false;
 
 protected:
-	bool oit_enabled_ = false;
 	Direct3D8* const d3d;
-
-	VertexShader composite_vs;
-	PixelShader composite_ps;
-
-	ComPtr<ID3D11Texture2D>           FragListHead;
-	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListHeadUAV;
-
-	ComPtr<ID3D11Texture2D>           FragListCount;
-	ComPtr<ID3D11ShaderResourceView>  FragListCountSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListCountUAV;
-
-	ComPtr<ID3D11Buffer>              FragListNodes;
-	ComPtr<ID3D11ShaderResourceView>  FragListNodesSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListNodesUAV;
 
 	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
 	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
@@ -312,10 +276,6 @@ protected:
 
 	ComPtr<Direct3DSurface8> current_render_target;
 	ComPtr<Direct3DSurface8> current_depth_stencil;
-
-	ComPtr<ID3D11Texture2D> composite_texture;
-	ComPtr<ID3D11RenderTargetView> composite_view;
-	ComPtr<ID3D11ShaderResourceView> composite_srv;
 
 	ComPtr<ID3D11Buffer> per_scene_cbuf;
 	ComPtr<ID3D11Buffer> per_model_cbuf;

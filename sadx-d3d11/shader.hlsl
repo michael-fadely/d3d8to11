@@ -289,68 +289,16 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #if FVF_TEXCOUNT > 0
 	result = DiffuseMap.Sample(DiffuseSampler, input.tex0);
 #else
-	result = float4(1, 0, 0, 1);
+	result = float4(1, 1, 1, 1);
 #endif
 
-	return float4(result.rgb, 1); // HACK
+	//result *= input.diffuse;
+	//result += input.specular;
 
-	result *= input.diffuse;
-	result += input.specular;
-
-#ifdef RS_FOG
+//#ifdef RS_FOG
+#if 0
 	float factor = CalcFogFactor(input.fog);
 	result.rgb = (factor * result + (1.0 - factor) * fogColor).rgb;
-#endif
-
-#ifdef RS_ALPHA
-	if (result.a < 1.0f / 255.0f)
-	{
-		clip(-1);
-	}
-
-	#if !defined(FVF_RHW)
-	if ((srcBlend == BLEND_SRCALPHA || srcBlend == BLEND_ONE) &&
-	    (destBlend == BLEND_INVSRCALPHA || destBlend == BLEND_ZERO))
-	{
-		if (result.a > 254.0f / 255.0f)
-		{
-			return result;
-		}
-	}
-	#endif
-
-	#ifdef OIT
-		#ifndef DISABLE_PER_PIXEL_LIMIT
-			uint fragmentCount;
-			InterlockedAdd(FragListCount[input.position.xy], 1, fragmentCount);
-
-			if (fragmentCount >= MAX_FRAGMENTS)
-			{
-				clip(-1);
-			}
-		#endif
-
-		uint newIndex = FragListNodes.IncrementCounter();
-
-		// if per-pixel fragment limiting is enabled, this check is unnecessary
-		if (newIndex >= bufferLength)
-		{
-			clip(-1);
-		}
-
-		uint oldIndex;
-		InterlockedExchange(FragListHead[input.position.xy], newIndex, oldIndex);
-
-		OitNode n;
-
-		n.depth = input.depth.x / input.depth.y;
-		n.color = float4_to_unorm(result);
-		n.flags = (srcBlend << 8) | destBlend;
-		n.next  = oldIndex;
-
-		FragListNodes[newIndex] = n;
-		clip(-1);
-	#endif
 #endif
 
 	return result;
