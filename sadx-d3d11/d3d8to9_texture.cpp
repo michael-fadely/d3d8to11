@@ -9,15 +9,15 @@
 
  // TODO: instead of storing in map/vector, let d3d do the work if possible
 
-void Direct3DTexture8::create_native(ID3D11Texture2D* dxgi_rt)
+void Direct3DTexture8::create_native(ID3D11Texture2D* source)
 {
 	auto device  = Device->device;
 	auto context = Device->context;
 
-	if (dxgi_rt != nullptr)
+	if (source != nullptr)
 	{
-		dxgi_rt->GetDesc(&desc);
-		texture = dxgi_rt;
+		source->GetDesc(&desc);
+		texture = source;
 
 		is_render_target = !!(desc.BindFlags & D3D11_BIND_RENDER_TARGET);
 		is_depth_stencil = !!(desc.BindFlags & D3D11_BIND_DEPTH_STENCIL);
@@ -76,7 +76,11 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* dxgi_rt)
 			bind_flags |= D3D11_BIND_RENDER_TARGET;
 		}
 
-		// TODO: depth stencil
+		if (is_depth_stencil)
+		{
+			bind_flags |= D3D11_BIND_DEPTH_STENCIL;
+			format = to_typeless(format);
+		}
 
 		desc.ArraySize  = 1;
 		desc.BindFlags  = bind_flags;
@@ -100,10 +104,25 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* dxgi_rt)
 			throw std::runtime_error(message.str());
 		}
 
+		auto srv_format = format;
+
+		if (is_depth_stencil)
+		{
+			// create a shader resource view with a readable pixel format
+			srv_format = typeless_to_float(format);
+
+			// if float didn't work, it's probably int we want
+			if (srv_format == DXGI_FORMAT_UNKNOWN)
+			{
+				srv_format = typeless_to_unorm(format);
+			}
+
+		}
+
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-		srv_desc.Format = desc.Format;
-		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Format              = srv_format;
+		srv_desc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srv_desc.Texture2D.MipLevels = Levels;
 
 		if (FAILED(device->CreateShaderResourceView(texture.Get(), &srv_desc, &srv)))

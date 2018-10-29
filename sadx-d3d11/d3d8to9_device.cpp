@@ -5,8 +5,6 @@
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
 
-// TODO: LotR: RotK depth stencil
-
 #include "stdafx.h"
 
 #include <d3d11_1.h>
@@ -203,22 +201,11 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 
 void Direct3DDevice8::create_depth_stencil()
 {
-	D3D11_TEXTURE2D_DESC depth_tdesc {};
+	depth_stencil = new Direct3DTexture8(this, present_params.BackBufferWidth, present_params.BackBufferHeight, 1,
+	                                          D3DUSAGE_DEPTHSTENCIL, present_params.AutoDepthStencilFormat, D3DPOOL_DEFAULT);
 
-	const DXGI_FORMAT format = to_dxgi(present_params.AutoDepthStencilFormat);
-
-	depth_tdesc.Width      = present_params.BackBufferWidth;
-	depth_tdesc.Height     = present_params.BackBufferHeight;
-	depth_tdesc.MipLevels  = 1;
-	depth_tdesc.ArraySize  = 1;
-	depth_tdesc.Format     = to_typeless(format); // set texture format to typeless so we can make an SRV
-	depth_tdesc.SampleDesc = { 1, 0 };
-	depth_tdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-
-	if (FAILED(device->CreateTexture2D(&depth_tdesc, nullptr, &depth_texture)))
-	{
-		throw std::runtime_error("failed to create depth texture");
-	}
+	depth_stencil->create_native();
+	depth_stencil->GetSurfaceLevel(0, &current_depth_stencil);
 
 	D3D11_DEPTH_STENCIL_DESC depth_desc {};
 
@@ -251,38 +238,6 @@ void Direct3DDevice8::create_depth_stencil()
 	}
 
 	context->OMSetDepthStencilState(depth_state_rw.Get(), 0);
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC depth_vdesc {};
-	depth_vdesc.Format        = typeless_to_depth(depth_tdesc.Format);
-	depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-
-	if (FAILED(device->CreateDepthStencilView(depth_texture.Get(), &depth_vdesc, &depth_view)))
-	{
-		throw std::runtime_error("failed to create depth stencil view");
-	}
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
-
-	// create a shader resource view with a readable pixel format
-	auto srv_format = typeless_to_float(depth_tdesc.Format);
-
-	// if float didn't work, it's probably int we want
-	if (srv_format == DXGI_FORMAT_UNKNOWN)
-	{
-		srv_format = typeless_to_unorm(depth_tdesc.Format);
-	}
-
-	srv_desc.Format                    = srv_format;
-	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srv_desc.Texture2D.MostDetailedMip = 0;
-	srv_desc.Texture2D.MipLevels       = 1;
-
-	HRESULT hr = device->CreateShaderResourceView(depth_texture.Get(), &srv_desc, &depth_srv);
-
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("failed to create depth srv");
-	}
 }
 
 void Direct3DDevice8::create_render_target()
@@ -339,7 +294,9 @@ void Direct3DDevice8::create_render_target()
 	}
 
 	// set the composite render target as the back buffer
-	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), depth_view.Get());
+	ComPtr<Direct3DSurface8> surface;
+	depth_stencil->GetSurfaceLevel(0, &surface);
+	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), surface->depth_stencil.Get());
 }
 
 void Direct3DDevice8::create_native()
@@ -945,7 +902,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL;
 	}
 
-#if 1
 	if (!current_render_target)
 	{
 		back_buffer->GetSurfaceLevel(0, &current_render_target);
@@ -955,22 +911,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 	(*ppBackBuffer)->AddRef();
 
 	return D3D_OK;
-#else
-	*ppBackBuffer = nullptr;
-
-	IDirect3DSurface9 *SurfaceInterface = nullptr;
-
-	const HRESULT hr = ProxyInterface->GetBackBuffer(0, iBackBuffer, Type, &SurfaceInterface);
-
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-	*ppBackBuffer = address_table->FindAddress<Direct3DSurface8>(SurfaceInterface);
-
-	return D3D_OK;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRasterStatus(D3DRASTER_STATUS* pRasterStatus)
@@ -1460,103 +1400,67 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDes
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRenderTarget, Direct3DSurface8* pNewZStencil)
 {
-#if 1
-	current_render_target = pRenderTarget;
+	ID3D11RenderTargetView* render_target = nullptr;
+	ID3D11DepthStencilView* depth_stencil = nullptr;
 
 	if (pRenderTarget == nullptr)
 	{
-		context->OMSetRenderTargets(0, nullptr, depth_view.Get());
-		return D3D_OK;
-	}
-
-	auto target = pRenderTarget->render_target;
-
-	// TODO: pNewZStencil !!!
-	context->OMSetRenderTargets(1, target.GetAddressOf(), depth_view.Get());
-
-	return D3D_OK;
-#else
-	HRESULT hr;
-
-	if (pRenderTarget != nullptr)
-	{
-		hr = ProxyInterface->SetRenderTarget(0, pRenderTarget->GetProxyInterface());
-
-		if (FAILED(hr))
-		{
-			return hr;
-		}
-	}
-
-	if (pNewZStencil != nullptr)
-	{
-		hr = ProxyInterface->SetDepthStencilSurface(pNewZStencil->GetProxyInterface());
-
-		if (FAILED(hr))
-		{
-			return hr;
-		}
+		render_target = current_render_target->render_target.Get();
 	}
 	else
 	{
-		ProxyInterface->SetDepthStencilSurface(nullptr);
+		render_target = pRenderTarget->render_target.Get();
+
+		if (!render_target)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		current_render_target = pRenderTarget;
 	}
 
+	if (pNewZStencil == nullptr)
+	{
+		depth_stencil = current_depth_stencil->depth_stencil.Get();
+	}
+	else
+	{
+		depth_stencil = pNewZStencil->depth_stencil.Get();
+
+		if (!depth_stencil)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		current_depth_stencil = pNewZStencil;
+	}
+
+	context->OMSetRenderTargets(1, &render_target, depth_stencil);
 	return D3D_OK;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderTarget(Direct3DSurface8** ppRenderTarget)
 {
-#if 1
-	// TODO: required for LotR: RotK...?
-	return D3DERR_INVALIDCALL;
-#else
-	if (ppRenderTarget == nullptr)
+	if (!ppRenderTarget)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	IDirect3DSurface9 *SurfaceInterface = nullptr;
-
-	const HRESULT hr = ProxyInterface->GetRenderTarget(0, &SurfaceInterface);
-
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-	*ppRenderTarget = address_table->FindAddress<Direct3DSurface8>(SurfaceInterface);
-
+	*ppRenderTarget = current_render_target.Get();
+	(*ppRenderTarget)->AddRef();
 	return D3D_OK;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDepthStencilSurface(Direct3DSurface8** ppZStencilSurface)
 {
-	if (ppZStencilSurface == nullptr)
+	if (!ppZStencilSurface)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-#if 1
-	// TODO: required for LotR: RotK
-	*ppZStencilSurface = nullptr;
-	return D3DERR_INVALIDCALL;
-#else
-	IDirect3DSurface9 *SurfaceInterface = nullptr;
-
-	const HRESULT hr = ProxyInterface->GetDepthStencilSurface(&SurfaceInterface);
-
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-	*ppZStencilSurface = address_table->FindAddress<Direct3DSurface8>(SurfaceInterface);
-
+	*ppZStencilSurface = current_depth_stencil.Get();
+	(*ppZStencilSurface)->AddRef();
 	return D3D_OK;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::BeginScene()
@@ -1602,7 +1506,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 			flags |= D3D11_CLEAR_STENCIL;
 		}
 
-		context->ClearDepthStencilView(depth_view.Get(), flags, Z, static_cast<uint8_t>(Stencil));
+		if (current_depth_stencil)
+		{
+			context->ClearDepthStencilView(current_depth_stencil->depth_stencil.Get(), flags, Z, static_cast<uint8_t>(Stencil));
+		}
 	}
 
 	return D3D_OK;
@@ -2418,7 +2325,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
 
-	if (alpha.data() == TRUE && oit_enabled_)
+	if (oit_enabled_ && alpha.data() == TRUE)
 	{
 		DWORD ZWRITEENABLE;
 		DWORD ZENABLE;
@@ -2798,18 +2705,18 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetStreamSource(UINT StreamNumber, Di
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pIndexData, UINT BaseVertexIndex)
 {
-	if (pIndexData == nullptr || BaseVertexIndex > 0x7FFFFFFF)
+	if (BaseVertexIndex > 0x7FFFFFFF)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (index_buffer)
-	{
-		index_buffer->Release();
-	}
-
 	index_buffer = pIndexData;
-	index_buffer->AddRef();
+
+	if (pIndexData == nullptr)
+	{
+		context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+		return D3D_OK;
+	}
 
 	CurrentBaseVertexIndex = static_cast<INT>(BaseVertexIndex);
 	auto dxgi = to_dxgi(index_buffer->desc8.Format);
@@ -2825,8 +2732,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetIndices(Direct3DIndexBuffer8** ppI
 		return D3DERR_INVALIDCALL;
 	}
 
-	*ppIndexData = index_buffer;
-	index_buffer->AddRef();
+	if (index_buffer)
+	{
+		*ppIndexData = index_buffer.Get();
+		(*ppIndexData)->AddRef();
+	}
+	else
+	{
+		*ppIndexData = nullptr;
+	}
 
 	if (pBaseVertexIndex != nullptr)
 	{
@@ -3577,12 +3491,15 @@ void Direct3DDevice8::oit_write()
 	// must match the number of UAVs given.
 	static const uint zero[3] = { 0, 0, 0 };
 
-	ComPtr<Direct3DSurface8> surface;
-	back_buffer->GetSurfaceLevel(0, &surface);
+	ComPtr<Direct3DSurface8> bb_surface;
+	back_buffer->GetSurfaceLevel(0, &bb_surface);
+
+	ComPtr<Direct3DSurface8> ds_surface;
+	depth_stencil->GetSurfaceLevel(0, &ds_surface);
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_enabled_ ? composite_view.GetAddressOf() : surface->render_target.GetAddressOf(),
-	                                                   depth_view.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_enabled_ ? composite_view.GetAddressOf() : bb_surface->render_target.GetAddressOf(),
+	                                                   ds_surface->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
@@ -3610,7 +3527,7 @@ void Direct3DDevice8::oit_read()
 		FragListCountSRV.Get(),
 		FragListNodesSRV.Get(),
 		composite_srv.Get(),
-		depth_srv.Get()
+		depth_stencil->srv.Get()
 	};
 
 	// Binds the shader resource views of our UAV buffers as read-only.

@@ -36,6 +36,12 @@ Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* pa
 		rt_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rt_desc.Texture2D.MipSlice = level;
 	}
+
+	if (parent->is_depth_stencil)
+	{
+		depth_vdesc.Format        = typeless_to_depth(parent->desc.Format);
+		depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	}
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void **ppvObj)
@@ -154,13 +160,27 @@ void Direct3DSurface8::create_native()
 {
 	auto device = Device->device;
 
-	if (parent->is_render_target)
+	if (parent)
 	{
-		auto hr = device->CreateRenderTargetView(parent->texture.Get(), &rt_desc, &render_target);
-
-		if (FAILED(hr))
+		if (parent->is_render_target)
 		{
-			throw std::runtime_error("CreateRenderTargetView failed");
+			auto hr = device->CreateRenderTargetView(parent->texture.Get(), &rt_desc, &render_target);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("CreateRenderTargetView failed");
+			}
+		}
+
+		if (parent->is_depth_stencil)
+		{
+
+			auto hr = device->CreateDepthStencilView(parent->texture.Get(), &depth_vdesc, &depth_stencil);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("CreateDepthStencilView failed");
+			}
 		}
 	}
 }

@@ -297,7 +297,7 @@ protected:
 	dirty_t<uint32_t> blend_flags;
 	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> blend_states;
 
-	Direct3DIndexBuffer8* index_buffer = nullptr;
+	ComPtr<Direct3DIndexBuffer8> index_buffer = nullptr;
 
 	void up_get(size_t target_size);
 
@@ -305,13 +305,13 @@ protected:
 	std::deque<ComPtr<Direct3DVertexBuffer8>> up_buffers;
 
 	dirty_t<DWORD> FVF;
-	ComPtr<ID3D11Texture2D> depth_texture;
+	ComPtr<Direct3DTexture8> depth_stencil;
 	ComPtr<ID3D11DepthStencilState> depth_state_rw;
 	ComPtr<ID3D11DepthStencilState> depth_state_ro;
-	ComPtr<ID3D11DepthStencilView> depth_view;
-	ComPtr<ID3D11ShaderResourceView> depth_srv;
 	ComPtr<Direct3DTexture8> back_buffer;
+
 	ComPtr<Direct3DSurface8> current_render_target;
+	ComPtr<Direct3DSurface8> current_depth_stencil;
 
 	ComPtr<ID3D11Texture2D> composite_texture;
 	ComPtr<ID3D11RenderTargetView> composite_view;

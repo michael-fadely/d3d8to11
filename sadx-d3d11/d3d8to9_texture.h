@@ -65,6 +65,7 @@ public:
 	D3DPOOL   Pool;
 
 	D3D11_TEXTURE2D_DESC desc {};
+	D3D11_DEPTH_STENCIL_DESC depth_desc {};
 
 	bool is_render_target = false;
 	bool is_depth_stencil = false;
