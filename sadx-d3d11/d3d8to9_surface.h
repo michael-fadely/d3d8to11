@@ -30,10 +30,9 @@ public:
 
 	void create_native();
 	ComPtr<ID3D11RenderTargetView> render_target;
-
-private:
-	Direct3DDevice8* const Device;
 	Direct3DTexture8* parent;
+
+	Direct3DDevice8* const Device;
 	UINT level;
 	D3DSURFACE_DESC8 desc8 {};
 

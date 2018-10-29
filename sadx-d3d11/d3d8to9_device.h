@@ -310,7 +310,8 @@ protected:
 	ComPtr<ID3D11DepthStencilState> depth_state_ro;
 	ComPtr<ID3D11DepthStencilView> depth_view;
 	ComPtr<ID3D11ShaderResourceView> depth_srv;
-	ComPtr<ID3D11RenderTargetView> render_target;
+	ComPtr<Direct3DTexture8> back_buffer;
+	ComPtr<Direct3DSurface8> current_render_target;
 
 	ComPtr<ID3D11Texture2D> composite_texture;
 	ComPtr<ID3D11RenderTargetView> composite_view;

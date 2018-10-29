@@ -26,7 +26,7 @@ public:
 	Direct3DTexture8(const Direct3DTexture8&) = delete;
 	Direct3DTexture8& operator=(const Direct3DTexture8&) = delete;
 
-	void create_native();
+	void create_native(ID3D11Texture2D* view_of = nullptr);
 
 	Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
 	~Direct3DTexture8() = default;

@@ -9,96 +9,107 @@
 
  // TODO: instead of storing in map/vector, let d3d do the work if possible
 
-void Direct3DTexture8::create_native()
+void Direct3DTexture8::create_native(ID3D11Texture2D* dxgi_rt)
 {
 	auto device  = Device->device;
 	auto context = Device->context;
 
-	uint32_t usage = D3D11_USAGE_DEFAULT;
-	uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE;
-
-	is_render_target = !!(Usage & D3DUSAGE_RENDERTARGET);
-	is_depth_stencil = !!(Usage & D3DUSAGE_DEPTHSTENCIL);
-
-	if (!Levels)
+	if (dxgi_rt != nullptr)
 	{
-		++Levels;
+		dxgi_rt->GetDesc(&desc);
+		texture = dxgi_rt;
 
-		if (!is_render_target && !is_depth_stencil)
+		is_render_target = !!(desc.BindFlags & D3D11_BIND_RENDER_TARGET);
+		is_depth_stencil = !!(desc.BindFlags & D3D11_BIND_DEPTH_STENCIL);
+	}
+	else
+	{
+		uint32_t usage = D3D11_USAGE_DEFAULT;
+		uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE;
+
+		is_render_target = !!(Usage & D3DUSAGE_RENDERTARGET);
+		is_depth_stencil = !!(Usage & D3DUSAGE_DEPTHSTENCIL);
+
+		if (!Levels)
 		{
-			auto width = Width;
-			auto height = Height;
+			++Levels;
 
-			while (width != 1 && height != 1)
+			if (!is_render_target && !is_depth_stencil)
 			{
-				++Levels;
-				width = std::max(1u, width / 2);
-				height = std::max(1u, height / 2);
+				auto width = Width;
+				auto height = Height;
+
+				while (width != 1 && height != 1)
+				{
+					++Levels;
+					width = std::max(1u, width / 2);
+					height = std::max(1u, height / 2);
+				}
 			}
 		}
-	}
 
-	auto format = to_dxgi(Format);
+		auto format = to_dxgi(Format);
 
-	if (!IsWindows8OrGreater())
-	{
-		switch (format)
+		if (!IsWindows8OrGreater())
 		{
-			case DXGI_FORMAT_B5G6R5_UNORM:
-			case DXGI_FORMAT_B5G5R5A1_UNORM:
-			case DXGI_FORMAT_B4G4R4A4_UNORM:
-			case DXGI_FORMAT_B8G8R8A8_UNORM:
-				format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				break;
+			switch (format)
+			{
+				case DXGI_FORMAT_B5G6R5_UNORM:
+				case DXGI_FORMAT_B5G5R5A1_UNORM:
+				case DXGI_FORMAT_B4G4R4A4_UNORM:
+				case DXGI_FORMAT_B8G8R8A8_UNORM:
+					format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					break;
 
-			default:
-				break;
+				default:
+					break;
+			}
 		}
-	}
 
-	/*if (Usage & D3DUSAGE_DYNAMIC)
-	{
-		usage = D3D11_USAGE_DYNAMIC;
-	}*/
+		/*if (Usage & D3DUSAGE_DYNAMIC)
+		{
+			usage = D3D11_USAGE_DYNAMIC;
+		}*/
 
-	if (is_render_target)
-	{
-		bind_flags |= D3D11_BIND_RENDER_TARGET;
-	}
+		if (is_render_target)
+		{
+			bind_flags |= D3D11_BIND_RENDER_TARGET;
+		}
 
-	// TODO: depth stencil
+		// TODO: depth stencil
 
-	desc.ArraySize  = 1;
-	desc.BindFlags  = bind_flags;
-	desc.Usage      = static_cast<D3D11_USAGE>(usage);
-	desc.Format     = format;
-	desc.Width      = Width;
-	desc.Height     = Height;
-	desc.MipLevels  = Levels;
-	desc.SampleDesc = { 1, 0 };
+		desc.ArraySize  = 1;
+		desc.BindFlags  = bind_flags;
+		desc.Usage      = static_cast<D3D11_USAGE>(usage);
+		desc.Format     = format;
+		desc.Width      = Width;
+		desc.Height     = Height;
+		desc.MipLevels  = Levels;
+		desc.SampleDesc = { 1, 0 };
 
-	auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
+		auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
 
-	if (FAILED(hr))
-	{
-		std::stringstream message;
+		if (FAILED(hr))
+		{
+			std::stringstream message;
 
-		message << "CreateTexture2D failed with error " << std::hex << static_cast<uint32_t>(hr) << std::dec
-			<< ": format: " << static_cast<uint32_t>(desc.Format)
-			<< " width: " << desc.Width << " height: " << desc.Height << " levels: " << desc.MipLevels;
+			message << "CreateTexture2D failed with error " << std::hex << static_cast<uint32_t>(hr) << std::dec
+				<< ": format: " << static_cast<uint32_t>(desc.Format)
+				<< " width: " << desc.Width << " height: " << desc.Height << " levels: " << desc.MipLevels;
 
-		throw std::runtime_error(message.str());
-	}
+			throw std::runtime_error(message.str());
+		}
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-	srv_desc.Format              = desc.Format;
-	srv_desc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srv_desc.Texture2D.MipLevels = Levels;
+		srv_desc.Format = desc.Format;
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = Levels;
 
-	if (FAILED(device->CreateShaderResourceView(texture.Get(), &srv_desc, &srv)))
-	{
-		throw std::runtime_error("CreateShaderResourceView failed");
+		if (FAILED(device->CreateShaderResourceView(texture.Get(), &srv_desc, &srv)))
+		{
+			throw std::runtime_error("CreateShaderResourceView failed");
+		}
 	}
 
 	surfaces.resize(Levels);
@@ -305,8 +316,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto surface = surfaces[Level];
-	*ppSurfaceLevel = surface.Get();
+	*ppSurfaceLevel = surfaces[Level].Get();
+	(*ppSurfaceLevel)->AddRef();
 
 	return D3D_OK;
 }

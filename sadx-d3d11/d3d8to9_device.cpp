@@ -5,6 +5,8 @@
 
 // TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
 
+// TODO: LotR: RotK depth stencil
+
 #include "stdafx.h"
 
 #include <d3d11_1.h>
@@ -292,8 +294,11 @@ void Direct3DDevice8::create_render_target()
 	D3D11_TEXTURE2D_DESC tex_desc {};
 	pBackBuffer->GetDesc(&tex_desc);
 
-	// use the back buffer address to create the render target
-	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
+	back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	back_buffer->create_native(pBackBuffer);
+
+	back_buffer->GetSurfaceLevel(0, &current_render_target);
+
 	pBackBuffer->Release();
 
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
@@ -845,7 +850,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 	    pPresentationParameters->Windowed != present_params.Windowed)
 	{
 		present_params = *pPresentationParameters;
-		render_target = nullptr;
+		back_buffer = nullptr;
 
 		swap_chain->ResizeBuffers(0, present_params.BackBufferWidth, present_params.BackBufferHeight,
 		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
@@ -941,9 +946,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 	}
 
 #if 1
-	// TODO: required for LotR: RotK
-	*ppBackBuffer = nullptr;
-	return D3DERR_INVALIDCALL;
+	if (!current_render_target)
+	{
+		back_buffer->GetSurfaceLevel(0, &current_render_target);
+	}
+
+	*ppBackBuffer = current_render_target.Get();
+	(*ppBackBuffer)->AddRef();
+
+	return D3D_OK;
 #else
 	*ppBackBuffer = nullptr;
 
@@ -1273,8 +1284,45 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSurface, const RECT* pSourceRectsArray, UINT cRects, Direct3DSurface8* pDestinationSurface, const POINT* pDestPointsArray)
 {
 #if 1
-	// not required for SADX
-	return D3DERR_INVALIDCALL;
+	if (!pSourceSurface || !pDestinationSurface)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (pSourceRectsArray || cRects || pDestPointsArray) // TODO
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	UINT src_index = 0;
+	UINT dst_index = 0;
+	ComPtr<ID3D11Resource> src, dst;
+
+	// TODO: MAKE NOT SHIT
+
+	if (pSourceSurface->render_target)
+	{
+		pSourceSurface->render_target->GetResource(&src);
+	}
+	else if (pSourceSurface->parent)
+	{
+		pSourceSurface->parent->srv->GetResource(&src);
+		src_index = pSourceSurface->level;
+	}
+
+	if (pDestinationSurface->render_target)
+	{
+		pDestinationSurface->render_target->GetResource(&dst);
+	}
+	else if (pDestinationSurface->parent)
+	{
+		pDestinationSurface->parent->srv->GetResource(&dst);
+		src_index = pDestinationSurface->level;
+	}
+
+	context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
+	return D3D_OK;
+
 #else
 	if (pSourceSurface == nullptr || pDestinationSurface == nullptr || pSourceSurface == pDestinationSurface)
 	{
@@ -1413,22 +1461,18 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDes
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRenderTarget, Direct3DSurface8* pNewZStencil)
 {
 #if 1
+	current_render_target = pRenderTarget;
+
 	if (pRenderTarget == nullptr)
 	{
+		context->OMSetRenderTargets(0, nullptr, depth_view.Get());
 		return D3D_OK;
 	}
 
 	auto target = pRenderTarget->render_target;
 
-	if (!render_target)
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
 	// TODO: pNewZStencil !!!
 	context->OMSetRenderTargets(1, target.GetAddressOf(), depth_view.Get());
-
-	pRenderTarget->AddRef();
 
 	return D3D_OK;
 #else
@@ -1496,7 +1540,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDepthStencilSurface(Direct3DSurfac
 	}
 
 #if 1
-	// not required for SADX
+	// TODO: required for LotR: RotK
 	*ppZStencilSurface = nullptr;
 	return D3DERR_INVALIDCALL;
 #else
@@ -1537,7 +1581,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 		};
 
 		context->ClearRenderTargetView(composite_view.Get(), color);
-		context->ClearRenderTargetView(render_target.Get(), color);
+
+		if (current_render_target)
+		{
+			context->ClearRenderTargetView(current_render_target->render_target.Get(), color);
+		}
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))
@@ -3494,7 +3542,10 @@ void Direct3DDevice8::oit_release()
 {
 	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
+	ComPtr<Direct3DSurface8> surface;
+	back_buffer->GetSurfaceLevel(0, &surface);
+
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, surface->render_target.GetAddressOf(), nullptr,
 	                                                   1, null.size(), &null[0], nullptr);
 
 	FragListHead     = nullptr;
@@ -3526,8 +3577,11 @@ void Direct3DDevice8::oit_write()
 	// must match the number of UAVs given.
 	static const uint zero[3] = { 0, 0, 0 };
 
+	ComPtr<Direct3DSurface8> surface;
+	back_buffer->GetSurfaceLevel(0, &surface);
+
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_enabled_ ? composite_view.GetAddressOf() : render_target.GetAddressOf(),
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_enabled_ ? composite_view.GetAddressOf() : surface->render_target.GetAddressOf(),
 	                                                   depth_view.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
@@ -3545,7 +3599,11 @@ void Direct3DDevice8::oit_read()
 	ID3D11UnorderedAccessView* uavs[3] = {};
 
 	// Unbinds our UAVs.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
+
+	ComPtr<Direct3DSurface8> surface;
+	back_buffer->GetSurfaceLevel(0, &surface);
+
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, surface->render_target.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
 
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {
 		FragListHeadSRV.Get(),
