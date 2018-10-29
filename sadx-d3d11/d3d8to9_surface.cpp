@@ -7,9 +7,35 @@
 #include "d3d8to9.hpp"
 
 // IDirect3DSurface8
-Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_) :
-	Device(device), parent(parent_), level(level_)
+Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_)
+	: Device(device),
+	  parent(parent_),
+	  level(level_)
 {
+	auto width = parent->Width;
+	auto height = parent->Height;
+
+	for (size_t i = 0; i < level && width > 1 && height > 1; ++i)
+	{
+		width = std::max(1u, width / 2);
+		height = std::max(1u, height / 2);
+	}
+
+	desc8.Format          = parent->Format;
+	desc8.Type            = parent->GetType();
+	desc8.Usage           = parent->Usage;
+	desc8.Pool            = parent->Pool;
+	desc8.Size            = calc_texture_size(width, height, 1, parent->Format);
+	desc8.MultiSampleType = D3DMULTISAMPLE_NONE;
+	desc8.Width           = width;
+	desc8.Height          = height;
+
+	if (parent->is_render_target)
+	{
+		rt_desc.Format             = parent->desc.Format;
+		rt_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rt_desc.Texture2D.MipSlice = level;
+	}
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void **ppvObj)
@@ -105,7 +131,13 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetContainer(REFIID riid, void **ppC
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8 *pDesc)
 {
-	return parent->GetLevelDesc(level, pDesc);
+	if (pDesc == nullptr)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	*pDesc = desc8;
+	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::LockRect(D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags)
@@ -116,4 +148,19 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::LockRect(D3DLOCKED_RECT *pLockedRect
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::UnlockRect()
 {
 	return parent->UnlockRect(level);
+}
+
+void Direct3DSurface8::create_native()
+{
+	auto device = Device->device;
+
+	if (parent->is_render_target)
+	{
+		auto hr = device->CreateRenderTargetView(parent->texture.Get(), &rt_desc, &render_target);
+
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("CreateRenderTargetView failed");
+		}
+	}
 }

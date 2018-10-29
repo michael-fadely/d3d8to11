@@ -57,17 +57,23 @@ public:
 	ComPtr<ID3D11Texture2D> texture;
 	ComPtr<ID3D11ShaderResourceView> srv;
 
-	UINT Width;
-	UINT Height;
-	UINT Levels;
-	DWORD Usage;
+	UINT      Width;
+	UINT      Height;
+	UINT      Levels;
+	DWORD     Usage;
 	D3DFORMAT Format;
-	D3DPOOL Pool;
+	D3DPOOL   Pool;
+
+	D3D11_TEXTURE2D_DESC desc {};
+
+	bool is_render_target = false;
+	bool is_depth_stencil = false;
 
 private:
+	std::vector<ComPtr<Direct3DSurface8>> surfaces;
+
 	bool convert(UINT Level);
 	Direct3DDevice8* const Device;
-	D3D11_TEXTURE2D_DESC desc {};
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
 	std::unordered_map<UINT, std::vector<uint8_t>> texture_levels;

@@ -28,8 +28,14 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE LockRect(D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags);
 	virtual HRESULT STDMETHODCALLTYPE UnlockRect();
 
+	void create_native();
+	ComPtr<ID3D11RenderTargetView> render_target;
+
 private:
 	Direct3DDevice8* const Device;
 	Direct3DTexture8* parent;
 	UINT level;
+	D3DSURFACE_DESC8 desc8 {};
+
+	D3D11_RENDER_TARGET_VIEW_DESC rt_desc {};
 };

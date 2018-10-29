@@ -1413,8 +1413,24 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDes
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRenderTarget, Direct3DSurface8* pNewZStencil)
 {
 #if 1
-	// TODO: required for LotR: RotK
-	return D3DERR_INVALIDCALL;
+	if (pRenderTarget == nullptr)
+	{
+		return D3D_OK;
+	}
+
+	auto target = pRenderTarget->render_target;
+
+	if (!render_target)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	// TODO: pNewZStencil !!!
+	context->OMSetRenderTargets(1, target.GetAddressOf(), depth_view.Get());
+
+	pRenderTarget->AddRef();
+
+	return D3D_OK;
 #else
 	HRESULT hr;
 
@@ -1449,7 +1465,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRe
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderTarget(Direct3DSurface8** ppRenderTarget)
 {
 #if 1
-	// not required for SADX
+	// TODO: required for LotR: RotK...?
 	return D3DERR_INVALIDCALL;
 #else
 	if (ppRenderTarget == nullptr)

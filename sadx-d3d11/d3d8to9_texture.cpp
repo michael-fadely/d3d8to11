@@ -14,30 +14,28 @@ void Direct3DTexture8::create_native()
 	auto device  = Device->device;
 	auto context = Device->context;
 
+	uint32_t usage = D3D11_USAGE_DEFAULT;
+	uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE;
+
+	is_render_target = !!(Usage & D3DUSAGE_RENDERTARGET);
+	is_depth_stencil = !!(Usage & D3DUSAGE_DEPTHSTENCIL);
+
 	if (!Levels)
 	{
 		++Levels;
-		auto width = Width;
-		auto height = Height;
 
-		while (width != 1 && height != 1)
+		if (!is_render_target && !is_depth_stencil)
 		{
-			++Levels;
-			width  = std::max(1u, width / 2);
-			height = std::max(1u, height / 2);
+			auto width = Width;
+			auto height = Height;
+
+			while (width != 1 && height != 1)
+			{
+				++Levels;
+				width = std::max(1u, width / 2);
+				height = std::max(1u, height / 2);
+			}
 		}
-	}
-
-	uint32_t usage = D3D11_USAGE_DEFAULT;
-
-	if (Usage & D3DUSAGE_DYNAMIC)
-	{
-		usage = D3D11_USAGE_DYNAMIC;
-	}
-
-	if (Usage & D3DUSAGE_RENDERTARGET)
-	{
-		throw std::runtime_error("D3DUSAGE_RENDERTARGET not supported");
 	}
 
 	auto format = to_dxgi(Format);
@@ -58,8 +56,20 @@ void Direct3DTexture8::create_native()
 		}
 	}
 
+	/*if (Usage & D3DUSAGE_DYNAMIC)
+	{
+		usage = D3D11_USAGE_DYNAMIC;
+	}*/
+
+	if (is_render_target)
+	{
+		bind_flags |= D3D11_BIND_RENDER_TARGET;
+	}
+
+	// TODO: depth stencil
+
 	desc.ArraySize  = 1;
-	desc.BindFlags  = D3D11_BIND_SHADER_RESOURCE;
+	desc.BindFlags  = bind_flags;
 	desc.Usage      = static_cast<D3D11_USAGE>(usage);
 	desc.Format     = format;
 	desc.Width      = Width;
@@ -89,6 +99,17 @@ void Direct3DTexture8::create_native()
 	if (FAILED(device->CreateShaderResourceView(texture.Get(), &srv_desc, &srv)))
 	{
 		throw std::runtime_error("CreateShaderResourceView failed");
+	}
+
+	surfaces.resize(Levels);
+	surfaces.shrink_to_fit();
+
+	size_t level = 0;
+
+	for (auto& i : surfaces)
+	{
+		i = new Direct3DSurface8(Device, this, level++);
+		i->create_native();
 	}
 }
 // IDirect3DTexture8
@@ -284,14 +305,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 		return D3DERR_INVALIDCALL;
 	}
 
-	try
-	{
-		*ppSurfaceLevel = new Direct3DSurface8(Device, this, Level);
-	}
-	catch (std::exception&)
-	{
-		return D3DERR_INVALIDCALL;
-	}
+	auto surface = surfaces[Level];
+	*ppSurfaceLevel = surface.Get();
 
 	return D3D_OK;
 }

@@ -264,10 +264,10 @@ public:
 	ComPtr<ID3D11InfoQueue> info_queue;
 	ComPtr<ID3D11RasterizerState> raster_state;
 
-	bool oit_enabled = true;
+	bool oit_enabled = false;
 
 protected:
-	bool oit_enabled_ = true;
+	bool oit_enabled_ = false;
 	Direct3D8* const d3d;
 
 	VertexShader composite_vs;
