@@ -51,6 +51,16 @@ struct ShaderFlags
 	static uint32_t sanitize(uint32_t flags);
 };
 
+struct DepthFlags
+{
+	enum T : uint32_t
+	{
+		test_enabled    = 1 << 5,
+		write_enabled   = 1 << 4,
+		comparison_mask = 0xF
+	};
+};
+
 struct SamplerSettings : dirty_impl
 {
 	dirty_t<D3DTEXTUREADDRESS> address_u, address_v, address_w;
@@ -229,6 +239,7 @@ public:
 	void compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
 	void update_blend();
+	void update_depth();
 	bool update();
 	void free_shaders();
 	void update_wv_inv_t();
@@ -270,9 +281,10 @@ protected:
 
 	dirty_t<DWORD> FVF;
 	ComPtr<Direct3DTexture8> depth_stencil;
-	ComPtr<ID3D11DepthStencilState> depth_state_rw;
-	ComPtr<ID3D11DepthStencilState> depth_state_ro;
 	ComPtr<Direct3DTexture8> back_buffer;
+
+	dirty_t<uint32_t> depth_flags;
+	std::unordered_map<uint32_t, ComPtr<ID3D11DepthStencilState>> depth_states;
 
 	ComPtr<Direct3DSurface8> current_render_target;
 	ComPtr<Direct3DSurface8> current_depth_stencil;
