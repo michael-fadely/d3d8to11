@@ -158,7 +158,14 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 		return D3DERR_INVALIDCALL;
 	}
 
-	if ((uint64_t)OffsetToLock + (uint64_t)SizeToLock >= (uint64_t)buffer.size())
+	if (OffsetToLock >= buffer.size())
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	const uint64_t remainder = buffer.size() - OffsetToLock;
+
+	if (SizeToLock > remainder)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -212,4 +219,26 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDesc(D3DVERTEXBUFFER_DESC* p
 
 	*pDesc = desc8;
 	return D3D_OK;
+}
+
+void Direct3DVertexBuffer8::get_buffer(size_t offset, size_t size, uint8_t** ptr)
+{
+	if (offset >= buffer.size())
+	{
+		return;
+	}
+
+	const uint64_t remainder = buffer.size() - offset;
+
+	if (size > remainder)
+	{
+		return;
+	}
+
+	if (!ptr)
+	{
+		return;
+	}
+
+	*ptr = reinterpret_cast<BYTE*>(&buffer[offset]);
 }

@@ -55,8 +55,8 @@ struct DepthFlags
 {
 	enum T : uint32_t
 	{
-		test_enabled    = 1 << 5,
-		write_enabled   = 1 << 4,
+		test_enabled    = 1 << 15,
+		write_enabled   = 1 << 14,
 		comparison_mask = 0xF
 	};
 };

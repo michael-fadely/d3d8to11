@@ -295,8 +295,14 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	//result *= input.diffuse;
 	//result += input.specular;
 
-//#ifdef RS_FOG
-#if 0
+//#ifdef RS_ALPHA
+//	if (result.a * 255.0f < 254.0f / 255.0f)
+//	{
+//		clip(-1);
+//	}
+//#endif
+
+#ifdef RS_FOG
 	float factor = CalcFogFactor(input.fog);
 	result.rgb = (factor * result + (1.0 - factor) * fogColor).rgb;
 #endif

@@ -2200,8 +2200,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 {
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
+		// TODO: fix this shit (LotR: RotK)
 		auto stream = stream_sources[0]; // HACK
-		auto& buffer = stream.buffer;
+
+		if (!stream.buffer)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		auto buffer = stream.buffer;
 
 		auto point_count = PrimitiveCount + 2;
 		auto stride = buffer->desc8.Size / point_count;
@@ -3269,6 +3276,10 @@ void Direct3DDevice8::update_depth()
 	}
 
 	D3D11_DEPTH_STENCIL_DESC depth_desc {};
+
+	std::stringstream shit;
+	shit << "new depth state: " << std::hex << std::setw(4) << std::setfill('0') << depth_flags.data() << "\n";
+	OutputDebugStringA(shit.str().c_str());
 
 	depth_desc.DepthEnable = !!(depth_flags & DepthFlags::test_enabled);
 	depth_desc.DepthWriteMask = !!(depth_flags & DepthFlags::write_enabled) ?
