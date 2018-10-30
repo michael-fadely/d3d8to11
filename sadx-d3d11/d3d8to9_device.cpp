@@ -3018,19 +3018,16 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_per_pixel()
 {
-	per_pixel.srcBlend   = render_state_values[D3DRS_SRCBLEND];
-	per_pixel.destBlend  = render_state_values[D3DRS_DESTBLEND];
 	per_pixel.fogMode    = render_state_values[D3DRS_FOGTABLEMODE];
 	per_pixel.fogStart   = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGSTART].data());
 	per_pixel.fogEnd     = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGEND].data());
 	per_pixel.fogDensity = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGDENSITY].data());
+	per_pixel.set_color(render_state_values[D3DRS_FOGCOLOR]);
 
-	if (!per_pixel.dirty() && !render_state_values[D3DRS_FOGCOLOR].dirty())
+	if (!per_pixel.dirty())
 	{
 		return;
 	}
-
-	per_pixel.set_color(render_state_values[D3DRS_FOGCOLOR]);
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	context->Map(per_pixel_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);

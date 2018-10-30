@@ -14,7 +14,6 @@ public:
 	dirty_t<matrix>   projectionMatrix;
 	dirty_t<float2>   screenDimensions;
 	dirty_t<float3>   viewPosition;
-	dirty_t<uint32_t> bufferLength;
 
 	void write(CBufferBase& cbuf) const override;
 
@@ -44,8 +43,6 @@ public:
 class PerPixelBuffer : public ICBuffer, dirty_impl
 {
 public:
-	dirty_t<uint>   srcBlend;
-	dirty_t<uint>   destBlend;
 	dirty_t<uint>   fogMode;
 	dirty_t<float>  fogStart;
 	dirty_t<float>  fogEnd;

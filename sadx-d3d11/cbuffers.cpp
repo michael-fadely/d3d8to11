@@ -3,14 +3,13 @@
 
 void PerSceneBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << this->viewMatrix << this->projectionMatrix << this->screenDimensions << this->viewPosition
-		<< this->bufferLength;
+	cbuf << this->viewMatrix << this->projectionMatrix << this->screenDimensions << this->viewPosition;
 }
 
 bool PerSceneBuffer::dirty() const
 {
 	return viewMatrix.dirty() || projectionMatrix.dirty() ||
-	       screenDimensions.dirty() || viewPosition.dirty() || bufferLength.dirty();
+	       screenDimensions.dirty() || viewPosition.dirty();
 }
 
 void PerSceneBuffer::clear()
@@ -19,7 +18,6 @@ void PerSceneBuffer::clear()
 	projectionMatrix.clear();
 	screenDimensions.clear();
 	viewPosition.clear();
-	bufferLength.clear();
 }
 
 void PerSceneBuffer::mark()
@@ -28,7 +26,6 @@ void PerSceneBuffer::mark()
 	projectionMatrix.mark();
 	screenDimensions.mark();
 	viewPosition.mark();
-	bufferLength.mark();
 }
 
 void PerModelBuffer::write(CBufferBase& cbuf) const
@@ -90,15 +87,13 @@ void PerModelBuffer::mark()
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << srcBlend << destBlend << fogMode
+	cbuf << fogMode
 		<< fogStart << fogEnd << fogDensity << fogColor;
 }
 
 bool PerPixelBuffer::dirty() const
 {
-	return srcBlend.dirty() ||
-	       destBlend.dirty() ||
-	       fogMode.dirty() ||
+	return fogMode.dirty() ||
 	       fogStart.dirty() ||
 	       fogEnd.dirty() ||
 	       fogDensity.dirty() ||
@@ -107,8 +102,6 @@ bool PerPixelBuffer::dirty() const
 
 void PerPixelBuffer::clear()
 {
-	srcBlend.clear();
-	destBlend.clear();
 	fogMode.clear();
 	fogStart.clear();
 	fogEnd.clear();
@@ -118,8 +111,6 @@ void PerPixelBuffer::clear()
 
 void PerPixelBuffer::mark()
 {
-	srcBlend.mark();
-	destBlend.mark();
 	fogMode.mark();
 	fogStart.mark();
 	fogEnd.mark();

@@ -125,7 +125,6 @@ cbuffer PerSceneBuffer : register(b0)
 	matrix projectionMatrix;
 	float2 screenDimensions;
 	float3 viewPosition;
-	uint   bufferLength;
 };
 
 cbuffer PerModelBuffer : register(b1)
@@ -143,8 +142,6 @@ cbuffer PerModelBuffer : register(b1)
 
 cbuffer PerPixelBuffer : register(b2)
 {
-	uint   srcBlend;
-	uint   destBlend;
 	uint   fogMode;
 	float  fogStart;
 	float  fogEnd;
