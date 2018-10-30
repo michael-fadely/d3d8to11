@@ -173,10 +173,10 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 	locked = true;
 	*ppbData = reinterpret_cast<BYTE*>(&buffer[OffsetToLock]);
 
-	if (Flags & D3DLOCK_DISCARD)
+	/*if (Flags & D3DLOCK_DISCARD)
 	{
 		memset(*ppbData, 0, SizeToLock);
-	}
+	}*/
 
 	return D3D_OK;
 }

@@ -2201,26 +2201,27 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
 		// TODO: fix this shit (LotR: RotK)
-		auto stream = stream_sources[0]; // HACK
+		auto stream = stream_sources[0]; // HACK: shouldn't only be handling 0!
 
 		if (!stream.buffer)
 		{
 			return D3DERR_INVALIDCALL;
 		}
 
-		auto buffer = stream.buffer;
+		const auto buffer = stream.buffer;
 
-		auto point_count = PrimitiveCount + 2;
-		auto stride = buffer->desc8.Size / point_count;
-		auto offset = StartVertex * stride;
+		const auto stride = stream.stride;
+		const auto offset = StartVertex * stride;
+		const auto size = (2 + PrimitiveCount) * stride;
 
-		BYTE* data;
-		if (FAILED(buffer->Lock(offset, buffer->desc8.Size - offset, &data, D3DLOCK_DISCARD)))
-		{
-			return D3DERR_INVALIDCALL;
-		}
+		uint8_t* data = nullptr;
+		buffer->get_buffer(offset, size, &data);
+
+		ComPtr<Direct3DVertexBuffer8> temp;
+		UINT temp_stride;
+		GetStreamSource(0, &temp, &temp_stride);
 		auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
-		buffer->Unlock();
+		SetStreamSource(0, temp.Get(), temp_stride);
 		return result;
 	}
 
