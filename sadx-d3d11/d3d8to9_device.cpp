@@ -361,6 +361,11 @@ void Direct3DDevice8::create_native()
 	}
 	printf("done\n");
 #endif
+
+	for (size_t i = 0; i < render_state_values.size(); i++)
+	{
+		SetRenderState(static_cast<D3DRENDERSTATETYPE>(i), render_state_values[i].data());
+	}
 }
 
 uint32_t ShaderFlags::sanitize(uint32_t flags)
