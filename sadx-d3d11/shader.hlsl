@@ -249,11 +249,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		float NdotLdir = saturate(dot(N, Ldir));
 
 		ambient += lights[i].Ambient;
-		diffuse += /*Cd * */Ld * NdotLdir; // applying Cd after the fact for better vertex color
+		diffuse += Cd * Ld * NdotLdir;
 
 		#ifdef RS_SPECULAR
 			float4 Ls = lights[i].Specular;
-			float3 H = normalize(viewDir + Ldir);
+			float3 H = normalize(viewDir + normalize(Ldir));
 			specular += Ls * pow(dot(N, H), P);
 		#endif
 	}
@@ -289,8 +289,8 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result = float4(1, 1, 1, 1);
 #endif
 
-	//result *= input.diffuse;
-	//result += input.specular;
+	result *= input.diffuse;
+	result += input.specular;
 
 //#ifdef RS_ALPHA
 //	if (result.a * 255.0f < 254.0f / 255.0f)
