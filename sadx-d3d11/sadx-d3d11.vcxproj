@@ -166,7 +166,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
-    <ClInclude Include="globals.h" />
     <ClInclude Include="hash_combine.h" />
     <ClInclude Include="int_multiple.h" />
     <ClInclude Include="Light.h" />
@@ -192,7 +191,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClCompile Include="d3d8to9_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to9_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
-    <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />

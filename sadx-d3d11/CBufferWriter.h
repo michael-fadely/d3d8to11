@@ -1,7 +1,6 @@
 #pragma once
 
 #include <gsl/span>
-#include "simple_math.h"
 
 constexpr auto VECTOR_SIZE = sizeof(float) * 4;
 
@@ -60,25 +59,33 @@ public:
 
 	CBufferBase& operator<<(const CBufferAlign& align_of);
 
-	template <typename T, size_t size>
-	__forceinline CBufferBase& operator<<(const std::array<T, size>& array)
+	template <size_t size>
+	CBufferBase& operator<<(const std::array<float, size>& array)
 	{
-		return *this << gsl::span<const T>(array);
+		write(array.data(), size * sizeof(float));
+		return *this;
 	}
 
-	template <typename T, size_t size>
-	__forceinline CBufferBase& operator<<(const T(&array)[size])
+	template <size_t size>
+	CBufferBase& operator<<(const float(&array)[size])
 	{
-		return *this << gsl::span<const T>(array);
+		write(&array[0], size * sizeof(float));
+		return *this;
 	}
 
 	template <typename T>
-	__forceinline CBufferBase& operator<<(const dirty_t<T>& value)
+	CBufferBase& operator<<(const dirty_t<T>& value)
 	{
 		return *this << value.data();
 	}
 
-	virtual void write(const void* data, size_t size)
+	virtual void write(const void* data, size_t size) = 0;
+};
+
+class CBufferDummy : public CBufferBase
+{
+public:
+	void write(const void* data, size_t size) override
 	{
 		align(size);
 		add(size);
@@ -99,10 +106,6 @@ template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector3& data);
 template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector4& data);
-template <>
-CBufferBase& CBufferBase::operator<<(const gsl::span<float>& data);
-template <>
-CBufferBase& CBufferBase::operator<<(const gsl::span<const float>& data);
 
 template <>
 __forceinline CBufferBase& CBufferBase::operator<<(const DWORD& data)

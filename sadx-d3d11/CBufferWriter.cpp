@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "CBufferWriter.h"
-#include <gsl/span>
 
 CBufferWriter::CBufferWriter(uint8_t* ptr_)
 	: ptr(ptr_)
@@ -52,7 +51,7 @@ void CBufferWriter::write(const void* data, size_t size)
 
 size_t ICBuffer::cbuffer_size() const
 {
-	CBufferBase cbuf;
+	CBufferDummy cbuf;
 	write(cbuf);
 	return cbuf.offset();
 }
@@ -116,18 +115,4 @@ CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector4& data)
 {
 	const float array[] = { data.x, data.y, data.z, data.w };
 	return *this << array;
-}
-
-template <>
-CBufferBase& CBufferBase::operator<<(const gsl::span<float>& data)
-{
-	write(&data[0], data.size_bytes());
-	return *this;
-}
-
-template <>
-CBufferBase& CBufferBase::operator<<(const gsl::span<const float>& data)
-{
-	write(&data[0], data.size_bytes());
-	return *this;
 }

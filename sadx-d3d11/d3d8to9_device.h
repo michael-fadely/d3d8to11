@@ -104,6 +104,12 @@ struct StreamPair
 {
 	Direct3DVertexBuffer8* buffer;
 	UINT stride;
+
+	bool operator==(const StreamPair& other) const
+	{
+		return buffer == other.buffer &&
+		       stride == other.stride;
+	}
 };
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;

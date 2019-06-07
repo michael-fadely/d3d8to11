@@ -52,7 +52,6 @@
 #include "d3d8types.hpp"
 #include "defs.h"
 #include "dirty_t.h"
-#include "globals.h"
 #include "hash_combine.h"
 #include "int_multiple.h"
 #include "Light.h"

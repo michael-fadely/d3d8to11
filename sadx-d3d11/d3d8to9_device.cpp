@@ -3,8 +3,6 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
-// TODO: (long-term) adjust draw queue to draw all opaque geometry first like a SANE GAME
-
 #include "stdafx.h"
 
 #include <d3d11_1.h>
@@ -17,7 +15,6 @@
 #include "int_multiple.h"
 #include "CBufferWriter.h"
 #include "Material.h"
-#include "globals.h"
 #include "ShaderIncluder.h"
 
 using namespace Microsoft::WRL;
@@ -30,58 +27,60 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
+static std::vector<D3D_SHADER_MACRO> shader_preproc_defs;
+
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 {
-	std::vector<D3D_SHADER_MACRO> result;
+	shader_preproc_defs.clear();
 
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
-		result.push_back({ "FVF_RHW", "1" });
+		shader_preproc_defs.push_back({ "FVF_RHW", "1" });
 	}
 
 	if (flags & D3DFVF_NORMAL)
 	{
-		result.push_back({ "FVF_NORMAL", "1" });
+		shader_preproc_defs.push_back({ "FVF_NORMAL", "1" });
 	}
 
 	if (flags & D3DFVF_DIFFUSE)
 	{
-		result.push_back({ "FVF_DIFFUSE", "1" });
+		shader_preproc_defs.push_back({ "FVF_DIFFUSE", "1" });
 	}
 
 	if (flags & D3DFVF_TEXCOUNT_MASK)
 	{
 		texcount_str = std::to_string((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
-		result.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
+		shader_preproc_defs.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
 	}
 
 	if (flags & ShaderFlags::tci_envmap)
 	{
-		result.push_back({ "TCI_CAMERASPACENORMAL", "1" });
+		shader_preproc_defs.push_back({ "TCI_CAMERASPACENORMAL", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_lighting)
 	{
-		result.push_back({ "RS_LIGHTING", "1" });
+		shader_preproc_defs.push_back({ "RS_LIGHTING", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_specular)
 	{
-		result.push_back({ "RS_SPECULAR", "1" });
+		shader_preproc_defs.push_back({ "RS_SPECULAR", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_alpha)
 	{
-		result.push_back({ "RS_ALPHA", "1" });
+		shader_preproc_defs.push_back({ "RS_ALPHA", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_fog)
 	{
-		result.push_back({ "RS_FOG", "1" });
+		shader_preproc_defs.push_back({ "RS_FOG", "1" });
 	}
 
-	result.push_back({});
-	return result;
+	shader_preproc_defs.push_back({});
+	return shader_preproc_defs;
 }
 
 const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string& path)
@@ -94,7 +93,7 @@ const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string
 	}
 
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
-	auto size = static_cast<size_t>(file.tellg());
+	const auto size = static_cast<size_t>(file.tellg());
 	file.seekg(0, std::ios::beg);
 	std::vector<uint8_t> buffer(size);
 	file.read(reinterpret_cast<char*>(buffer.data()), size);
@@ -859,7 +858,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	catch (std::exception& ex)
 	{
 		delete result;
-		//printf(__FUNCTION__ " %s\n", ex.what());
+
+		std::string str = __FUNCTION__;
+		str.append(" ");
+		str.append(ex.what());
+
+		OutputDebugStringA(str.c_str());
+
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -941,7 +946,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	catch (std::exception& ex)
 	{
 		delete result;
-		//printf(__FUNCTION__ " %s\n", ex.what());
+
+		std::string str = __FUNCTION__;
+		str.append(" ");
+		str.append(ex.what());
+
+		OutputDebugStringA(str.c_str());
+
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -967,7 +978,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	catch (std::exception& ex)
 	{
 		delete result;
-		//printf(__FUNCTION__ " %s\n", ex.what());
+
+		std::string str = __FUNCTION__;
+		str.append(" ");
+		str.append(ex.what());
+
+		OutputDebugStringA(str.c_str());
+
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -1394,7 +1411,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 
 void Direct3DDevice8::update_wv_inv_t()
 {
-	matrix m = (per_model.worldMatrix.data() * per_scene.viewMatrix.data()).Invert();
+	const matrix m = (per_model.worldMatrix.data() * per_scene.viewMatrix.data()).Invert();
 
 	// don't need to transpose for reasons
 	per_model.wvMatrixInvT = m;
@@ -1410,9 +1427,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
+		{
 			per_scene.viewMatrix = *pMatrix;
+
+			const auto inverse = per_scene.viewMatrix.data().Invert();
+			per_scene.viewPosition = inverse.Translation();
+
 			update_wv_inv_t();
 			break;
+		}
 
 		case D3DTS_PROJECTION:
 			per_scene.projectionMatrix = *pMatrix;
@@ -2154,11 +2177,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 
 bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const
 {
-	auto t = to_d3d11(PrimitiveType);
+	const auto topology = to_d3d11(PrimitiveType);
 
-	if (t != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
+	if (topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
 	{
-		context->IASetPrimitiveTopology(t);
+		context->IASetPrimitiveTopology(topology);
 		return true;
 	}
 
@@ -2224,7 +2247,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		ComPtr<Direct3DVertexBuffer8> temp;
 		UINT temp_stride;
 		GetStreamSource(0, &temp, &temp_stride);
-		auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
+		const auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
 		SetStreamSource(0, temp.Get(), temp_stride);
 		return result;
 	}
@@ -2264,7 +2287,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
-	if (!update() || !pVertexStreamZeroData)
+	if (!pVertexStreamZeroData)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -2312,7 +2335,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto size = count * VertexStreamZeroStride;
+	const auto size = count * VertexStreamZeroStride;
 
 	up_get(size);
 
@@ -2330,7 +2353,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 	SetStreamSource(0, up_buffer.Get(), VertexStreamZeroStride);
 
-	auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
+	const auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
 
 	SetStreamSource(0, nullptr, 0);
 	up_buffers.push_back(up_buffer);
@@ -2381,7 +2404,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 		//ProxyInterface->SetVertexShader(nullptr);
 		//hr = ProxyInterface->SetFVF(Handle);
 
-		auto fvf = Handle;
+		const auto fvf = Handle;
 
 		shader_flags &= ~ShaderFlags::fvf_mask;
 		shader_flags |= fvf;
@@ -2531,42 +2554,46 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderFunction(DWORD Handle,
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Direct3DVertexBuffer8* pStreamData, UINT Stride)
 {
+	const StreamPair pair = { pStreamData, pStreamData ? Stride : 0 };
 	auto it = stream_sources.find(StreamNumber);
 
 	if (it == stream_sources.end())
 	{
-		if (pStreamData != nullptr)
+		stream_sources[StreamNumber] = pair;
+
+		if (pStreamData)
 		{
-			stream_sources[StreamNumber] = { pStreamData, Stride };
 			pStreamData->AddRef();
 		}
 	}
 	else
 	{
+		if (it->second == pair)
+		{
+			return D3D_OK;
+		}
+
 		if (it->second.buffer)
 		{
 			it->second.buffer->Release();
 		}
 
-		if (pStreamData == nullptr)
+		it->second = pair;
+
+		if (pStreamData)
 		{
-			stream_sources.erase(it);
-		}
-		else
-		{
-			it->second = { pStreamData, Stride };
 			pStreamData->AddRef();
 		}
 	}
 
-	if (pStreamData != nullptr)
+	if (pStreamData == nullptr)
 	{
-		UINT zero = 0;
-		context->IASetVertexBuffers(StreamNumber, 1, pStreamData->buffer_resource.GetAddressOf(), &Stride, &zero);
+		context->IASetVertexBuffers(StreamNumber, 0, nullptr, nullptr, nullptr);
 	}
 	else
 	{
-		context->IASetVertexBuffers(StreamNumber, 0, nullptr, nullptr, nullptr);
+		UINT zero = 0;
+		context->IASetVertexBuffers(StreamNumber, 1, pStreamData->buffer_resource.GetAddressOf(), &Stride, &zero);
 	}
 
 	return D3D_OK;
@@ -2618,7 +2645,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pInd
 	}
 
 	CurrentBaseVertexIndex = static_cast<INT>(BaseVertexIndex);
-	auto dxgi = to_dxgi(index_buffer->desc8.Format);
+	const auto dxgi = to_dxgi(index_buffer->desc8.Format);
 
 	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, BaseVertexIndex * dxgi_stride(dxgi));
 	return D3D_OK;
@@ -3065,8 +3092,6 @@ void Direct3DDevice8::commit_per_scene()
 {
 	per_scene.screenDimensions = { viewport.Width, viewport.Height };
 
-	per_scene.viewPosition = per_scene.viewMatrix.data().Translation();
-
 	if (!per_scene.dirty())
 	{
 		return;
@@ -3176,7 +3201,7 @@ void Direct3DDevice8::update_shaders()
 
 	tci.clear();
 
-	auto lighting = render_state_values[D3DRS_LIGHTING].data();
+	auto& lighting = render_state_values[D3DRS_LIGHTING];
 
 	if (lighting != 1 && shader_flags & D3DFVF_NORMAL)
 	{
@@ -3186,6 +3211,8 @@ void Direct3DDevice8::update_shaders()
 	{
 		shader_flags |= ShaderFlags::rs_lighting;
 	}
+
+	lighting.clear();
 
 	auto& specular = render_state_values[D3DRS_SPECULARENABLE];
 
@@ -3250,7 +3277,7 @@ void Direct3DDevice8::update_blend()
 
 	D3D11_BLEND_DESC desc {};
 
-	auto flags = blend_flags.data();
+	const auto flags = blend_flags.data();
 
 	desc.RenderTarget[0].BlendEnable           = flags >> 15 & 1;
 	desc.RenderTarget[0].SrcBlend              = static_cast<D3D11_BLEND>(flags & 0xF);
@@ -3260,6 +3287,7 @@ void Direct3DDevice8::update_blend()
 	desc.RenderTarget[0].SrcBlendAlpha         = D3D11_BLEND_ONE;
 	desc.RenderTarget[0].DestBlendAlpha        = D3D11_BLEND_ZERO;
 	desc.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
+
 	ComPtr<ID3D11BlendState> blend_state;
 	HRESULT hr = device->CreateBlendState(&desc, &blend_state);
 
@@ -3342,7 +3370,7 @@ void Direct3DDevice8::free_shaders()
 
 void Direct3DDevice8::up_get(size_t target_size)
 {
-	auto rounded = round_pow2(target_size);
+	const size_t rounded = round_pow2(target_size);
 
 	for (auto it = up_buffers.begin(); it != up_buffers.end(); ++it)
 	{
