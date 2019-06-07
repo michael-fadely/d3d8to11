@@ -278,7 +278,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
-//[earlydepthstencil]
+[earlydepthstencil]
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
