@@ -115,7 +115,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 		return it->second;
 	}
 
-	printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
+	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -159,7 +159,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 		return it->second;
 	}
 
-	printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
+	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
 
@@ -195,7 +195,7 @@ PixelShader Direct3DDevice8::get_ps(uint32_t flags)
 void Direct3DDevice8::create_depth_stencil()
 {
 	depth_stencil = new Direct3DTexture8(this, present_params.BackBufferWidth, present_params.BackBufferHeight, 1,
-	                                          D3DUSAGE_DEPTHSTENCIL, present_params.AutoDepthStencilFormat, D3DPOOL_DEFAULT);
+	                                     D3DUSAGE_DEPTHSTENCIL, present_params.AutoDepthStencilFormat, D3DPOOL_DEFAULT);
 
 	depth_stencil->create_native();
 	depth_stencil->GetSurfaceLevel(0, &current_depth_stencil);
@@ -275,7 +275,8 @@ void Direct3DDevice8::create_native()
 
 	if (info_queue)
 	{
-		printf("D3D11 debug info queue enabled\n");
+		//printf("D3D11 debug info queue enabled\n");
+		OutputDebugStringA("D3D11 debug info queue enabled\n");
 		info_queue->SetMuteDebugOutput(FALSE);
 	}
 
@@ -405,30 +406,28 @@ SamplerSettings::SamplerSettings()
 
 bool SamplerSettings::operator==(const SamplerSettings& s) const
 {
-	return
-		address_u.data()      == s.address_u.data() &&
-		address_v.data()      == s.address_v.data() &&
-		address_w.data()      == s.address_w.data() &&
-		filter_mag.data()     == s.filter_mag.data() &&
-		filter_min.data()     == s.filter_min.data() &&
-		filter_mip.data()     == s.filter_mip.data() &&
-		mip_lod_bias.data()   == s.mip_lod_bias.data() &&
-		max_mip_level.data()  == s.max_mip_level.data() &&
-		max_anisotropy.data() == s.max_anisotropy.data();
+	return address_u.data()      == s.address_u.data() &&
+	       address_v.data()      == s.address_v.data() &&
+	       address_w.data()      == s.address_w.data() &&
+	       filter_mag.data()     == s.filter_mag.data() &&
+	       filter_min.data()     == s.filter_min.data() &&
+	       filter_mip.data()     == s.filter_mip.data() &&
+	       mip_lod_bias.data()   == s.mip_lod_bias.data() &&
+	       max_mip_level.data()  == s.max_mip_level.data() &&
+	       max_anisotropy.data() == s.max_anisotropy.data();
 }
 
 bool SamplerSettings::dirty() const
 {
-	return
-		address_u.dirty() ||
-		address_v.dirty() ||
-		address_w.dirty() ||
-		filter_mag.dirty() ||
-		filter_min.dirty() ||
-		filter_mip.dirty() ||
-		mip_lod_bias.dirty() ||
-		max_mip_level.dirty() ||
-		max_anisotropy.dirty();
+	return address_u.dirty() ||
+	       address_v.dirty() ||
+	       address_w.dirty() ||
+	       filter_mag.dirty() ||
+	       filter_min.dirty() ||
+	       filter_mip.dirty() ||
+	       mip_lod_bias.dirty() ||
+	       max_mip_level.dirty() ||
+	       max_anisotropy.dirty();
 }
 
 void SamplerSettings::clear()
@@ -860,7 +859,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		//printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -942,7 +941,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		//printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -968,7 +967,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	catch (std::exception& ex)
 	{
 		delete result;
-		printf(__FUNCTION__ " %s\n", ex.what());
+		//printf(__FUNCTION__ " %s\n", ex.what());
 		print_info_queue();
 		return D3DERR_INVALIDCALL;
 	}
@@ -1770,7 +1769,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_BLENDOP:
 			if (ref.dirty())
 			{
-				printf("RS_BLENDOP: %lu\n", Value);
+				//printf("RS_BLENDOP: %lu\n", Value);
 			}
 
 			ref.clear();
@@ -2217,7 +2216,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 		const auto stride = stream.stride;
 		const auto offset = StartVertex * stride;
-		const auto size = (2 + PrimitiveCount) * stride;
+		const auto size   = (2 + PrimitiveCount) * stride;
 
 		uint8_t* data = nullptr;
 		buffer->get_buffer(offset, size, &data);
@@ -2255,7 +2254,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 {
 #if 1
 	// TODO
-	printf(__FUNCTION__ " not implemented\n");
+	//printf(__FUNCTION__ " not implemented\n");
 	return D3DERR_INVALIDCALL;
 #else
 	ApplyClipPlanes();
@@ -2272,7 +2271,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		const auto data = reinterpret_cast<const uint8_t*>(pVertexStreamZeroData);
+		const auto data   = reinterpret_cast<const uint8_t*>(pVertexStreamZeroData);
 		const auto stride = VertexStreamZeroStride;
 
 		trifan_buffer.resize(3 * stride * PrimitiveCount);
@@ -2791,7 +2790,8 @@ void Direct3DDevice8::print_info_queue() const
 
 		if (hr == S_OK && pMessage->pDescription)
 		{
-			printf("%s\n", pMessage->pDescription);
+			OutputDebugStringA(pMessage->pDescription);
+			//printf("%s\n", pMessage->pDescription);
 		}
 
 		delete[] pMessage;
@@ -2999,7 +2999,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (fvf != 0)
 	{
-		printf("unsupported FVF\n");
+		//printf("unsupported FVF\n");
 		return false;
 	}
 
@@ -3012,7 +3012,7 @@ bool Direct3DDevice8::update_input_layout()
 	if (FAILED(hr))
 	{
 		//throw std::runtime_error("CreateInputLayout failed");
-		printf("CreateInputLayout failed\n");
+		//printf("CreateInputLayout failed\n");
 		return false;
 	}
 
@@ -3218,8 +3218,17 @@ void Direct3DDevice8::update_shaders()
 
 	compile_shaders(shader_flags, vs, ps);
 
-	context->VSSetShader(vs.shader.Get(), nullptr, 0);
-	context->PSSetShader(ps.shader.Get(), nullptr, 0);
+	if (vs != last_vs)
+	{
+		context->VSSetShader(vs.shader.Get(), nullptr, 0);
+		this->last_vs = vs;
+	}
+
+	if (ps != last_ps)
+	{
+		context->PSSetShader(ps.shader.Get(), nullptr, 0);
+		this->last_ps = ps;
+	}
 }
 
 void Direct3DDevice8::update_blend()
@@ -3284,10 +3293,8 @@ void Direct3DDevice8::update_depth()
 	shit << "new depth state: " << std::hex << std::setw(4) << std::setfill('0') << depth_flags.data() << "\n";
 	OutputDebugStringA(shit.str().c_str());
 
-	depth_desc.DepthEnable = !!(depth_flags & DepthFlags::test_enabled);
-	depth_desc.DepthWriteMask = !!(depth_flags & DepthFlags::write_enabled) ?
-	                            D3D11_DEPTH_WRITE_MASK_ALL :
-	                            D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth_desc.DepthEnable    = !!(depth_flags & DepthFlags::test_enabled);
+	depth_desc.DepthWriteMask = !!(depth_flags & DepthFlags::write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 
 	depth_desc.DepthFunc = static_cast<D3D11_COMPARISON_FUNC>(depth_flags & DepthFlags::comparison_mask);
 	depth_desc.FrontFace = {
@@ -3347,6 +3354,6 @@ void Direct3DDevice8::up_get(size_t target_size)
 		}
 	}
 
-	printf(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
+	//printf(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
 	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
 }

@@ -43,6 +43,12 @@ struct Shader
 		blob   = other.blob;
 		return *this;
 	}
+
+	bool operator==(const Shader<T>& other) const
+	{
+		return shader == other.shader &&
+		       blob == other.blob;
+	}
 };
 
 using VertexShader = Shader<ID3D11VertexShader>;
