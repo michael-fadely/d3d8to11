@@ -131,7 +131,7 @@
     <ClCompile Include="d3d8to9_device.cpp">
       <Filter>d3d8wrapper</Filter>
     </ClCompile>
-    <ClCompile Include="Uknown.cpp">
+    <ClCompile Include="Unknown.cpp">
       <Filter>d3d8wrapper</Filter>
     </ClCompile>
     <ClCompile Include="CBufferWriter.cpp">
