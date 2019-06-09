@@ -47,6 +47,8 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 {
 	shader_preproc_defs.clear();
 
+	flags = ShaderFlags::sanitize(flags);
+
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
 		shader_preproc_defs.push_back({ "FVF_RHW", "1" });
@@ -67,6 +69,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		shader_preproc_defs.push_back({ "FVF_DIFFUSE", "1" });
 	}
 
+	if (flags & D3DFVF_SPECULAR)
+	{
+		shader_preproc_defs.push_back({ "FVF_SPECULAR", "1" });
+	}
+
 	if (flags & D3DFVF_TEXCOUNT_MASK)
 	{
 		texcount_str = std::to_string((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
@@ -78,12 +85,12 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		shader_preproc_defs.push_back({ "TCI_CAMERASPACENORMAL", "1" });
 	}
 
-	if (flags & ShaderFlags::rs_lighting)
+	if ((flags & (ShaderFlags::rs_lighting | D3DFVF_NORMAL)) == (ShaderFlags::rs_lighting | D3DFVF_NORMAL))
 	{
 		shader_preproc_defs.push_back({ "RS_LIGHTING", "1" });
 	}
 
-	if (flags & ShaderFlags::rs_specular)
+	if ((flags & (ShaderFlags::rs_specular | ShaderFlags::rs_lighting)) == (ShaderFlags::rs_specular | ShaderFlags::rs_lighting))
 	{
 		shader_preproc_defs.push_back({ "RS_SPECULAR", "1" });
 	}
@@ -1856,17 +1863,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_ALPHABLENDENABLE:
+			ref.clear();
 			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
 			break;
 
 		case D3DRS_BLENDOP:
-			if (ref.dirty())
-			{
-				//printf("RS_BLENDOP: %lu\n", Value);
-			}
-
 			ref.clear();
-
 			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
 			break;
 	}
