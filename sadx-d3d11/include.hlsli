@@ -3,6 +3,8 @@
 #define MAX_FRAGMENTS 16
 #endif
 
+#define M_PI 3.14159265358979323846
+
 // D3DBLEND enum
 #define BLEND_ZERO            1
 #define BLEND_ONE             2
@@ -28,6 +30,10 @@
 #define FOGMODE_EXP2   2
 #define FOGMODE_LINEAR 3
 #define E              2.71828
+
+#define LIGHT_POINT       1
+#define LIGHT_SPOT        2
+#define LIGHT_DIRECTIONAL 3
 
 /*
 // Magic number to consider a null-entry.
