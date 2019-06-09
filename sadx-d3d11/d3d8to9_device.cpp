@@ -568,7 +568,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::ResourceManagerDiscardBytes(DWORD Byt
 	UNREFERENCED_PARAMETER(Bytes);
 
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->EvictManagedResources();
@@ -634,7 +634,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDisplayMode(D3DDISPLAYMODE* pMode)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetDisplayMode(0, pMode);
@@ -644,7 +644,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDisplayMode(D3DDISPLAYMODE* pMode)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCreationParameters(D3DDEVICE_CREATION_PARAMETERS* pParameters)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetCreationParameters(pParameters);
@@ -654,7 +654,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCreationParameters(D3DDEVICE_CREAT
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetCursorProperties(UINT XHotSpot, UINT YHotSpot, Direct3DSurface8* pCursorBitmap)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pCursorBitmap == nullptr)
@@ -668,7 +668,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetCursorProperties(UINT XHotSpot, UI
 
 void STDMETHODCALLTYPE Direct3DDevice8::SetCursorPosition(UINT XScreenSpace, UINT YScreenSpace, DWORD Flags)
 {
-	// not required for SADX
+	// not yet supported
 #if 0
 	ProxyInterface->SetCursorPosition(XScreenSpace, YScreenSpace, Flags);
 #endif
@@ -677,7 +677,7 @@ void STDMETHODCALLTYPE Direct3DDevice8::SetCursorPosition(UINT XScreenSpace, UIN
 BOOL STDMETHODCALLTYPE Direct3DDevice8::ShowCursor(BOOL bShow)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return FALSE;
 #else
 	return ProxyInterface->ShowCursor(bShow);
@@ -687,7 +687,7 @@ BOOL STDMETHODCALLTYPE Direct3DDevice8::ShowCursor(BOOL bShow)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateAdditionalSwapChain(D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DSwapChain8** ppSwapChain)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 #ifndef D3D8TO9NOLOG
@@ -795,7 +795,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 	}
 
-
 	if ((GetAsyncKeyState(VK_CONTROL) & (1 << 16)) && (GetAsyncKeyState('R') & (1 << 16)))
 	{
 		if (!this->freeing_shaders)
@@ -834,7 +833,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRasterStatus(D3DRASTER_STATUS* pRasterStatus)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetRasterStatus(0, pRasterStatus);
@@ -844,7 +843,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRasterStatus(D3DRASTER_STATUS* pRa
 void STDMETHODCALLTYPE Direct3DDevice8::SetGammaRamp(DWORD Flags, const D3DGAMMARAMP* pRamp)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return;
 #else
 	ProxyInterface->SetGammaRamp(0, Flags, pRamp);
@@ -854,7 +853,7 @@ void STDMETHODCALLTYPE Direct3DDevice8::SetGammaRamp(DWORD Flags, const D3DGAMMA
 void STDMETHODCALLTYPE Direct3DDevice8::GetGammaRamp(D3DGAMMARAMP* pRamp)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return;
 #else
 	ProxyInterface->GetGammaRamp(0, pRamp);
@@ -915,7 +914,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVolumeTexture(UINT Width, UINT Height, UINT Depth, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, Direct3DVolumeTexture8** ppVolumeTexture)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (ppVolumeTexture == nullptr)
@@ -943,7 +942,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVolumeTexture(UINT Width, UINT 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateCubeTexture(UINT EdgeLength, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, Direct3DCubeTexture8** ppCubeTexture)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (ppCubeTexture == nullptr)
@@ -1035,7 +1034,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateRenderTarget(UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, BOOL Lockable, Direct3DSurface8** ppSurface)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (ppSurface == nullptr)
@@ -1075,7 +1074,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateRenderTarget(UINT Width, UINT H
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateDepthStencilSurface(UINT Width, UINT Height, D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, Direct3DSurface8** ppSurface)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (ppSurface == nullptr)
@@ -1115,7 +1114,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateDepthStencilSurface(UINT Width,
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT Height, D3DFORMAT Format, Direct3DSurface8** ppSurface)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 #ifndef D3D8TO9NOLOG
@@ -1287,7 +1286,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::UpdateTexture(Direct3DBaseTexture8* pSourceTexture, Direct3DBaseTexture8* pDestinationTexture)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pSourceTexture == nullptr || pDestinationTexture == nullptr || pSourceTexture->GetType() != pDestinationTexture->GetType())
@@ -1322,7 +1321,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::UpdateTexture(Direct3DBaseTexture8* p
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDestSurface)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pDestSurface == nullptr)
@@ -1881,7 +1880,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderState(D3DRENDERSTATETYPE Sta
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::BeginStateBlock()
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->BeginStateBlock();
@@ -1891,7 +1890,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::BeginStateBlock()
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::EndStateBlock(DWORD* pToken)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pToken == nullptr)
@@ -1906,7 +1905,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::EndStateBlock(DWORD* pToken)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::ApplyStateBlock(DWORD Token)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (Token == 0)
@@ -1921,7 +1920,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::ApplyStateBlock(DWORD Token)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CaptureStateBlock(DWORD Token)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (Token == 0)
@@ -1936,7 +1935,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CaptureStateBlock(DWORD Token)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeleteStateBlock(DWORD Token)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (Token == 0)
@@ -1953,7 +1952,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeleteStateBlock(DWORD Token)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateStateBlock(D3DSTATEBLOCKTYPE Type, DWORD* pToken)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 #ifndef D3D8TO9NOLOG
@@ -1972,7 +1971,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateStateBlock(D3DSTATEBLOCKTYPE Ty
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetClipStatus(const D3DCLIPSTATUS8* pClipStatus)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->SetClipStatus(pClipStatus);
@@ -1982,7 +1981,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetClipStatus(const D3DCLIPSTATUS8* p
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetClipStatus(D3DCLIPSTATUS8* pClipStatus)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetClipStatus(pClipStatus);
@@ -2139,7 +2138,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::ValidateDevice(DWORD* pNumPasses)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->ValidateDevice(pNumPasses);
@@ -2162,7 +2161,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetInfo(DWORD DevInfoID, void* pDevIn
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPaletteEntries(UINT PaletteNumber, const PALETTEENTRY* pEntries)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pEntries == nullptr)
@@ -2176,7 +2175,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPaletteEntries(UINT PaletteNumber,
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPaletteEntries(UINT PaletteNumber, PALETTEENTRY* pEntries)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pEntries == nullptr)
@@ -2190,7 +2189,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPaletteEntries(UINT PaletteNumber,
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetCurrentTexturePalette(UINT PaletteNumber)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (!PaletteFlag)
@@ -2204,7 +2203,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetCurrentTexturePalette(UINT Palette
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPaletteNumber)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (!PaletteFlag)
@@ -2267,7 +2266,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 {
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		// TODO: fix this shit (LotR: RotK)
 		auto stream = stream_sources[0]; // HACK: shouldn't only be handling 0!
 
 		if (!stream.buffer)
@@ -2276,7 +2274,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		}
 
 		const auto buffer = stream.buffer;
-
 		const auto stride = stream.stride;
 		const auto offset = StartVertex * stride;
 		const auto size   = (2 + PrimitiveCount) * stride;
@@ -2315,14 +2312,32 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount)
 {
-	// TODO: LotR RotK
-#if 1
-	//printf(__FUNCTION__ " not implemented\n");
-	return D3DERR_INVALIDCALL;
-#else
-	ApplyClipPlanes();
-	return ProxyInterface->DrawIndexedPrimitive(PrimitiveType, CurrentBaseVertexIndex, MinIndex, NumVertices, StartIndex, PrimitiveCount);
-#endif
+	if (!index_buffer)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	// TODO: triangle fan
+	if (PrimitiveType == D3DPT_TRIANGLEFAN)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (!set_primitive_type(PrimitiveType))
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (!update())
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	auto count = PrimitiveCount;
+	primitive_vertex_count(PrimitiveType, count);
+
+	context->DrawIndexed(count, StartIndex, CurrentBaseVertexIndex);
+	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
@@ -2416,7 +2431,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::ProcessVertices(UINT SrcStartIndex, UINT DestIndex, UINT VertexCount, Direct3DVertexBuffer8* pDestBuffer, DWORD Flags)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pDestBuffer == nullptr)
@@ -2455,7 +2470,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 	else
 	{
 	#if 1
-		// not required for SADX
+		// not yet supported
 		hr = D3DERR_INVALIDCALL;
 	#else
 		const DWORD handleMagic = Handle << 1;
@@ -2484,7 +2499,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShader(DWORD* pHandle)
 		return D3D_OK;
 	}
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	*pHandle = CurrentVertexShaderHandle;
@@ -2496,7 +2511,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShader(DWORD* pHandle)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeleteVertexShader(DWORD Handle)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if ((Handle & 0x80000000) == 0)
@@ -2564,7 +2579,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderDeclaration(DWORD Hand
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderFunction(DWORD Handle, void* pData, DWORD* pSizeOfData)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 #ifndef D3D8TO9NOLOG
@@ -2676,18 +2691,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pInd
 		return D3DERR_INVALIDCALL;
 	}
 
-	index_buffer = pIndexData;
-
 	if (pIndexData == nullptr)
 	{
-		context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+		if (pIndexData != index_buffer.Get())
+		{
+			index_buffer = pIndexData;
+			context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+		}
+
 		return D3D_OK;
 	}
 
+	index_buffer = pIndexData;
 	CurrentBaseVertexIndex = static_cast<INT>(BaseVertexIndex);
 	const auto dxgi = to_dxgi(index_buffer->desc8.Format);
-
-	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, BaseVertexIndex * dxgi_stride(dxgi));
+	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, 0);
 	return D3D_OK;
 }
 
@@ -2724,7 +2742,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreatePixelShader(const DWORD* pFunct
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPixelShader(DWORD Handle)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	CurrentPixelShaderHandle = Handle;
@@ -2736,7 +2754,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPixelShader(DWORD Handle)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPixelShader(DWORD* pHandle)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (pHandle == nullptr)
@@ -2753,7 +2771,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPixelShader(DWORD* pHandle)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePixelShader(DWORD Handle)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	if (Handle == 0)
@@ -2775,7 +2793,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePixelShader(DWORD Handle)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPixelShaderConstant(DWORD Register, const void* pConstantData, DWORD ConstantCount)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->SetPixelShaderConstantF(Register, static_cast<const float *>(pConstantData), ConstantCount);
@@ -2785,7 +2803,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetPixelShaderConstant(DWORD Register
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPixelShaderConstant(DWORD Register, void* pConstantData, DWORD ConstantCount)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetPixelShaderConstantF(Register, static_cast<float *>(pConstantData), ConstantCount);
@@ -2800,7 +2818,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetPixelShaderFunction(DWORD Handle, 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawRectPatch(UINT Handle, const float* pNumSegs, const D3DRECTPATCH_INFO* pRectPatchInfo)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->DrawRectPatch(Handle, pNumSegs, pRectPatchInfo);
@@ -2810,7 +2828,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawRectPatch(UINT Handle, const floa
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawTriPatch(UINT Handle, const float* pNumSegs, const D3DTRIPATCH_INFO* pTriPatchInfo)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->DrawTriPatch(Handle, pNumSegs, pTriPatchInfo);
@@ -2820,7 +2838,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawTriPatch(UINT Handle, const float
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePatch(UINT Handle)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->DeletePatch(Handle);
