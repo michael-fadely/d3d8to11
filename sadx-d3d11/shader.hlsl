@@ -214,13 +214,13 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 			#ifdef FVF_DIFFUSE
 			case CS_COLOR1:
-				result.diffuse = any(input.diffuse) ? input.diffuse : float4(1, 1, 1, 1);
+				result.diffuse = input.diffuse;
 				break;
 			#endif
 
 			#ifdef FVF_SPECULAR
 			case CS_COLOR2:
-				result.diffuse = any(input.specular) ? input.specular : float4(1, 1, 1, 1);
+				result.diffuse = input.specular;
 				break;
 			#endif
 
@@ -231,7 +231,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 	else
 	{
-		result.diffuse = float4(1, 1, 1, 1);
+		result.diffuse = diffuseSource == CS_MATERIAL ? saturate(material.Diffuse) : float4(1, 1, 1, 1);
 	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
