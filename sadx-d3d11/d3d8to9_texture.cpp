@@ -9,15 +9,15 @@
 
  // TODO: instead of storing in map/vector, let d3d do the work if possible
 
-void Direct3DTexture8::create_native(ID3D11Texture2D* source)
+void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 {
 	auto device  = Device->device;
 	auto context = Device->context;
 
-	if (source != nullptr)
+	if (view_of != nullptr)
 	{
-		source->GetDesc(&desc);
-		texture = source;
+		view_of->GetDesc(&desc);
+		texture = view_of;
 
 		is_render_target = !!(desc.BindFlags & D3D11_BIND_RENDER_TARGET);
 		is_depth_stencil = !!(desc.BindFlags & D3D11_BIND_DEPTH_STENCIL);
