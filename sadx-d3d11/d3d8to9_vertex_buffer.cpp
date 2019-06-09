@@ -177,10 +177,10 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 	this->lock_size   = SizeToLock;
 	this->lock_flags  = Flags;
 
-	/*if (Flags & D3DLOCK_DISCARD)
+	if (Flags & D3DLOCK_DISCARD)
 	{
 		memset(*ppbData, 0, SizeToLock);
-	}*/
+	}
 
 	return D3D_OK;
 }
@@ -216,7 +216,8 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(reinterpret_cast<uint8_t*>(mapped.pData) + lock_offset, buffer.data() + lock_offset, lock_size);
+	//memcpy(reinterpret_cast<uint8_t*>(mapped.pData) + lock_offset, buffer.data() + lock_offset, lock_size);
+	memcpy(mapped.pData, buffer.data(), buffer.size());
 
 	context->Unmap(buffer_resource.Get(), 0);
 	return D3D_OK;
