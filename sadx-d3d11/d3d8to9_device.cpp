@@ -1958,32 +1958,29 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 	*ppTexture = nullptr;
 
-	const auto it = texture_stages.find(Stage);
+	// HACK: this should be doing a bounds check; avoiding std::array right now
+	auto ptr = texture_stages[Stage].data();
 
-	if (it == texture_stages.end())
+	if (ptr)
 	{
-		return D3DERR_INVALIDCALL;
+		ptr->AddRef();
 	}
 
-	auto texture = it->second;
-	texture->AddRef();
-	*ppTexture = it->second;
+	*ppTexture = ptr;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseTexture8* pTexture)
 {
-	auto it = texture_stages.find(Stage);
-
 	if (pTexture == nullptr)
 	{
-		context->PSSetShaderResources(Stage, 0, nullptr);
-
-		if (it != texture_stages.end())
+		//context->PSSetShaderResources(Stage, 0, nullptr);
+		if (texture_stages[Stage] != nullptr)
 		{
-			it->second->Release();
-			texture_stages.erase(it);
+			texture_stages[Stage].data()->Release();
 		}
+
+		texture_stages[Stage] = nullptr;
 
 		return D3D_OK;
 	}
@@ -1998,19 +1995,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	auto texture = dynamic_cast<Direct3DTexture8*>(pTexture);
 
-	if (it != texture_stages.end())
+	if (texture_stages[Stage].data() != nullptr)
 	{
-		it->second->Release();
-		it->second = texture;
-		texture->AddRef();
-	}
-	else
-	{
-		texture_stages[Stage] = texture;
-		texture->AddRef();
+		texture_stages[Stage].data()->Release();
 	}
 
-	context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
+	texture_stages[Stage] = texture;
+	texture->AddRef();
+
+	//context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
 	return D3D_OK;
 }
 
@@ -2842,11 +2835,16 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (it != fvf_layouts.end())
 	{
-		context->IASetInputLayout(it->second.Get());
+		auto ptr = it->second.Get();
+
+		if (ptr != last_input_layout)
+		{
+			context->IASetInputLayout(ptr);
+			last_input_layout = ptr;
+		}
+
 		return true;
 	}
-
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elements;
 
 	D3D11_INPUT_ELEMENT_DESC pos_element {};
 	pos_element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -2869,8 +2867,11 @@ bool Direct3DDevice8::update_input_layout()
 			throw std::runtime_error("unsupported D3DFVF_POSITION type");
 	}
 
+	D3D11_INPUT_ELEMENT_DESC elements[16] {};
+
+	size_t i = 0;
 	fvf &= ~D3DFVF_POSITION_MASK;
-	elements.push_back(pos_element);
+	elements[i++] = pos_element;
 
 	if (fvf & D3DFVF_NORMAL)
 	{
@@ -2882,7 +2883,7 @@ bool Direct3DDevice8::update_input_layout()
 		e.Format            = DXGI_FORMAT_R32G32B32_FLOAT;
 		e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-		elements.push_back(e);
+		elements[i++] = e;
 	}
 
 	if (fvf & D3DFVF_DIFFUSE)
@@ -2896,7 +2897,7 @@ bool Direct3DDevice8::update_input_layout()
 		e.Format            = DXGI_FORMAT_B8G8R8A8_UNORM;
 		e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-		elements.push_back(e);
+		elements[i++] = e;
 	}
 
 	if (fvf & D3DFVF_SPECULAR)
@@ -2910,7 +2911,7 @@ bool Direct3DDevice8::update_input_layout()
 		e.Format            = DXGI_FORMAT_B8G8R8A8_UNORM;
 		e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-		elements.push_back(e);
+		elements[i++] = e;
 	}
 
 	auto tex = (fvf & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT;
@@ -2929,7 +2930,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 2)
@@ -2942,7 +2943,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 3)
@@ -2955,7 +2956,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 4)
@@ -2968,7 +2969,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 5)
@@ -2981,7 +2982,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 6)
@@ -2994,7 +2995,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex >= 7)
@@ -3007,7 +3008,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 
 		if (tex == 8)
@@ -3020,7 +3021,7 @@ bool Direct3DDevice8::update_input_layout()
 			e.Format            = DXGI_FORMAT_R32G32_FLOAT;
 			e.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 
-			elements.push_back(e);
+			elements[i++] = e;
 		}
 	}
 
@@ -3034,7 +3035,8 @@ bool Direct3DDevice8::update_input_layout()
 
 	ComPtr<ID3D11InputLayout> layout;
 
-	HRESULT hr = device->CreateInputLayout(elements.data(), elements.size(), vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
+	HRESULT hr = device->CreateInputLayout(elements, i,
+	                                       vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
 
 	if (FAILED(hr))
 	{
@@ -3043,6 +3045,7 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
+	last_input_layout = layout.Get();
 	fvf_layouts[FVF] = layout;
 	context->IASetInputLayout(layout.Get());
 	return true;
@@ -3124,7 +3127,7 @@ void Direct3DDevice8::update_sampler()
 		if (it != sampler_states.end())
 		{
 			context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
-			return;
+			continue;
 		}
 
 		D3D11_SAMPLER_DESC sampler_desc {};
@@ -3240,22 +3243,27 @@ void Direct3DDevice8::update_shaders()
 
 	alpha.clear();
 
+	if (last_shader_flags == shader_flags)
+	{
+		return;
+	}
+
 	VertexShader vs;
 	PixelShader ps;
 
 	compile_shaders(shader_flags, vs, ps);
 
-	if (vs != last_vs)
+	if ((shader_flags & ShaderFlags::vs_mask) != (last_shader_flags & ShaderFlags::vs_mask))
 	{
 		context->VSSetShader(vs.shader.Get(), nullptr, 0);
-		this->last_vs = vs;
 	}
 
-	if (ps != last_ps)
+	if ((shader_flags & ShaderFlags::ps_mask) != (last_shader_flags & ShaderFlags::ps_mask))
 	{
 		context->PSSetShader(ps.shader.Get(), nullptr, 0);
-		this->last_ps = ps;
 	}
+
+	last_shader_flags = shader_flags;
 }
 
 void Direct3DDevice8::update_blend()
@@ -3307,6 +3315,8 @@ void Direct3DDevice8::update_depth()
 		return;
 	}
 
+	depth_flags.clear();
+
 	const auto it = depth_states.find(depth_flags);
 
 	if (it != depth_states.end())
@@ -3346,12 +3356,38 @@ void Direct3DDevice8::update_depth()
 
 	context->OMSetDepthStencilState(depth_state.Get(), 0);
 	depth_states[depth_flags] = std::move(depth_state);
-	depth_flags.clear();
+}
+
+void Direct3DDevice8::update_texture_stages()
+{
+	for (size_t i = 0; i < 16; i++)
+	{
+		auto value = texture_stages[i];
+
+		if (!value.dirty())
+		{
+			continue;
+		}
+
+		auto ptr = value.data();
+
+		if (ptr == nullptr)
+		{
+			context->PSSetShaderResources(i, 0, nullptr);
+		}
+		else
+		{
+			context->PSSetShaderResources(i, 1, ptr->srv.GetAddressOf());
+		}
+
+		value.clear();
+	}
 }
 
 bool Direct3DDevice8::update()
 {
 	update_shaders();
+	update_texture_stages();
 	update_sampler();
 	update_blend();
 	update_depth();

@@ -82,7 +82,7 @@ namespace std
 	template <>
 	struct hash<SamplerSettings>
 	{
-		std::size_t operator()(const SamplerSettings& s) const
+		std::size_t operator()(const SamplerSettings& s) const noexcept
 		{
 			size_t h = std::hash<size_t>()(s.address_u.data());
 
@@ -119,8 +119,9 @@ class Direct3DDevice8 : public Unknown
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string texcount_str;
-	VertexShader last_vs;
-	PixelShader last_ps;
+
+	// used strictly for comparison
+	ID3D11InputLayout* last_input_layout = nullptr;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;
@@ -248,11 +249,14 @@ public:
 	void update_shaders();
 	void update_blend();
 	void update_depth();
+	void update_texture_stages();
 	bool update();
 	void free_shaders();
 	void update_wv_inv_t();
 
 	uint32_t shader_flags = ShaderFlags::none;
+	uint32_t last_shader_flags = ShaderFlags::mask;
+
 	std::unordered_map<uint32_t, VertexShader> vertex_shaders;
 	std::unordered_map<uint32_t, PixelShader> pixel_shaders;
 
@@ -268,7 +272,7 @@ public:
 protected:
 	Direct3D8* const d3d;
 
-	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
+	dirty_t<Direct3DTexture8*> texture_stages[16] {};
 	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
 	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
 	std::array<dirty_t<DWORD>, 174> render_state_values;
