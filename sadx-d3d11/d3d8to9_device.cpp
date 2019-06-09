@@ -3111,9 +3111,9 @@ void Direct3DDevice8::commit_per_scene()
 
 void Direct3DDevice8::update_sampler()
 {
-	for (auto& setting_it : sampler_setting_values)
+	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
-		auto& setting = setting_it.second;
+		auto& setting = sampler_setting_values[i];
 
 		if (!setting.dirty())
 		{
@@ -3126,7 +3126,7 @@ void Direct3DDevice8::update_sampler()
 
 		if (it != sampler_states.end())
 		{
-			context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
+			context->PSSetSamplers(i, 1, it->second.GetAddressOf());
 			continue;
 		}
 
@@ -3149,7 +3149,7 @@ void Direct3DDevice8::update_sampler()
 			throw std::runtime_error("CreateSamplerState failed");
 		}
 
-		context->PSSetSamplers(setting_it.first, 1, sampler_state.GetAddressOf());
+		context->PSSetSamplers(i, 1, sampler_state.GetAddressOf());
 		sampler_states[setting] = sampler_state;
 	}
 }
@@ -3189,6 +3189,7 @@ void Direct3DDevice8::update_shaders()
 
 	fog_enable.clear();
 
+	// HACK: this is dumb and bad
 	auto& sampler_0 = texture_state_values[0];
 
 	auto& tci = sampler_0[D3DTSS_TEXCOORDINDEX];
@@ -3360,7 +3361,7 @@ void Direct3DDevice8::update_depth()
 
 void Direct3DDevice8::update_texture_stages()
 {
-	for (size_t i = 0; i < 16; i++)
+	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
 		auto value = texture_stages[i];
 

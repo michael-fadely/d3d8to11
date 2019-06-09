@@ -114,6 +114,8 @@ struct StreamPair
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
+constexpr auto TEXTURE_STAGE_COUNT = 16;
+
 class Direct3DDevice8 : public Unknown
 {
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
@@ -272,9 +274,9 @@ public:
 protected:
 	Direct3D8* const d3d;
 
-	dirty_t<Direct3DTexture8*> texture_stages[16] {};
-	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
-	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
+	dirty_t<Direct3DTexture8*> texture_stages[TEXTURE_STAGE_COUNT] {};
+	std::unordered_map<DWORD, dirty_t<DWORD>> texture_state_values[TEXTURE_STAGE_COUNT] {};
+	SamplerSettings sampler_setting_values[TEXTURE_STAGE_COUNT] {};
 	std::array<dirty_t<DWORD>, 174> render_state_values;
 	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
 	std::unordered_map<DWORD, StreamPair> stream_sources;
