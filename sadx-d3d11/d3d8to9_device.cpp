@@ -20,6 +20,7 @@
 using namespace Microsoft::WRL;
 
 static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+static constexpr uint32_t RASTER_DEFAULT = D3DCULL_CCW | (D3DFILL_SOLID << 2);
 
 static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 {
@@ -307,19 +308,6 @@ void Direct3DDevice8::create_native()
 
 	swap_chain->SetFullscreenState(!present_params.Windowed, nullptr);
 
-	D3D11_RASTERIZER_DESC raster {};
-
-	raster.FillMode        = D3D11_FILL_SOLID;
-	raster.CullMode        = D3D11_CULL_NONE;
-	raster.DepthClipEnable = TRUE;
-
-	if (FAILED(device->CreateRasterizerState(&raster, &raster_state)))
-	{
-		throw std::runtime_error("failed to create rasterizer state");
-	}
-
-	context->RSSetState(raster_state.Get());
-
 	create_depth_stencil();
 	create_render_target();
 
@@ -507,6 +495,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	  d3d(d3d)
 {
 	blend_flags = BLEND_DEFAULT;
+	raster_flags = RASTER_DEFAULT;
 
 	render_state_values[D3DRS_ZENABLE]          = TRUE;
 	render_state_values[D3DRS_ZWRITEENABLE]     = TRUE;
@@ -1772,7 +1761,24 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	switch (State)
 	{
 		default:
+		{
+			std::stringstream ss;
+			ss << __FUNCTION__ << " unhandled render state type: " << State << std::endl;
+			OutputDebugStringA(ss.str().c_str());
 			break;
+		}
+
+		case D3DRS_CULLMODE:
+		{
+			raster_flags = (raster_flags.data() & ~RasterFlags::cull_mask) | (Value & 3);
+			break;
+		}
+
+		case D3DRS_FILLMODE:
+		{
+			raster_flags = (raster_flags.data() & ~RasterFlags::fill_mask) | ((Value & 3) << 2);
+			break;
+		}
 
 		case D3DRS_ZENABLE:
 		{
@@ -3464,8 +3470,41 @@ void Direct3DDevice8::update_depth()
 	depth_flags.clear();
 }
 
+void Direct3DDevice8::update_rasterizers()
+{
+	if (!raster_flags.dirty())
+	{
+		return;
+	}
+
+	raster_flags.clear();
+	const auto it = raster_states.find(raster_flags);
+
+	if (it != raster_states.end())
+	{
+		context->RSSetState(it->second.Get());
+		return;
+	}
+
+	D3D11_RASTERIZER_DESC raster {};
+
+	raster.FillMode        = static_cast<D3D11_FILL_MODE>((raster_flags.data() >> 2) & 3);
+	raster.CullMode        = static_cast<D3D11_CULL_MODE>(raster_flags.data() & 3);
+	raster.DepthClipEnable = TRUE;
+
+	ComPtr<ID3D11RasterizerState> raster_state;
+	if (FAILED(device->CreateRasterizerState(&raster, &raster_state)))
+	{
+		throw std::runtime_error("failed to create rasterizer state");
+	}
+
+	context->RSSetState(raster_state.Get());
+	raster_states.emplace(raster_flags, std::move(raster_state));
+}
+
 bool Direct3DDevice8::update()
 {
+	update_rasterizers();
 	update_shaders();
 	update_sampler();
 	update_blend();

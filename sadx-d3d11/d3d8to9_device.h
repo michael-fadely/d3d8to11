@@ -44,7 +44,7 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_lighting | rs_specular;
+	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_alpha | rs_lighting | rs_specular;
 	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
 #endif
 
@@ -59,6 +59,21 @@ struct DepthFlags
 		write_enabled   = 1 << 14,
 		comparison_mask = 0xF
 	};
+};
+
+struct RasterFlags
+{
+	enum T : uint32_t
+	{
+		cull_none = 1,
+		cull_front,
+		cull_back,
+		fill_wireframe = 2 << 2,
+		fill_solid = 3 << 2
+	};
+
+	static constexpr uint32_t cull_mask = 0b0011;
+	static constexpr uint32_t fill_mask = 0b1100;
 };
 
 struct SamplerSettings : dirty_impl
@@ -247,6 +262,7 @@ public:
 	void update_shaders();
 	void update_blend();
 	void update_depth();
+	void update_rasterizers();
 	bool update();
 	void free_shaders();
 	void update_wv_inv_t();
@@ -263,8 +279,6 @@ public:
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
-	ComPtr<ID3D11RasterizerState> raster_state;
-
 
 protected:
 	Direct3D8* const d3d;
@@ -275,6 +289,9 @@ protected:
 	std::array<dirty_t<DWORD>, 174> render_state_values;
 	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
 	std::unordered_map<DWORD, StreamPair> stream_sources;
+
+	dirty_t<uint32_t> raster_flags;
+	std::unordered_map<uint32_t, ComPtr<ID3D11RasterizerState>> raster_states;
 
 	std::unordered_map<SamplerSettings, ComPtr<ID3D11SamplerState>> sampler_states;
 
