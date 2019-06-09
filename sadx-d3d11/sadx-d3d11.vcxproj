@@ -90,12 +90,14 @@
       <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">
     <ClCompile>
@@ -117,12 +119,14 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -144,12 +148,14 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
       <ModuleDefinitionFile>d3d8.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /C /Y /D "$(ProjectDir)mod.ini" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)configschema.xml" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)system\"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="cbuffers.h" />
