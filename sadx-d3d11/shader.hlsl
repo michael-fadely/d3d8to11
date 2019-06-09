@@ -184,6 +184,24 @@ float CalcFogFactor(float d)
 	return clamp(fogCoeff, 0, 1);
 }
 
+float4 white_not_lit(float4 color)
+{
+#ifdef RS_LIGHTING
+	return color;
+#else
+	return float4(1, 1, 1, 1);
+#endif
+}
+
+float4 black_not_lit(float4 color)
+{
+#ifdef RS_LIGHTING
+	return color;
+#else
+	return float4(0, 0, 0, 0);
+#endif
+}
+
 VS_OUTPUT vs_main(VS_INPUT input)
 {
 	VS_OUTPUT result = (VS_OUTPUT)0;
@@ -216,17 +234,31 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	if (colorVertex == true)
 	{
+	#ifndef RS_LIGHTING
+		#ifdef FVF_DIFFUSE
+			result.diffuse = input.diffuse;
+		#else
+			result.diffuse = float4(1, 1, 1, 1);
+		#endif
+
+		#if defined(RS_SPECULAR) && defined(FVF_SPECULAR)
+			result.specular = input.specular;
+		#else
+			result.specular = float4(0, 0, 0, 0);
+		#endif
+
+	#else
 		switch (materialSources.ambient)
 		{
 			case CS_MATERIAL:
-				result.ambient = material.Ambient;
+				result.ambient = black_not_lit(material.Ambient);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.ambient = input.diffuse;
 			#else
-				result.ambient = material.Ambient;
+				result.ambient = black_not_lit(material.Ambient);
 			#endif
 				break;
 
@@ -234,7 +266,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.ambient = input.specular;
 			#else
-				result.ambient = material.Ambient;
+				result.ambient = black_not_lit(material.Ambient);
 			#endif
 				break;
 
@@ -246,14 +278,14 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		switch (materialSources.diffuse)
 		{
 			case CS_MATERIAL:
-				result.diffuse = material.Diffuse;
+				result.diffuse = white_not_lit(material.Diffuse);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.diffuse = input.diffuse;
 			#else
-				result.diffuse = material.Diffuse;
+				result.diffuse = white_not_lit(material.Diffuse);
 			#endif
 				break;
 
@@ -261,7 +293,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.diffuse = input.specular;
 			#else
-				result.diffuse = material.Diffuse;
+				result.diffuse = white_not_lit(material.Diffuse);
 			#endif
 				break;
 
@@ -270,18 +302,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				break;
 		}
 
-	#ifdef RS_SPECULAR
 		switch (materialSources.specular)
 		{
 			case CS_MATERIAL:
-				result.specular = material.Specular;
+				result.specular = black_not_lit(material.Specular);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.specular = input.diffuse;
 			#else
-				result.specular = material.Specular;
+				result.specular = black_not_lit(material.Specular);
 			#endif
 				break;
 
@@ -289,7 +320,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.specular = input.specular;
 			#else
-				result.specular = material.Specular;
+				result.specular = black_not_lit(material.Specular);
 			#endif
 				break;
 
@@ -297,19 +328,18 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				result.specular = float4(1, 0, 0, 1);
 				break;
 		}
-	#endif
 
 		switch (materialSources.emissive)
 		{
 			case CS_MATERIAL:
-				result.emissive = material.Emissive;
+				result.emissive = black_not_lit(material.Emissive);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.emissive = input.diffuse;
 			#else
-				result.emissive = material.Emissive;
+				result.emissive = black_not_lit(material.Emissive);
 			#endif
 				break;
 
@@ -317,7 +347,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.emissive = input.specular;
 			#else
-				result.emissive = material.Emissive;
+				result.emissive = black_not_lit(material.Emissive);
 			#endif
 				break;
 
@@ -325,17 +355,15 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				result.emissive = float4(1, 0, 0, 1);
 				break;
 		}
+	#endif
 	}
 	else
 	{
-		result.diffuse = material.Diffuse;
-
-	#ifdef RS_SPECULAR
-		result.specular = material.Specular;
-	#endif
+		result.diffuse = white_not_lit(material.Diffuse);
+		result.specular = black_not_lit(material.Specular);
 	}
 
-#if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
+#if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
 	float4 ambient  = float4(0, 0, 0, 0);
 	float4 diffuse  = float4(0, 0, 0, 0);
 	float4 specular = float4(0, 0, 0, 0);
@@ -355,7 +383,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	{
 		if (lights[i].Enabled == false)
 		{
-			break;
+			continue;
 		}
 
 		float Atten;
@@ -434,13 +462,13 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 
 	// Ambient Lighting = Ca*[Ga + sum(Atteni*Spoti*Lai)]
-	ambient = Ca * saturate(globalAmbient + saturate(ambient));
+	ambient = saturate(Ca * saturate(globalAmbient + saturate(ambient)));
 
 	/*
 		Diffuse components are clamped to be from 0 to 255, after all lights are processed and interpolated separately.
 		The resulting diffuse lighting value is a combination of the ambient, diffuse and emissive light values.
 	*/
-	diffuse = saturate(float4(diffuse.rgb, Cd.a));
+	diffuse = saturate(diffuse);
 
 	#ifdef RS_SPECULAR
 		specular = float4(saturate(Cs * saturate(specular)).rgb, 0);
@@ -474,9 +502,9 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result = float4(1, 1, 1, 1);
 #endif
 
-	result *= float4(saturate(input.diffuse.rgb + input.ambient), input.diffuse.a);
-	result.rgb = saturate(result.rgb + input.specular.rgb);
-	result.rgb = saturate(result.rgb + input.emissive.rgb);
+	result = saturate(result * saturate(input.diffuse + input.ambient));
+	result = saturate(result + input.specular);
+	result = saturate(result + input.emissive);
 
 //#ifdef RS_ALPHA
 //	if (result.a * 255.0f < 254.0f / 255.0f)
