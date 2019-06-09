@@ -801,6 +801,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		{
 			OutputDebugStringA("clearing cached shaders...\n");
 			free_shaders();
+			update();
 			this->freeing_shaders = true;
 		}
 	}
@@ -1413,10 +1414,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 	if (Flags & D3DCLEAR_TARGET)
 	{
 		float color[] = {
-			((Color >> 16) & 0xFF) / 255.0f,
-			((Color >> 8) & 0xFF) / 255.0f,
-			(Color & 0xFF) / 255.0f,
-			((Color >> 24) & 0xFF) / 255.0f,
+			static_cast<float>((Color >> 16) & 0xFF) / 255.0f,
+			static_cast<float>((Color >> 8) & 0xFF) / 255.0f,
+			static_cast<float>(Color & 0xFF) / 255.0f,
+			static_cast<float>((Color >> 24) & 0xFF) / 255.0f,
 		};
 
 		if (current_render_target)
@@ -1808,8 +1809,24 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			ref.clear();
 			break;
 
+		case D3DRS_AMBIENT:
+			per_model.ambient = to_color4(Value);
+			break;
+
 		case D3DRS_DIFFUSEMATERIALSOURCE:
-			per_model.diffuseSource = Value;
+			per_model.materialSources.diffuse = Value;
+			break;
+
+		case D3DRS_SPECULARMATERIALSOURCE:
+			per_model.materialSources.specular = Value;
+			break;
+
+		case D3DRS_AMBIENTMATERIALSOURCE:
+			per_model.materialSources.ambient = Value;
+			break;
+
+		case D3DRS_EMISSIVEMATERIALSOURCE:
+			per_model.materialSources.emissive = Value;
 			break;
 
 		case D3DRS_COLORVERTEX:
@@ -3476,8 +3493,6 @@ void Direct3DDevice8::free_shaders()
 	per_model.mark();
 	per_pixel.mark();
 	per_scene.mark();
-
-	update();
 }
 
 void Direct3DDevice8::up_get(size_t target_size)

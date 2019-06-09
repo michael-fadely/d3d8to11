@@ -28,10 +28,43 @@ void PerSceneBuffer::mark()
 	viewPosition.mark();
 }
 
+bool MaterialSources::dirty() const
+{
+	return diffuse.dirty() ||
+	       specular.dirty() ||
+	       ambient.dirty() ||
+	       emissive.dirty();
+}
+
+void MaterialSources::clear()
+{
+	diffuse.clear();
+	specular.clear();
+	ambient.clear();
+	emissive.clear();
+}
+
+void MaterialSources::mark()
+{
+	diffuse.mark();
+	specular.mark();
+	ambient.mark();
+	emissive.mark();
+}
+
+inline CBufferBase& operator<<(CBufferBase& buffer, const MaterialSources& data)
+{
+	return buffer << CBufferAlign()
+	       << data.diffuse.data()
+	       << data.specular.data()
+	       << data.ambient.data()
+	       << data.emissive.data();
+}
+
 void PerModelBuffer::write(CBufferBase& cbuf) const
 {
 	cbuf << worldMatrix << wvMatrixInvT << textureMatrix
-		<< diffuseSource << colorVertex;
+		<< materialSources << ambient << colorVertex;
 
 	for (const auto& light : lights)
 	{
@@ -52,7 +85,7 @@ bool PerModelBuffer::dirty() const
 	}
 
 	return worldMatrix.dirty() || wvMatrixInvT.dirty() || textureMatrix.dirty() ||
-	       material.dirty() || diffuseSource.dirty() || colorVertex.dirty();
+	       material.dirty() || materialSources.dirty() || ambient.dirty() || colorVertex.dirty();
 }
 
 void PerModelBuffer::clear()
@@ -66,7 +99,8 @@ void PerModelBuffer::clear()
 	wvMatrixInvT.clear();
 	textureMatrix.clear();
 	material.clear();
-	diffuseSource.clear();
+	materialSources.clear();
+	ambient.clear();
 	colorVertex.clear();
 }
 
@@ -81,14 +115,15 @@ void PerModelBuffer::mark()
 	wvMatrixInvT.mark();
 	textureMatrix.mark();
 	material.mark();
-	diffuseSource.mark();
+	materialSources.mark();
+	ambient.mark();
 	colorVertex.mark();
 }
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << fogMode
-		<< fogStart << fogEnd << fogDensity << fogColor;
+	cbuf << fogMode << fogStart << fogEnd
+		<< fogDensity << fogColor;
 }
 
 bool PerPixelBuffer::dirty() const
@@ -120,12 +155,5 @@ void PerPixelBuffer::mark()
 
 void PerPixelBuffer::set_color(uint color)
 {
-	float4 fcolor;
-
-	fcolor.x = ((color >> 16) & 0xFF) / 255.0f;
-	fcolor.y = ((color >> 8) & 0xFF) / 255.0f;
-	fcolor.z = (color & 0xFF) / 255.0f;
-	fcolor.w = ((color >> 24) & 0xFF) / 255.0f;
-
-	fogColor = fcolor;
+	fogColor = to_color4(color);
 }

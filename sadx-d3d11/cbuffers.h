@@ -22,6 +22,19 @@ public:
 	void mark() override;
 };
 
+class MaterialSources : dirty_impl
+{
+public:
+	dirty_t<uint> diffuse;
+	dirty_t<uint> specular;
+	dirty_t<uint> ambient;
+	dirty_t<uint> emissive;
+
+	bool dirty() const override;
+	void clear() override;
+	void mark() override;
+};
+
 class PerModelBuffer : public ICBuffer, dirty_impl
 {
 public:
@@ -30,7 +43,8 @@ public:
 	dirty_t<matrix>                         textureMatrix;
 	std::array<dirty_t<Light>, LIGHT_COUNT> lights;
 	dirty_t<Material>                       material;
-	dirty_t<uint>                           diffuseSource;
+	MaterialSources                         materialSources;
+	dirty_t<float4>                         ambient;
 	dirty_t<bool>                           colorVertex = dirty_t<bool>(true);
 
 	void write(CBufferBase& cbuf) const override;

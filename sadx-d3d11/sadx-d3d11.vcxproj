@@ -194,6 +194,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)system\"</Command>
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />
+    <ClCompile Include="simple_math.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">Create</PrecompiledHeader>

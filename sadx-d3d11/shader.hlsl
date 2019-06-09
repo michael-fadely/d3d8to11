@@ -22,6 +22,14 @@ struct Material
 	float  Power;    /* Sharpness if specular highlight */
 };
 
+struct MaterialSources
+{
+	uint diffuse;  /* Diffuse material source. */
+	uint specular; /* Specular material source. */
+	uint ambient;  /* Ambient material source. */
+	uint emissive; /* Emissive material source. */
+};
+
 struct Light
 {
 	bool   Enabled;
@@ -88,8 +96,10 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 position : SV_POSITION;
-	float4 diffuse  : COLOR0;
-	float4 specular : COLOR1;
+	float4 ambient  : COLOR0;
+	float4 diffuse  : COLOR1;
+	float4 specular : COLOR2;
+	float4 emissive : COLOR3;
 	float2 depth    : DEPTH;
 	float  fog      : FOG;
 
@@ -133,7 +143,8 @@ cbuffer PerModelBuffer : register(b1)
 	matrix wvMatrixInvT;
 	matrix textureMatrix;
 
-	uint diffuseSource;
+	MaterialSources materialSources;
+	float4 ambient;
 	bool colorVertex;
 
 	Light lights[LIGHT_COUNT];
@@ -206,45 +217,137 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	if (colorVertex == true)
 	{
-		switch (diffuseSource)
+		switch (materialSources.ambient)
 		{
 			case CS_MATERIAL:
-				result.diffuse = saturate(material.Diffuse);
+				result.ambient = material.Ambient;
 				break;
 
-			#ifdef FVF_DIFFUSE
 			case CS_COLOR1:
-				result.diffuse = input.diffuse;
-				break;
+			#ifdef FVF_DIFFUSE
+				result.ambient = input.diffuse;
+			#else
+				result.ambient = material.Ambient;
 			#endif
+				break;
 
-			#ifdef FVF_SPECULAR
 			case CS_COLOR2:
-				result.diffuse = input.specular;
-				break;
+			#ifdef FVF_SPECULAR
+				result.ambient = input.specular;
+			#else
+				result.ambient = material.Ambient;
 			#endif
+				break;
 
 			default:
-				result.diffuse = float4(1, 1, 1, 1);
+				result.ambient = float4(1, 0, 0, 1);
+				break;
+		}
+
+		switch (materialSources.diffuse)
+		{
+			case CS_MATERIAL:
+				result.diffuse = material.Diffuse;
+				break;
+
+			case CS_COLOR1:
+			#ifdef FVF_DIFFUSE
+				result.diffuse = input.diffuse;
+			#else
+				result.diffuse = material.Diffuse;
+			#endif
+				break;
+
+			case CS_COLOR2:
+			#ifdef FVF_SPECULAR
+				result.diffuse = input.specular;
+			#else
+				result.diffuse = material.Diffuse;
+			#endif
+				break;
+
+			default:
+				result.diffuse = float4(1, 0, 0, 1);
+				break;
+		}
+
+	#ifdef RS_SPECULAR
+		switch (materialSources.specular)
+		{
+			case CS_MATERIAL:
+				result.specular = material.Specular;
+				break;
+
+			case CS_COLOR1:
+			#ifdef FVF_DIFFUSE
+				result.specular = input.diffuse;
+			#else
+				result.specular = material.Specular;
+			#endif
+				break;
+
+			case CS_COLOR2:
+			#ifdef FVF_SPECULAR
+				result.specular = input.specular;
+			#else
+				result.specular = material.Specular;
+			#endif
+				break;
+
+			default:
+				result.specular = float4(1, 0, 0, 1);
+				break;
+		}
+	#endif
+
+		switch (materialSources.emissive)
+		{
+			case CS_MATERIAL:
+				result.emissive = material.Emissive;
+				break;
+
+			case CS_COLOR1:
+			#ifdef FVF_DIFFUSE
+				result.emissive = input.diffuse;
+			#else
+				result.emissive = material.Emissive;
+			#endif
+				break;
+
+			case CS_COLOR2:
+			#ifdef FVF_SPECULAR
+				result.emissive = input.specular;
+			#else
+				result.emissive = material.Emissive;
+			#endif
+				break;
+
+			default:
+				result.emissive = float4(1, 0, 0, 1);
 				break;
 		}
 	}
 	else
 	{
-		result.diffuse = diffuseSource == CS_MATERIAL ? saturate(material.Diffuse) : float4(1, 1, 1, 1);
+		result.diffuse = material.Diffuse;
+
+	#ifdef RS_SPECULAR
+		result.specular = material.Specular;
+	#endif
 	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL)/* && !defined(FVF_RHW)*/
 	float4 diffuse  = float4(0, 0, 0, 0);
 	float4 ambient  = float4(0, 0, 0, 0);
 	float4 specular = float4(0, 0, 0, 0);
+	float4 emissive = float4(0, 0, 0, 0);
 
 	float4 Cd = saturate(result.diffuse);
 	float3 N  = normalize(mul((float3x3)worldMatrix, input.normal));
 
 	#ifdef RS_SPECULAR
 		float4 Cs = max(0, material.Specular);
-		float P = max(0, material.Power);
+		float P   = max(0, material.Power);
 
 		float4 worldPosition = mul(worldMatrix, input.position);
 		float3 viewDir = normalize(viewPosition - worldPosition.xyz);

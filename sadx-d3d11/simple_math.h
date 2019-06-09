@@ -15,3 +15,10 @@ using int4     = std::array<int, 4>;
 using uint2    = std::array<uint, 2>;
 using uint3    = std::array<uint, 3>;
 using uint4    = std::array<uint, 4>;
+
+/**
+ * \brief Converts an RGB or ARGB integer color to float4.
+ * \param color The 32-bit integer color to convert to a float4
+ * \return The float4 representation of \p color
+ */
+float4 to_color4(uint color);
