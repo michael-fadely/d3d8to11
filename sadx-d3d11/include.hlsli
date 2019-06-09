@@ -29,6 +29,7 @@
 #define FOGMODE_LINEAR 3
 #define E              2.71828
 
+/*
 // Magic number to consider a null-entry.
 static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 
@@ -63,6 +64,7 @@ Texture2D                 BackBuffer    : register(t3);
 Texture2D                 DepthBuffer   : register(t4);
 
 #endif
+*/
 
 // from D3DX_DXGIFormatConvert.inl
 
