@@ -1958,29 +1958,32 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 	*ppTexture = nullptr;
 
-	// HACK: this should be doing a bounds check; avoiding std::array right now
-	auto ptr = texture_stages[Stage].data();
+	const auto it = texture_stages.find(Stage);
 
-	if (ptr)
+	if (it == texture_stages.end())
 	{
-		ptr->AddRef();
+		return D3DERR_INVALIDCALL;
 	}
 
-	*ppTexture = ptr;
+	auto texture = it->second;
+	texture->AddRef();
+	*ppTexture = it->second;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseTexture8* pTexture)
 {
+	auto it = texture_stages.find(Stage);
+
 	if (pTexture == nullptr)
 	{
-		//context->PSSetShaderResources(Stage, 0, nullptr);
-		if (texture_stages[Stage] != nullptr)
-		{
-			texture_stages[Stage].data()->Release();
-		}
+		context->PSSetShaderResources(Stage, 0, nullptr);
 
-		texture_stages[Stage] = nullptr;
+		if (it != texture_stages.end())
+		{
+			it->second->Release();
+			texture_stages.erase(it);
+		}
 
 		return D3D_OK;
 	}
@@ -1995,15 +1998,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	auto texture = dynamic_cast<Direct3DTexture8*>(pTexture);
 
-	if (texture_stages[Stage].data() != nullptr)
+	if (it != texture_stages.end())
 	{
-		texture_stages[Stage].data()->Release();
+		it->second->Release();
+		it->second = texture;
+		texture->AddRef();
+	}
+	else
+	{
+		texture_stages[Stage] = texture;
+		texture->AddRef();
 	}
 
-	texture_stages[Stage] = texture;
-	texture->AddRef();
-
-	//context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
+	context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
 	return D3D_OK;
 }
 
@@ -2835,14 +2842,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (it != fvf_layouts.end())
 	{
-		auto ptr = it->second.Get();
-
-		if (ptr != last_input_layout)
-		{
-			context->IASetInputLayout(ptr);
-			last_input_layout = ptr;
-		}
-
+		context->IASetInputLayout(it->second.Get());
 		return true;
 	}
 
@@ -3025,6 +3025,11 @@ bool Direct3DDevice8::update_input_layout()
 		}
 	}
 
+	if (i >= 16)
+	{
+		throw;
+	}
+
 	if (fvf != 0)
 	{
 		//printf("unsupported FVF\n");
@@ -3045,7 +3050,6 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	last_input_layout = layout.Get();
 	fvf_layouts[FVF] = layout;
 	context->IASetInputLayout(layout.Get());
 	return true;
@@ -3111,9 +3115,9 @@ void Direct3DDevice8::commit_per_scene()
 
 void Direct3DDevice8::update_sampler()
 {
-	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	for (auto& setting_it : sampler_setting_values)
 	{
-		auto& setting = sampler_setting_values[i];
+		auto& setting = setting_it.second;
 
 		if (!setting.dirty())
 		{
@@ -3126,8 +3130,8 @@ void Direct3DDevice8::update_sampler()
 
 		if (it != sampler_states.end())
 		{
-			context->PSSetSamplers(i, 1, it->second.GetAddressOf());
-			continue;
+			context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
+			return;
 		}
 
 		D3D11_SAMPLER_DESC sampler_desc {};
@@ -3149,7 +3153,7 @@ void Direct3DDevice8::update_sampler()
 			throw std::runtime_error("CreateSamplerState failed");
 		}
 
-		context->PSSetSamplers(i, 1, sampler_state.GetAddressOf());
+		context->PSSetSamplers(setting_it.first, 1, sampler_state.GetAddressOf());
 		sampler_states[setting] = sampler_state;
 	}
 }
@@ -3316,8 +3320,6 @@ void Direct3DDevice8::update_depth()
 		return;
 	}
 
-	depth_flags.clear();
-
 	const auto it = depth_states.find(depth_flags);
 
 	if (it != depth_states.end())
@@ -3357,38 +3359,12 @@ void Direct3DDevice8::update_depth()
 
 	context->OMSetDepthStencilState(depth_state.Get(), 0);
 	depth_states[depth_flags] = std::move(depth_state);
-}
-
-void Direct3DDevice8::update_texture_stages()
-{
-	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
-	{
-		auto value = texture_stages[i];
-
-		if (!value.dirty())
-		{
-			continue;
-		}
-
-		auto ptr = value.data();
-
-		if (ptr == nullptr)
-		{
-			context->PSSetShaderResources(i, 0, nullptr);
-		}
-		else
-		{
-			context->PSSetShaderResources(i, 1, ptr->srv.GetAddressOf());
-		}
-
-		value.clear();
-	}
+	depth_flags.clear();
 }
 
 bool Direct3DDevice8::update()
 {
 	update_shaders();
-	update_texture_stages();
 	update_sampler();
 	update_blend();
 	update_depth();

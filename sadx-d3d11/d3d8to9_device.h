@@ -114,16 +114,11 @@ struct StreamPair
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
-constexpr auto TEXTURE_STAGE_COUNT = 16;
-
 class Direct3DDevice8 : public Unknown
 {
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string texcount_str;
-
-	// used strictly for comparison
-	ID3D11InputLayout* last_input_layout = nullptr;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;
@@ -251,7 +246,6 @@ public:
 	void update_shaders();
 	void update_blend();
 	void update_depth();
-	void update_texture_stages();
 	bool update();
 	void free_shaders();
 	void update_wv_inv_t();
@@ -274,9 +268,9 @@ public:
 protected:
 	Direct3D8* const d3d;
 
-	dirty_t<Direct3DTexture8*> texture_stages[TEXTURE_STAGE_COUNT] {};
-	std::unordered_map<DWORD, dirty_t<DWORD>> texture_state_values[TEXTURE_STAGE_COUNT] {};
-	SamplerSettings sampler_setting_values[TEXTURE_STAGE_COUNT] {};
+	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
+	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
+	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
 	std::array<dirty_t<DWORD>, 174> render_state_values;
 	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
 	std::unordered_map<DWORD, StreamPair> stream_sources;
