@@ -42,5 +42,8 @@ public:
 
 private:
 	bool locked = false;
+	UINT lock_offset = 0;
+	UINT lock_size = 0;
+	DWORD lock_flags = 0;
 	Direct3DDevice8* const Device;
 };

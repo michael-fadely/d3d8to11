@@ -173,6 +173,10 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 	locked = true;
 	*ppbData = reinterpret_cast<BYTE*>(&buffer[OffsetToLock]);
 
+	this->lock_offset = OffsetToLock;
+	this->lock_size   = SizeToLock;
+	this->lock_flags  = Flags;
+
 	/*if (Flags & D3DLOCK_DISCARD)
 	{
 		memset(*ppbData, 0, SizeToLock);
@@ -192,7 +196,19 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 	auto context = Device->context;
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	auto hr = context->Map(buffer_resource.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+
+	D3D11_MAP map_type = D3D11_MAP_WRITE;
+
+	if (lock_flags & D3DLOCK_DISCARD)
+	{
+		map_type = D3D11_MAP_WRITE_DISCARD;
+	}
+	else if (lock_flags & D3DLOCK_NOOVERWRITE)
+	{
+		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
+	}
+
+	auto hr = context->Map(buffer_resource.Get(), 0, map_type, 0, &mapped);
 
 	if (FAILED(hr))
 	{
@@ -204,7 +220,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(mapped.pData, buffer.data(), buffer.size());
+	memcpy(reinterpret_cast<uint8_t*>(mapped.pData) + lock_offset, buffer.data() + lock_offset, lock_size);
 
 	context->Unmap(buffer_resource.Get(), 0);
 	return D3D_OK;
