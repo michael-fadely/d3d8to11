@@ -170,10 +170,10 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 	this->lock_size   = SizeToLock;
 	this->lock_flags  = Flags;
 
-	if (Flags & D3DLOCK_DISCARD)
+	/*if (Flags & D3DLOCK_DISCARD)
 	{
 		memset(*ppbData, 0, SizeToLock);
-	}
+	}*/
 
 	return D3D_OK;
 }
