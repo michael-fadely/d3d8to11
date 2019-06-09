@@ -119,6 +119,7 @@ class Direct3DDevice8 : public Unknown
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string texcount_str;
+	bool freeing_shaders = false;
 
 public:
 	Direct3DDevice8(const Direct3DDevice8&) = delete;

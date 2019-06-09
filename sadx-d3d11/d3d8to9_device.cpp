@@ -795,6 +795,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 	}
 
+
+	if ((GetAsyncKeyState(VK_CONTROL) & (1 << 16)) && (GetAsyncKeyState('R') & (1 << 16)))
+	{
+		if (!this->freeing_shaders)
+		{
+			OutputDebugStringA("clearing cached shaders...\n");
+			free_shaders();
+			this->freeing_shaders = true;
+		}
+	}
+	else
+	{
+		this->freeing_shaders = false;
+	}
+
 	return D3D_OK;
 }
 
@@ -2300,8 +2315,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount)
 {
+	// TODO: LotR RotK
 #if 1
-	// TODO
 	//printf(__FUNCTION__ " not implemented\n");
 	return D3DERR_INVALIDCALL;
 #else
@@ -2390,7 +2405,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT MinVertexIndex, UINT NumVertexIndices, UINT PrimitiveCount, const void* pIndexData, D3DFORMAT IndexDataFormat, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
 #if 1
-	// TODO
+	// TODO: LotR RotK
 	return D3DERR_INVALIDCALL;
 #else
 	ApplyClipPlanes();
@@ -2415,7 +2430,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::ProcessVertices(UINT SrcStartIndex, U
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexShader(const DWORD* pDeclaration, const DWORD* pFunction, DWORD* pHandle, DWORD Usage)
 {
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 }
 
@@ -2515,7 +2530,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeleteVertexShader(DWORD Handle)
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShaderConstant(DWORD Register, const void* pConstantData, DWORD ConstantCount)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->SetVertexShaderConstantF(Register, static_cast<const float *>(pConstantData), ConstantCount);
@@ -2525,7 +2540,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShaderConstant(DWORD Registe
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderConstant(DWORD Register, void* pConstantData, DWORD ConstantCount)
 {
 #if 1
-	// not required for SADX
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	return ProxyInterface->GetVertexShaderConstantF(Register, static_cast<float *>(pConstantData), ConstantCount);
@@ -3410,9 +3425,41 @@ bool Direct3DDevice8::update()
 
 void Direct3DDevice8::free_shaders()
 {
+	//auto fvf = shader_flags & ShaderFlags::fvf_mask;
+	//shader_flags = ShaderFlags::none | FVF.data();
+	last_shader_flags = ShaderFlags::mask;
+
 	shader_sources.clear();
 	vertex_shaders.clear();
 	pixel_shaders.clear();
+	fvf_layouts.clear();
+
+	for (auto& value : render_state_values)
+	{
+		value.mark();
+	}
+
+	depth_flags.mark();
+	blend_flags.mark();
+
+	for (auto& a : texture_state_values)
+	{
+		for (auto& b : a.second)
+		{
+			b.second.mark();
+		}
+	}
+
+	for (auto& pair : sampler_setting_values)
+	{
+		pair.second.mark();
+	}
+
+	per_model.mark();
+	per_pixel.mark();
+	per_scene.mark();
+
+	update();
 }
 
 void Direct3DDevice8::up_get(size_t target_size)
