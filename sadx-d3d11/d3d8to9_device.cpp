@@ -38,6 +38,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		shader_preproc_defs.push_back({ "FVF_RHW", "1" });
 	}
 
+	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZ)
+	{
+		shader_preproc_defs.push_back({ "FVF_XYZ", "1" });
+	}
+
 	if (flags & D3DFVF_NORMAL)
 	{
 		shader_preproc_defs.push_back({ "FVF_NORMAL", "1" });
@@ -351,15 +356,35 @@ void Direct3DDevice8::create_native()
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 
 #if 0
-	printf("precompiling shaders...\n");
+	OutputDebugStringA("precompiling shaders...\n");
+
+	uint32_t last = std::numeric_limits<uint32_t>::max();
+
 	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
 	{
-		VertexShader vs;
-		PixelShader ps;
+		auto flags = ShaderFlags::sanitize(i);
+		
+		if ((flags & ShaderFlags::vs_mask) != (last & ShaderFlags::vs_mask))
+		{
+			std::stringstream ss;
+			ss << "processing vs: " << flags << "/" << static_cast<uint32_t>(ShaderFlags::count) << "\n";
+			OutputDebugStringA(ss.str().c_str());
 
-		compile_shaders(i, vs, ps);
+			auto temp = get_vs(flags);
+		}
+
+		if ((flags & ShaderFlags::ps_mask) != (last & ShaderFlags::ps_mask))
+		{
+			std::stringstream ss;
+			ss << "processing ps: " << flags << "/" << static_cast<uint32_t>(ShaderFlags::count) << "\n";
+			OutputDebugStringA(ss.str().c_str());
+
+			auto temp = get_ps(flags);
+		}
+
+		last = flags;
 	}
-	printf("done\n");
+	OutputDebugStringA("done\n");
 #endif
 
 	for (size_t i = 0; i < render_state_values.size(); i++)
@@ -2831,14 +2856,18 @@ void Direct3DDevice8::print_info_queue() const
 
 bool Direct3DDevice8::update_input_layout()
 {
-	if (!FVF.dirty() || !FVF.data())
+	// HACK: shit's busted
+	/*if (!FVF.dirty())
 	{
 		return false;
-	}
+	}*/
 
-	//FVF.clear();
+	FVF.clear();
 
-	auto it = fvf_layouts.find(FVF);
+	auto key = shader_flags & ShaderFlags::vs_mask;
+
+	// HACK: deliberately over-allocating input layouts because of bugs
+	auto it = fvf_layouts.find(key);
 
 	if (it != fvf_layouts.end())
 	{
@@ -2849,7 +2878,7 @@ bool Direct3DDevice8::update_input_layout()
 	D3D11_INPUT_ELEMENT_DESC pos_element {};
 	pos_element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	DWORD fvf = FVF;
+	DWORD fvf = key & ShaderFlags::fvf_mask;
 
 	switch (fvf & D3DFVF_POSITION_MASK)
 	{
@@ -3050,8 +3079,13 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	fvf_layouts[FVF] = layout;
+	fvf_layouts[key] = layout;
 	context->IASetInputLayout(layout.Get());
+
+	std::stringstream ss;
+	ss << "Created input layout #" << fvf_layouts.size() << std::endl;
+	OutputDebugStringA(ss.str().c_str());
+
 	return true;
 }
 
