@@ -190,13 +190,9 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 
-	D3D11_MAP map_type = D3D11_MAP_WRITE;
+	D3D11_MAP map_type = D3D11_MAP_WRITE_DISCARD;
 
-	if (lock_flags & D3DLOCK_DISCARD)
-	{
-		map_type = D3D11_MAP_WRITE_DISCARD;
-	}
-	else if (lock_flags & D3DLOCK_NOOVERWRITE)
+	if (lock_flags & D3DLOCK_NOOVERWRITE)
 	{
 		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 	}
