@@ -27,6 +27,20 @@ static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
 	D3D_FEATURE_LEVEL_11_0
 };
 
+inline uint32_t fvf_sanitize(uint32_t value)
+{
+	if ((value & D3DFVF_XYZ) == D3DFVF_XYZ)
+	{
+		value &= ~D3DFVF_XYZRHW;
+	}
+	else if ((value & D3DFVF_XYZRHW) == D3DFVF_XYZRHW)
+	{
+		value &= ~D3DFVF_NORMAL;
+	}
+
+	return value;
+}
+
 static std::vector<D3D_SHADER_MACRO> shader_preproc_defs;
 
 std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
@@ -2472,14 +2486,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 
 	if ((Handle & 0x80000000) == 0)
 	{
-		FVF = Handle;
-		//ProxyInterface->SetVertexShader(nullptr);
-		//hr = ProxyInterface->SetFVF(Handle);
+		if ((Handle & D3DFVF_XYZRHW) && D3DFVF_XYZRHW != (Handle & (D3DFVF_XYZRHW | D3DFVF_XYZ | D3DFVF_NORMAL)))
+		{
+			return D3DERR_INVALIDCALL;
+		}
 
-		const auto fvf = Handle;
+		const auto fvf = fvf_sanitize(Handle);
 
 		shader_flags &= ~ShaderFlags::fvf_mask;
 		shader_flags |= fvf;
+		FVF = fvf;
 
 		CurrentVertexShaderHandle = 0;
 		hr = D3D_OK;
@@ -2928,7 +2944,7 @@ bool Direct3DDevice8::update_input_layout()
 	D3D11_INPUT_ELEMENT_DESC pos_element {};
 	pos_element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	DWORD fvf = key & ShaderFlags::fvf_mask;
+	DWORD fvf = fvf_sanitize(key & ShaderFlags::fvf_mask);
 
 	switch (fvf & D3DFVF_POSITION_MASK)
 	{
