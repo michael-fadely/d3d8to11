@@ -44,6 +44,26 @@ struct Light
 	float  Phi;          /* Outer angle of spotlight cone */
 };
 
+struct TextureStage
+{
+	uint  colorOp;
+	uint  colorArg1;             // D3DTA
+	uint  colorArg2;             // D3DTA
+	uint  alphaOp;
+	uint  alphaArg1;             // D3DTA
+	uint  alphaArg2;             // D3DTA
+	float bumpEnvMat00;
+	float bumpEnvMat01;
+	float bumpEnvMat10;
+	float bumpEnvMat11;
+	uint  texCoordIndex;         // D3DTSS_TCI
+	float bumpEnvLScale;
+	float bumpEnvLOffset;
+	uint  textureTransformFlags;
+	uint  colorArg0;             // D3DTA
+	uint  alphaArg0;             // D3DTA
+};
+
 #define MAKE_TEXN(N) \
 	float2 tex ## N : TEXCOORD ## N
 
@@ -159,6 +179,11 @@ cbuffer PerPixelBuffer : register(b2)
 	uint  alphaRejectMode;
 	float alphaRejectThreshold;
 };
+
+cbuffer TextureStages : register(b3)
+{
+	TextureStage textureStages[TEXTURE_STAGE_COUNT];
+}
 
 Texture2D<float4> DiffuseMap     : register(t0);
 SamplerState      DiffuseSampler : register(s0);
@@ -483,15 +508,6 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.ambient.rgb  = ambient.rgb;
 	result.diffuse.rgb  = diffuse.rgb;
 	result.specular.rgb = specular.rgb;
-#endif
-
-#if FVF_TEXCOUNT > 0
-	#ifdef TCI_CAMERASPACENORMAL
-		result.tex0 = (float2)mul(float4(input.normal, 1), wvMatrixInvT);
-		result.tex0 = (float2)mul(textureMatrix, float4(result.tex0, 0, 1));
-	#else
-		result.tex0 = input.tex0;
-	#endif
 #endif
 
 	return result;

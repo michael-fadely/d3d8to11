@@ -161,11 +161,6 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
 		shader_preproc_defs.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
 	}
 
-	if (flags & ShaderFlags::tci_envmap)
-	{
-		shader_preproc_defs.push_back({ "TCI_CAMERASPACENORMAL", "1" });
-	}
-
 	if ((flags & (ShaderFlags::rs_lighting | D3DFVF_NORMAL)) == (ShaderFlags::rs_lighting | D3DFVF_NORMAL))
 	{
 		shader_preproc_defs.push_back({ "RS_LIGHTING", "1" });
@@ -435,6 +430,17 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-pixel CreateBuffer failed");
 	}
 
+	cbuffer_size = per_texture.cbuffer_size();
+
+	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+	cbuf_desc.StructureByteStride = cbuffer_size;
+
+	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_texture_cbuf);
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("per-texture CreateBuffer failed");
+	}
+
 	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
 
@@ -443,6 +449,9 @@ void Direct3DDevice8::create_native()
 
 	context->VSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
+
+	context->VSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
+	context->PSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 
 #if 0
 	OutputDebugStringA("precompiling shaders...\n");
@@ -480,16 +489,44 @@ void Direct3DDevice8::create_native()
 	{
 		SetRenderState(static_cast<D3DRENDERSTATETYPE>(i), render_state_values[i].data());
 	}
+
+	// set all the texture stage states to their defaults
+
+	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	{
+		SetTextureStageState(i, D3DTSS_COLOROP, !i ? D3DTOP_MODULATE : D3DTOP_DISABLE);
+		SetTextureStageState(i, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+		SetTextureStageState(i, D3DTSS_COLORARG2, D3DTA_CURRENT);
+		SetTextureStageState(i, D3DTSS_ALPHAOP, !i ? D3DTOP_SELECTARG1 : D3DTOP_DISABLE);
+		SetTextureStageState(i, D3DTSS_ALPHAARG1, D3DTA_TEXTURE); // If no texture is set for this stage, the default argument is D3DTA_DIFFUSE.
+		SetTextureStageState(i, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
+		SetTextureStageState(i, D3DTSS_BUMPENVMAT00, 0);
+		SetTextureStageState(i, D3DTSS_BUMPENVMAT01, 0);
+		SetTextureStageState(i, D3DTSS_BUMPENVMAT10, 0);
+		SetTextureStageState(i, D3DTSS_BUMPENVMAT11, 0);
+		SetTextureStageState(i, D3DTSS_TEXCOORDINDEX, i);
+		SetTextureStageState(i, D3DTSS_ADDRESSU, D3DTADDRESS_WRAP);
+		SetTextureStageState(i, D3DTSS_ADDRESSV, D3DTADDRESS_WRAP);
+		SetTextureStageState(i, D3DTSS_BORDERCOLOR, 0);
+		SetTextureStageState(i, D3DTSS_MAGFILTER, D3DTEXF_POINT);
+		SetTextureStageState(i, D3DTSS_MINFILTER, D3DTEXF_POINT);
+		SetTextureStageState(i, D3DTSS_MIPFILTER, D3DTEXF_NONE);
+		SetTextureStageState(i, D3DTSS_MIPMAPLODBIAS, 0);
+		SetTextureStageState(i, D3DTSS_MAXMIPLEVEL, 0);
+		SetTextureStageState(i, D3DTSS_MAXANISOTROPY, 1);
+		SetTextureStageState(i, D3DTSS_BUMPENVLSCALE, 0);
+		SetTextureStageState(i, D3DTSS_BUMPENVLOFFSET, 0);
+		SetTextureStageState(i, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
+		SetTextureStageState(i, D3DTSS_ADDRESSW, D3DTADDRESS_WRAP);
+		SetTextureStageState(i, D3DTSS_COLORARG0, D3DTA_CURRENT);
+		SetTextureStageState(i, D3DTSS_ALPHAARG0, D3DTA_CURRENT);
+		SetTextureStageState(i, D3DTSS_RESULTARG, D3DTA_CURRENT);
+	}
 }
 
 uint32_t ShaderFlags::sanitize(uint32_t flags)
 {
 	flags &= mask;
-
-	if (flags & tci_envmap && (!(flags & D3DFVF_TEXCOUNT_MASK) || !(flags & D3DFVF_NORMAL)))
-	{
-		flags &= ~tci_envmap;
-	}
 
 	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
 	{
@@ -718,6 +755,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 	pCaps->FVFCaps                  = 0xFFFFFFFF;
 	pCaps->TextureOpCaps            = 0xFFFFFFFF;
 	pCaps->MaxActiveLights          = LIGHT_COUNT;
+
+	pCaps->MaxTextureBlendStages   = TEXTURE_STAGE_COUNT;
+	pCaps->MaxSimultaneousTextures = TEXTURE_STAGE_COUNT;
 
 	return D3D_OK;
 }
@@ -2171,9 +2211,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 	*ppTexture = nullptr;
 
-	const auto it = texture_stages.find(Stage);
+	const auto it = textures.find(Stage);
 
-	if (it == texture_stages.end())
+	if (it == textures.end())
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -2186,16 +2226,23 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseTexture8* pTexture)
 {
-	auto it = texture_stages.find(Stage);
+	if (Stage > 0)
+	{
+		std::stringstream ss;
+		ss << __FUNCTION__ << " Non-zero texture stage: " << Stage << std::endl;
+		OutputDebugStringA(ss.str().c_str());
+	}
+
+	auto it = textures.find(Stage);
 
 	if (pTexture == nullptr)
 	{
 		context->PSSetShaderResources(Stage, 0, nullptr);
 
-		if (it != texture_stages.end())
+		if (it != textures.end())
 		{
 			it->second->Release();
-			texture_stages.erase(it);
+			textures.erase(it);
 		}
 
 		return D3D_OK;
@@ -2211,7 +2258,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	auto texture = dynamic_cast<Direct3DTexture8*>(pTexture);
 
-	if (it != texture_stages.end())
+	if (it != textures.end())
 	{
 		it->second->Release();
 		it->second = texture;
@@ -2219,7 +2266,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 	}
 	else
 	{
-		texture_stages[Stage] = texture;
+		textures[Stage] = texture;
 		texture->AddRef();
 	}
 
@@ -2263,9 +2310,60 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_ADDRESSW:
 			*pValue = sampler_setting_values[Stage].address_u.data();
 			break;
-		default:
-			*pValue = texture_state_values[Stage][Type];
+
+		case D3DTSS_COLOROP:
+			*pValue = per_texture.stages[Stage].colorOp;
 			break;
+		case D3DTSS_COLORARG1:
+			*pValue = per_texture.stages[Stage].colorArg1;
+			break;
+		case D3DTSS_COLORARG2:
+			*pValue = per_texture.stages[Stage].colorArg2;
+			break;
+		case D3DTSS_ALPHAOP:
+			*pValue = per_texture.stages[Stage].alphaOp;
+			break;
+		case D3DTSS_ALPHAARG1:
+			*pValue = per_texture.stages[Stage].alphaArg1;
+			break;
+		case D3DTSS_ALPHAARG2:
+			*pValue = per_texture.stages[Stage].alphaArg2;
+			break;
+		case D3DTSS_BUMPENVMAT00:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat00;
+			break;
+		case D3DTSS_BUMPENVMAT01:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat01;
+			break;
+		case D3DTSS_BUMPENVMAT10:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat10;
+			break;
+		case D3DTSS_BUMPENVMAT11:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat11;
+			break;
+		case D3DTSS_TEXCOORDINDEX:
+			*pValue = per_texture.stages[Stage].texCoordIndex;
+			break;
+		//case D3DTSS_BORDERCOLOR: // TODO
+		case D3DTSS_BUMPENVLSCALE:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvLScale;
+			break;
+		case D3DTSS_BUMPENVLOFFSET:
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvLOffset;
+			break;
+		case D3DTSS_TEXTURETRANSFORMFLAGS:
+			*pValue = per_texture.stages[Stage].textureTransformFlags;
+			break;
+		case D3DTSS_COLORARG0:
+			*pValue = per_texture.stages[Stage].colorArg0;
+			break;
+		case D3DTSS_ALPHAARG0:
+			*pValue = per_texture.stages[Stage].alphaArg0;
+			break;
+		//case D3DTSS_RESULTARG: // TODO
+
+		default:
+			return D3DERR_INVALIDCALL;
 	}
 
 	return D3D_OK;
@@ -2302,10 +2400,62 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_ADDRESSW:
 			sampler_setting_values[Stage].address_w = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
-		default:
-			texture_state_values[Stage][Type] = Value;
+
+		case D3DTSS_COLOROP:
+			per_texture.stages[Stage].colorOp = static_cast<D3DTEXTUREOP>(Value);
 			break;
+		case D3DTSS_COLORARG1:
+			per_texture.stages[Stage].colorArg1 = Value;
+			break;
+		case D3DTSS_COLORARG2:
+			per_texture.stages[Stage].colorArg2 = Value;
+			break;
+		case D3DTSS_ALPHAOP:
+			per_texture.stages[Stage].alphaOp = static_cast<D3DTEXTUREOP>(Value);
+			break;
+		case D3DTSS_ALPHAARG1:
+			per_texture.stages[Stage].alphaArg1 = Value;
+			break;
+		case D3DTSS_ALPHAARG2:
+			per_texture.stages[Stage].alphaArg2 = Value;
+			break;
+		case D3DTSS_BUMPENVMAT00:
+			per_texture.stages[Stage].bumpEnvMat00 = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_BUMPENVMAT01:
+			per_texture.stages[Stage].bumpEnvMat01 = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_BUMPENVMAT10:
+			per_texture.stages[Stage].bumpEnvMat10 = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_BUMPENVMAT11:
+			per_texture.stages[Stage].bumpEnvMat11 = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_TEXCOORDINDEX:
+			per_texture.stages[Stage].texCoordIndex = Value;
+			break;
+		//case D3DTSS_BORDERCOLOR: // TODO
+		case D3DTSS_BUMPENVLSCALE:
+			per_texture.stages[Stage].bumpEnvLScale = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_BUMPENVLOFFSET:
+			per_texture.stages[Stage].bumpEnvLOffset = *reinterpret_cast<float*>(&Value);
+			break;
+		case D3DTSS_TEXTURETRANSFORMFLAGS:
+			per_texture.stages[Stage].textureTransformFlags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
+			break;
+		case D3DTSS_COLORARG0:
+			per_texture.stages[Stage].colorArg0 = Value;
+			break;
+		case D3DTSS_ALPHAARG0:
+			per_texture.stages[Stage].alphaArg0 = Value;
+			break;
+		//case D3DTSS_RESULTARG: // TODO
+
+		default:
+			return D3DERR_INVALIDCALL;
 	}
+
 	return D3D_OK;
 }
 
@@ -3356,6 +3506,23 @@ void Direct3DDevice8::commit_per_scene()
 	context->Unmap(per_scene_cbuf.Get(), 0);
 }
 
+void Direct3DDevice8::commit_per_texture()
+{
+	return;
+	if (!per_texture.dirty())
+	{
+		return;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mapped {};
+	context->Map(per_texture_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+
+	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	per_texture.write(writer);
+	per_texture.clear();
+	context->Unmap(per_texture_cbuf.Get(), 0);
+}
+
 void Direct3DDevice8::update_sampler()
 {
 	for (auto& setting_it : sampler_setting_values)
@@ -3435,22 +3602,6 @@ void Direct3DDevice8::update_shaders()
 	}
 
 	fog_enable.clear();
-
-	// HACK: this is dumb and bad
-	auto& sampler_0 = texture_state_values[0];
-
-	auto& tci = sampler_0[D3DTSS_TEXCOORDINDEX];
-
-	if (tci.data() != 0 && shader_flags & D3DFVF_TEXCOUNT_MASK)
-	{
-		shader_flags |= ShaderFlags::tci_envmap;
-	}
-	else
-	{
-		shader_flags &= ~ShaderFlags::tci_envmap;
-	}
-
-	tci.clear();
 
 	auto& lighting = render_state_values[D3DRS_LIGHTING];
 
@@ -3648,6 +3799,7 @@ bool Direct3DDevice8::update()
 	update_blend();
 	update_depth();
 	commit_per_scene();
+	commit_per_texture();
 	commit_per_model();
 	commit_per_pixel();
 	return update_input_layout();
@@ -3655,8 +3807,6 @@ bool Direct3DDevice8::update()
 
 void Direct3DDevice8::free_shaders()
 {
-	//auto fvf = shader_flags & ShaderFlags::fvf_mask;
-	//shader_flags = ShaderFlags::none | FVF.data();
 	last_shader_flags = ShaderFlags::mask;
 
 	shader_sources.clear();
@@ -3672,14 +3822,6 @@ void Direct3DDevice8::free_shaders()
 	depth_flags.mark();
 	blend_flags.mark();
 
-	for (auto& a : texture_state_values)
-	{
-		for (auto& b : a.second)
-		{
-			b.second.mark();
-		}
-	}
-
 	for (auto& pair : sampler_setting_values)
 	{
 		pair.second.mark();
@@ -3688,6 +3830,7 @@ void Direct3DDevice8::free_shaders()
 	per_model.mark();
 	per_pixel.mark();
 	per_scene.mark();
+	per_texture.mark();
 }
 
 void Direct3DDevice8::up_get(size_t target_size)

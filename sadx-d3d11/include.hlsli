@@ -3,6 +3,10 @@
 #define MAX_FRAGMENTS 16
 #endif
 
+#ifndef TEXTURE_STAGE_COUNT
+#define TEXTURE_STAGE_COUNT 8
+#endif
+
 #define M_PI 3.14159265358979323846
 
 #define CMP_NEVER        1

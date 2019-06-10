@@ -166,3 +166,117 @@ void PerPixelBuffer::set_color(uint color)
 {
 	fogColor = to_color4(color);
 }
+
+bool TextureStage::dirty() const
+{
+	return colorOp.dirty() ||
+	       colorArg1.dirty() ||
+	       colorArg2.dirty() ||
+	       alphaOp.dirty() ||
+	       alphaArg1.dirty() ||
+	       alphaArg2.dirty() ||
+	       bumpEnvMat00.dirty() ||
+	       bumpEnvMat01.dirty() ||
+	       bumpEnvMat10.dirty() ||
+	       bumpEnvMat11.dirty() ||
+	       texCoordIndex.dirty() ||
+	       bumpEnvLScale.dirty() ||
+	       bumpEnvLOffset.dirty() ||
+	       textureTransformFlags.dirty() ||
+	       colorArg0.dirty() ||
+	       alphaArg0.dirty();
+}
+
+void TextureStage::clear()
+{
+	colorOp.clear();
+	colorArg1.clear();
+	colorArg2.clear();
+	alphaOp.clear();
+	alphaArg1.clear();
+	alphaArg2.clear();
+	bumpEnvMat00.clear();
+	bumpEnvMat01.clear();
+	bumpEnvMat10.clear();
+	bumpEnvMat11.clear();
+	texCoordIndex.clear();
+	bumpEnvLScale.clear();
+	bumpEnvLOffset.clear();
+	textureTransformFlags.clear();
+	colorArg0.clear();
+	alphaArg0.clear();
+}
+
+void TextureStage::mark()
+{
+	colorOp.mark();
+	colorArg1.mark();
+	colorArg2.mark();
+	alphaOp.mark();
+	alphaArg1.mark();
+	alphaArg2.mark();
+	bumpEnvMat00.mark();
+	bumpEnvMat01.mark();
+	bumpEnvMat10.mark();
+	bumpEnvMat11.mark();
+	texCoordIndex.mark();
+	bumpEnvLScale.mark();
+	bumpEnvLOffset.mark();
+	textureTransformFlags.mark();
+	colorArg0.mark();
+	alphaArg0.mark();
+}
+
+void TextureStages::write(CBufferBase& cbuf) const
+{
+	for (auto& it : stages)
+	{
+		cbuf
+			<< static_cast<uint>(it.colorOp.data())
+			<< it.colorArg1
+			<< it.colorArg2
+			<< static_cast<uint>(it.alphaOp.data())
+			<< it.alphaArg1
+			<< it.alphaArg2
+			<< it.bumpEnvMat00
+			<< it.bumpEnvMat01
+			<< it.bumpEnvMat10
+			<< it.bumpEnvMat11
+			<< it.texCoordIndex
+			<< it.bumpEnvLScale
+			<< it.bumpEnvLOffset
+			<< static_cast<uint>(it.textureTransformFlags.data())
+			<< it.colorArg0
+			<< it.alphaArg0
+			<< CBufferAlign();
+	}
+}
+
+bool TextureStages::dirty() const
+{
+	for (auto& it : stages)
+	{
+		if (it.dirty())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void TextureStages::clear()
+{
+	for (auto& it : stages)
+	{
+		it.clear();
+	}
+}
+
+void TextureStages::mark()
+{
+	for (auto& it : stages)
+	{
+		it.mark();
+	}
+}

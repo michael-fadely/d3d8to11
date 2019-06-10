@@ -31,20 +31,19 @@ struct ShaderFlags
 	enum T : uint32_t
 	{
 		none,
-		tci_envmap  = 0b00000000000000010000000000000000,
-		rs_lighting = 0b00000000000000100000000000000000,
-		rs_specular = 0b00000000000001000000000000000000,
-		rs_alpha    = 0b00000000000010000000000000000000,
-		rs_fog      = 0b00000000000100000000000000000000,
+		rs_lighting = 0b00000000000000010000000000000000,
+		rs_specular = 0b00000000000000100000000000000000,
+		rs_alpha    = 0b00000000000001000000000000000000,
+		rs_fog      = 0b00000000000010000000000000000000,
 		fvf_mask    = 0b00000000000000001111111111111111,
-		mask        = 0b00000000000111111111111111111111,
+		mask        = 0b00000000000011111111111111111111,
 		count
 	};
 
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr uint32_t vs_mask = fvf_mask | tci_envmap | rs_alpha | rs_lighting | rs_specular;
+	static constexpr uint32_t vs_mask = fvf_mask | rs_alpha | rs_lighting | rs_specular;
 	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
 #endif
 
@@ -257,6 +256,7 @@ public:
 	void commit_per_pixel();
 	void commit_per_model();
 	void commit_per_scene();
+	void commit_per_texture();
 	void update_sampler();
 	void compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
@@ -283,8 +283,7 @@ public:
 protected:
 	Direct3D8* const d3d;
 
-	std::unordered_map<DWORD, Direct3DTexture8*> texture_stages;
-	std::unordered_map<DWORD, std::unordered_map<DWORD, dirty_t<DWORD>>> texture_state_values;
+	std::unordered_map<DWORD, Direct3DTexture8*> textures;
 	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
 	std::array<dirty_t<DWORD>, 174> render_state_values;
 	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
@@ -318,9 +317,12 @@ protected:
 	ComPtr<ID3D11Buffer> per_scene_cbuf;
 	ComPtr<ID3D11Buffer> per_model_cbuf;
 	ComPtr<ID3D11Buffer> per_pixel_cbuf;
+	ComPtr<ID3D11Buffer> per_texture_cbuf;
 	PerSceneBuffer per_scene {};
 	PerModelBuffer per_model {};
 	PerPixelBuffer per_pixel {};
+	TextureStages per_texture {};
+
 
 	INT CurrentBaseVertexIndex = 0;
 	//const BOOL ZBufferDiscarding = FALSE;
