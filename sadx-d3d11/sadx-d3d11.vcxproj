@@ -96,7 +96,7 @@
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Hybrid|Win32'">
@@ -125,7 +125,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -154,7 +154,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
-xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"&lt;</Command>
+xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
