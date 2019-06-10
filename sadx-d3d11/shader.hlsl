@@ -478,9 +478,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		specular = float4(saturate(Cs * saturate(specular)).rgb, 0);
 	#endif
 
-	result.ambient  = ambient;
-	result.diffuse  = diffuse;
-	result.specular = specular;
+	result.ambient.rgb  = ambient.rgb;
+	result.diffuse.rgb  = diffuse.rgb;
+	result.specular.rgb = specular.rgb;
 #endif
 
 #if FVF_TEXCOUNT > 0
@@ -495,7 +495,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
+#ifndef RS_ALPHA
 [earlydepthstencil]
+#endif
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
