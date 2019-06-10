@@ -19,7 +19,8 @@
 
 using namespace Microsoft::WRL;
 
-static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
+static constexpr uint32_t BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8) | (D3D11_COLOR_WRITE_ENABLE_ALL << BLEND_COLORMASK_SHIFT);
 static constexpr uint32_t RASTER_DEFAULT = D3DCULL_CCW | (D3DFILL_SOLID << 2);
 
 static std::unordered_map<uint32_t, std::string> rs_strings = {
@@ -591,6 +592,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	render_state_values[D3DRS_COLORVERTEX]      = TRUE;
 	render_state_values[D3DRS_LOCALVIEWER]      = TRUE;
 	render_state_values[D3DRS_BLENDOP]          = D3DBLENDOP_ADD;
+	render_state_values[D3DRS_COLORWRITEENABLE] = 0xF;
 
 	depth_flags = DepthFlags::write_enabled | DepthFlags::test_enabled | D3D11_COMPARISON_LESS_EQUAL;
 
@@ -1841,6 +1843,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	{
 		default:
 		{
+			if (!ref.dirty())
+			{
+				break;
+			}
+
+			ref.clear();
 			auto it = rs_strings.find(State);
 
 			if (it == rs_strings.end())
@@ -1856,8 +1864,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 		}
 
-		// TODO: D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA
 		// TODO: D3DRS_TEXTUREFACTOR (multi-texture blending)
+
+		case D3DRS_COLORWRITEENABLE:
+		{
+			blend_flags = (blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
+			break;
+		}
 
 		case D3DRS_FOGSTART:
 		case D3DRS_FOGEND:
@@ -3522,14 +3535,17 @@ void Direct3DDevice8::update_blend()
 
 	const auto flags = blend_flags.data();
 
-	desc.RenderTarget[0].BlendEnable           = flags >> 15 & 1;
-	desc.RenderTarget[0].SrcBlend              = static_cast<D3D11_BLEND>(flags & 0xF);
-	desc.RenderTarget[0].DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
-	desc.RenderTarget[0].BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
-	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	desc.RenderTarget[0].SrcBlendAlpha         = D3D11_BLEND_ONE;
-	desc.RenderTarget[0].DestBlendAlpha        = D3D11_BLEND_ZERO;
-	desc.RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
+	for (auto& rt : desc.RenderTarget)
+	{
+		rt.BlendEnable           = flags >> 15 & 1;
+		rt.SrcBlend              = static_cast<D3D11_BLEND>(flags & 0xF);
+		rt.DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
+		rt.BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
+		rt.RenderTargetWriteMask = static_cast<D3D11_COLOR_WRITE_ENABLE>((flags >> BLEND_COLORMASK_SHIFT) & 0xF);
+		rt.SrcBlendAlpha         = D3D11_BLEND_ONE;
+		rt.DestBlendAlpha        = D3D11_BLEND_ZERO;
+		rt.BlendOpAlpha          = D3D11_BLEND_OP_ADD;
+	}
 
 	ComPtr<ID3D11BlendState> blend_state;
 	HRESULT hr = device->CreateBlendState(&desc, &blend_state);
