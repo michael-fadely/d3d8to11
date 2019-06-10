@@ -165,9 +165,7 @@ SamplerState      DiffuseSampler : register(s0);
 
 // From FixedFuncEMU.fx
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.
-//
 // Calculates fog factor based upon distance
-//
 float CalcFogFactor(float d)
 {
 	float fogCoeff = 1.0;
@@ -425,22 +423,26 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 				float rho = dot(Ldcs, Ldir);
 
-				float theta   = clamp(lights[i].Theta, 0.0f, M_PI);
-
+				float theta      = clamp(lights[i].Theta, 0.0f, M_PI);
 				float theta2     = theta / 2.0f;
 				float cos_theta2 = cos(theta2);
+
+				float phi      = clamp(lights[i].Phi, theta, M_PI);
+				float phi2     = phi / 2.0f;
+				float cos_phi2 = cos(phi2);
+
+				float falloff  = lights[i].Falloff;
 
 				if (rho > cos_theta2)
 				{
 					Spot = 1.0f;
 				}
+				else if (rho <= cos_phi2)
+				{
+					Spot = 0.0f;
+				}
 				else
 				{
-					float phi      = clamp(lights[i].Phi, theta, M_PI);
-					float falloff  = lights[i].Falloff;
-					float phi2     = phi / 2.0f;
-					float cos_phi2 = cos(phi2);
-
 					Spot = pow(max(0, (cos_theta2 - cos_phi2) / (rho - cos_phi2)), falloff);
 				}
 
