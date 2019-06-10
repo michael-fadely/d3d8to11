@@ -154,6 +154,10 @@ cbuffer PerPixelBuffer : register(b2)
 	float  fogEnd;
 	float  fogDensity;
 	float4 fogColor;
+
+	bool  alphaReject;
+	uint  alphaRejectMode;
+	float alphaRejectThreshold;
 };
 
 Texture2D<float4> DiffuseMap     : register(t0);
@@ -506,12 +510,42 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result = saturate(result + input.specular);
 	result = saturate(result + input.emissive);
 
-//#ifdef RS_ALPHA
-//	if (result.a * 255.0f < 254.0f / 255.0f)
-//	{
-//		clip(-1);
-//	}
-//#endif
+#ifdef RS_ALPHA
+	if (alphaReject == true)
+	{
+		uint alpha = floor(result.a * 255);
+		uint threshold = floor(alphaRejectThreshold * 255);
+
+		switch (alphaRejectMode)
+		{
+			case CMP_NEVER:
+				clip(-1);
+				break;
+			case CMP_LESS:
+				clip(alpha < threshold ? 1 : -1);
+				break;
+			case CMP_EQUAL:
+				clip(alpha == threshold ? 1 : -1);
+				break;
+			case CMP_LESSEQUAL:
+				clip(alpha <= threshold ? 1 : -1);
+				break;
+			case CMP_GREATER:
+				clip(alpha > threshold ? 1 : -1);
+				break;
+			case CMP_NOTEQUAL:
+				clip(alpha != threshold ? 1 : -1);
+				break;
+			case CMP_GREATEREQUAL:
+				clip(alpha >= threshold ? 1 : -1);
+				break;
+
+			default:
+				result = float4(1, 0, 0, 1);
+				break;
+		}
+	}
+#endif
 
 #ifdef RS_FOG
 	float factor = CalcFogFactor(input.fog);

@@ -5,6 +5,15 @@
 
 #define M_PI 3.14159265358979323846
 
+#define CMP_NEVER        1
+#define CMP_LESS         2
+#define CMP_EQUAL        3
+#define CMP_LESSEQUAL    4
+#define CMP_GREATER      5
+#define CMP_NOTEQUAL     6
+#define CMP_GREATEREQUAL 7
+#define CMP_ALWAYS       8
+
 // D3DBLEND enum
 #define BLEND_ZERO            1
 #define BLEND_ONE             2

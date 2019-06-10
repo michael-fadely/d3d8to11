@@ -122,8 +122,8 @@ void PerModelBuffer::mark()
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << fogMode << fogStart << fogEnd
-		<< fogDensity << fogColor;
+	cbuf << fogMode << fogStart << fogEnd << fogDensity << fogColor
+		<< alphaReject << alphaRejectMode << alphaRejectThreshold;
 }
 
 bool PerPixelBuffer::dirty() const
@@ -132,7 +132,10 @@ bool PerPixelBuffer::dirty() const
 	       fogStart.dirty() ||
 	       fogEnd.dirty() ||
 	       fogDensity.dirty() ||
-	       fogColor.dirty();
+	       fogColor.dirty() ||
+	       alphaReject.dirty() ||
+	       alphaRejectMode.dirty() ||
+	       alphaRejectThreshold.dirty();
 }
 
 void PerPixelBuffer::clear()
@@ -142,6 +145,9 @@ void PerPixelBuffer::clear()
 	fogEnd.clear();
 	fogDensity.clear();
 	fogColor.clear();
+	alphaReject.clear();
+	alphaRejectMode.clear();
+	alphaRejectThreshold.clear();
 }
 
 void PerPixelBuffer::mark()
@@ -151,6 +157,9 @@ void PerPixelBuffer::mark()
 	fogEnd.mark();
 	fogDensity.mark();
 	fogColor.mark();
+	alphaReject.mark();
+	alphaRejectMode.mark();
+	alphaRejectThreshold.mark();
 }
 
 void PerPixelBuffer::set_color(uint color)

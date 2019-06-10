@@ -62,6 +62,9 @@ public:
 	dirty_t<float>  fogEnd;
 	dirty_t<float>  fogDensity;
 	dirty_t<float4> fogColor;
+	dirty_t<bool>   alphaReject;
+	dirty_t<uint>   alphaRejectMode;
+	dirty_t<float>  alphaRejectThreshold;
 
 	void write(CBufferBase& cbuf) const override;
 
