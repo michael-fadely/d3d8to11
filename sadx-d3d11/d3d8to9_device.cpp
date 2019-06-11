@@ -3508,7 +3508,6 @@ void Direct3DDevice8::commit_per_scene()
 
 void Direct3DDevice8::commit_per_texture()
 {
-	return;
 	if (!per_texture.dirty())
 	{
 		return;
