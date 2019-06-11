@@ -510,6 +510,10 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.specular.rgb = specular.rgb;
 #endif
 
+#if FVF_TEXCOUNT > 0
+	result.tex0 = input.tex0;
+#endif
+
 	return result;
 }
 
