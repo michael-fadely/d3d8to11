@@ -28,26 +28,28 @@ using Microsoft::WRL::ComPtr;
 
 struct ShaderFlags
 {
-	enum T : uint32_t
+	using type = uint64_t;
+	enum T : type
 	{
 		none,
-		rs_lighting = 0b00000000000000010000000000000000,
-		rs_specular = 0b00000000000000100000000000000000,
-		rs_alpha    = 0b00000000000001000000000000000000,
-		rs_fog      = 0b00000000000010000000000000000000,
-		fvf_mask    = 0b00000000000000001111111111111111,
-		mask        = 0b00000000000011111111111111111111,
+		rs_lighting = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_specular = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_alpha    = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_fog      = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		fvf_texfmt  = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
+		fvf_mask    = 0b00000000'00000000'00000000'00000000'11111111'11111111'11111111'11111111,
+		mask        = 0b11110000'00000000'00000000'00000000'11111111'11111111'11111111'11111111,
 		count
 	};
 
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr uint32_t vs_mask = fvf_mask | rs_alpha | rs_lighting | rs_specular;
-	static constexpr uint32_t ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
+	static constexpr type vs_mask = fvf_mask | rs_alpha | rs_lighting | rs_specular;
+	static constexpr type ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
 #endif
 
-	static uint32_t sanitize(uint32_t flags);
+	static type sanitize(type flags);
 };
 
 struct DepthFlags
@@ -243,10 +245,10 @@ public:
 
 	void print_info_queue() const;
 
-	std::vector<D3D_SHADER_MACRO> shader_preprocess(uint32_t flags);
+	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags);
 	const std::vector<uint8_t>& get_shader_source(const std::string& path);
-	VertexShader get_vs(uint32_t flags);
-	PixelShader get_ps(uint32_t flags);
+	VertexShader get_vs(ShaderFlags::type flags);
+	PixelShader get_ps(ShaderFlags::type flags);
 	void create_depth_stencil();
 	void create_render_target();
 	void create_native();
@@ -258,7 +260,7 @@ public:
 	void commit_per_scene();
 	void commit_per_texture();
 	void update_sampler();
-	void compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps);
+	void compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
 	void update_blend();
 	void update_depth();
@@ -267,11 +269,11 @@ public:
 	void free_shaders();
 	void update_wv_inv_t();
 
-	uint32_t shader_flags = ShaderFlags::none;
-	uint32_t last_shader_flags = ShaderFlags::mask;
+	ShaderFlags::type shader_flags = ShaderFlags::none;
+	ShaderFlags::type last_shader_flags = ShaderFlags::mask;
 
-	std::unordered_map<uint32_t, VertexShader> vertex_shaders;
-	std::unordered_map<uint32_t, PixelShader> pixel_shaders;
+	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
+	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
 
 	D3DPRESENT_PARAMETERS8 present_params {};
 	ComPtr<IDXGISwapChain> swap_chain;
@@ -286,7 +288,7 @@ protected:
 	std::unordered_map<DWORD, Direct3DTexture8*> textures;
 	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
 	std::array<dirty_t<DWORD>, 174> render_state_values;
-	std::unordered_map<DWORD, ComPtr<ID3D11InputLayout>> fvf_layouts;
+	std::unordered_map<ShaderFlags::type, ComPtr<ID3D11InputLayout>> fvf_layouts;
 	std::unordered_map<DWORD, StreamPair> stream_sources;
 
 	dirty_t<uint32_t> raster_flags;

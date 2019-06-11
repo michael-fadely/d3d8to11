@@ -65,7 +65,7 @@ struct TextureStage
 };
 
 #define MAKE_TEXN(N) \
-	float2 tex ## N : TEXCOORD ## N
+	FVF_TEXCOORD ## N ## _TYPE tex ## N : TEXCOORD ## N
 
 struct VS_INPUT
 {
@@ -185,8 +185,23 @@ cbuffer TextureStages : register(b3)
 	TextureStage textureStages[TEXTURE_STAGE_COUNT];
 }
 
-Texture2D<float4> DiffuseMap     : register(t0);
-SamplerState      DiffuseSampler : register(s0);
+Texture2D<float4> texture0 : register(t0);
+Texture2D<float4> texture1 : register(t1);
+Texture2D<float4> texture2 : register(t2);
+Texture2D<float4> texture3 : register(t3);
+Texture2D<float4> texture4 : register(t4);
+Texture2D<float4> texture5 : register(t5);
+Texture2D<float4> texture6 : register(t6);
+Texture2D<float4> texture7 : register(t7);
+
+SamplerState sampler0 : register(s0);
+SamplerState sampler1 : register(s1);
+SamplerState sampler2 : register(s2);
+SamplerState sampler3 : register(s3);
+SamplerState sampler4 : register(s4);
+SamplerState sampler5 : register(s5);
+SamplerState sampler6 : register(s6);
+SamplerState sampler7 : register(s7);
 
 // From FixedFuncEMU.fx
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.
@@ -524,11 +539,24 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
 	float4 result;
 
-#if FVF_TEXCOUNT > 0
-	result = DiffuseMap.Sample(DiffuseSampler, input.tex0);
-#else
-	result = float4(1, 1, 1, 1);
-#endif
+	for (int i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	{
+		// TODO: D3DTTFF_PROJECTED
+		/*
+			When texture projection is enabled for a texture stage, all four floating point
+			values must be written to the corresponding texture register. Each texture coordinate
+			is divided by the last element before being passed to the rasterizer. For example,
+			if this flag is specified with the D3DTTFF_COUNT3 flag, the first and second texture
+			coordinates are divided by the third coordinate before being passed to the rasterizer.
+		*/
+		TextureStage stage = textureStages[i];
+
+		switch (stage.texCoordIndex & 0xFFFF)
+		{
+			default:
+				break;
+		}
+	}
 
 	result = saturate(result * saturate(input.diffuse + input.ambient));
 	result = saturate(result + input.specular);

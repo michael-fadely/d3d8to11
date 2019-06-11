@@ -124,11 +124,85 @@ inline uint32_t fvf_sanitize(uint32_t value)
 
 static std::vector<D3D_SHADER_MACRO> shader_preproc_defs;
 
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(uint32_t flags)
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags)
 {
+	static std::array<const char*, 8> texcoord_size_strings = {
+		"FVF_TEXCOORD0_SIZE",
+		"FVF_TEXCOORD1_SIZE",
+		"FVF_TEXCOORD2_SIZE",
+		"FVF_TEXCOORD3_SIZE",
+		"FVF_TEXCOORD4_SIZE",
+		"FVF_TEXCOORD5_SIZE",
+		"FVF_TEXCOORD6_SIZE",
+		"FVF_TEXCOORD7_SIZE"
+	};
+
+	static std::array<const char*, 8> texcoord_size_types = {
+		"FVF_TEXCOORD0_TYPE",
+		"FVF_TEXCOORD1_TYPE",
+		"FVF_TEXCOORD2_TYPE",
+		"FVF_TEXCOORD3_TYPE",
+		"FVF_TEXCOORD4_TYPE",
+		"FVF_TEXCOORD5_TYPE",
+		"FVF_TEXCOORD6_TYPE",
+		"FVF_TEXCOORD7_TYPE"
+	};
+
+	static std::array<const char*, 4> texcoord_format_types = {
+		"float2",
+		"float3",
+		"float4",
+		"float1",
+	};
+
 	shader_preproc_defs.clear();
 
 	flags = ShaderFlags::sanitize(flags);
+
+	auto format = flags >> 16u;
+	auto tex_count = static_cast<size_t>(((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT) & 0xF);
+
+	for (size_t i = 0; i < tex_count; i++)
+	{
+		const auto f = static_cast<size_t>(format & 3u);
+
+		switch (f)
+		{
+			case D3DFVF_TEXTUREFORMAT2:
+				shader_preproc_defs.push_back({ texcoord_size_strings[i], "2" });
+				break;
+
+			case D3DFVF_TEXTUREFORMAT1:
+				shader_preproc_defs.push_back({ texcoord_size_strings[i], "1" });
+				break;
+
+			case D3DFVF_TEXTUREFORMAT3:
+				shader_preproc_defs.push_back({ texcoord_size_strings[i], "3" });
+				break;
+
+			case D3DFVF_TEXTUREFORMAT4:
+				shader_preproc_defs.push_back({ texcoord_size_strings[i], "4" });
+				break;
+
+			default:
+				break;
+		}
+
+		switch (f)
+		{
+			case D3DFVF_TEXTUREFORMAT2:
+			case D3DFVF_TEXTUREFORMAT1:
+			case D3DFVF_TEXTUREFORMAT3:
+			case D3DFVF_TEXTUREFORMAT4:
+				shader_preproc_defs.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
+				break;
+
+			default:
+				break;
+		}
+
+		format >>= 2;
+	}
 
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
@@ -205,7 +279,7 @@ const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string
 	return shader_sources[path];
 }
 
-VertexShader Direct3DDevice8::get_vs(uint32_t flags)
+VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 
@@ -249,7 +323,7 @@ VertexShader Direct3DDevice8::get_vs(uint32_t flags)
 	return result;
 }
 
-PixelShader Direct3DDevice8::get_ps(uint32_t flags)
+PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
@@ -524,7 +598,7 @@ void Direct3DDevice8::create_native()
 	}
 }
 
-uint32_t ShaderFlags::sanitize(uint32_t flags)
+ShaderFlags::type ShaderFlags::sanitize(type flags)
 {
 	flags &= mask;
 
@@ -677,9 +751,8 @@ ULONG STDMETHODCALLTYPE Direct3DDevice8::Release()
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::TestCooperativeLevel()
 {
-	// TODO
+	// TODO: TestCooperativeLevel
 	return D3DERR_INVALIDCALL;
-	//return ProxyInterface->TestCooperativeLevel();
 }
 
 UINT STDMETHODCALLTYPE Direct3DDevice8::GetAvailableTextureMem()
@@ -724,7 +797,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 		return D3DERR_INVALIDCALL;
 	}
 
-	// TODO
+	// TODO: properly populate pCaps
 	*pCaps = {};
 
 	pCaps->MaxTextureWidth  = UINT_MAX;
@@ -2344,7 +2417,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_TEXCOORDINDEX:
 			*pValue = per_texture.stages[Stage].texCoordIndex;
 			break;
-		//case D3DTSS_BORDERCOLOR: // TODO
+		// TODO: case D3DTSS_BORDERCOLOR:
 		case D3DTSS_BUMPENVLSCALE:
 			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvLScale;
 			break;
@@ -2360,7 +2433,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_ALPHAARG0:
 			*pValue = per_texture.stages[Stage].alphaArg0;
 			break;
-		//case D3DTSS_RESULTARG: // TODO
+		// TODO: case D3DTSS_RESULTARG:
 
 		default:
 			return D3DERR_INVALIDCALL;
@@ -3567,7 +3640,7 @@ void Direct3DDevice8::update_sampler()
 	}
 }
 
-void Direct3DDevice8::compile_shaders(uint32_t flags, VertexShader& vs, PixelShader& ps)
+void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps)
 {
 	int result;
 
