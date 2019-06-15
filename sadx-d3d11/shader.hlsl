@@ -109,6 +109,13 @@ struct VS_INPUT
 #endif
 };
 
+struct FVFTexCoordOut
+{
+	uint componentCount;
+	bool divByLast;
+	float4 components;
+};
+
 struct VS_OUTPUT
 {
 	float4 position : SV_POSITION;
@@ -119,30 +126,7 @@ struct VS_OUTPUT
 	float2 depth    : DEPTH;
 	float  fog      : FOG;
 
-#if FVF_TEXCOUNT >= 1
-	MAKE_TEXN(0);
-#endif
-#if FVF_TEXCOUNT >= 2
-	MAKE_TEXN(1);
-#endif
-#if FVF_TEXCOUNT >= 3
-	MAKE_TEXN(2);
-#endif
-#if FVF_TEXCOUNT >= 4
-	MAKE_TEXN(3);
-#endif
-#if FVF_TEXCOUNT >= 5
-	MAKE_TEXN(4);
-#endif
-#if FVF_TEXCOUNT >= 6
-	MAKE_TEXN(5);
-#endif
-#if FVF_TEXCOUNT >= 7
-	MAKE_TEXN(6);
-#endif
-#if FVF_TEXCOUNT >= 8
-	MAKE_TEXN(7);
-#endif
+	FVFTexCoordOut uv[8] : TEXCOORD;
 };
 
 cbuffer PerSceneBuffer : register(b0)
@@ -288,7 +272,6 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		#else
 			result.specular = float4(0, 0, 0, 0);
 		#endif
-
 	#else
 		switch (materialSources.ambient)
 		{
@@ -526,7 +509,18 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 0
-	result.tex0 = input.tex0;
+	result.uv[0].componentCount = FVF_TEXCOORD0_SIZE;
+
+	#if FVF_TEXCOORD0_SIZE == 1
+		result.uv[0].components.x = input.tex0;
+	#elif FVF_TEXCOORD0_SIZE == 2
+		result.uv[0].components.xy = input.tex0.xy;
+	#elif FVF_TEXCOORD0_SIZE == 3
+		result.uv[0].components.xyz = input.tex0.xyz;
+	#elif FVF_TEXCOORD0_SIZE == 4
+		result.uv[0].components.xyzw = input.tex0.xyzw;
+	#endif
+
 #endif
 
 	return result;
@@ -537,10 +531,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
-	float4 result;
+	float4 result = (float4)1;
 
-	for (int i = 0; i < TEXTURE_STAGE_COUNT; i++)
+#if TEXTURE_STAGE_COUNT > 0
 	{
+		int i = 0;
 		// TODO: D3DTTFF_PROJECTED
 		/*
 			When texture projection is enabled for a texture stage, all four floating point
@@ -551,12 +546,9 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		*/
 		TextureStage stage = textureStages[i];
 
-		switch (stage.texCoordIndex & 0xFFFF)
-		{
-			default:
-				break;
-		}
+		result = texture0.Sample(sampler0, input.uv[i].components);
 	}
+#endif
 
 	result = saturate(result * saturate(input.diffuse + input.ambient));
 	result = saturate(result + input.specular);
