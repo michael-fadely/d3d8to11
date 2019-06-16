@@ -8,24 +8,24 @@
 
 // IDirect3DSurface8
 Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_)
-	: Device(device),
-	  parent(parent_),
+	: parent(parent_),
+	  device8(device),
 	  level(level_)
 {
-	auto width = parent->Width;
-	auto height = parent->Height;
+	auto width  = parent->width_;
+	auto height = parent->height_;
 
 	for (size_t i = 0; i < level && width > 1 && height > 1; ++i)
 	{
-		width = std::max(1u, width / 2);
+		width  = std::max(1u, width / 2);
 		height = std::max(1u, height / 2);
 	}
 
-	desc8.Format          = parent->Format;
+	desc8.Format          = parent->format_;
 	desc8.Type            = parent->GetType();
-	desc8.Usage           = parent->Usage;
-	desc8.Pool            = parent->Pool;
-	desc8.Size            = calc_texture_size(width, height, 1, parent->Format);
+	desc8.Usage           = parent->usage_;
+	desc8.Pool            = parent->pool_;
+	desc8.Size            = calc_texture_size(width, height, 1, parent->format_);
 	desc8.MultiSampleType = D3DMULTISAMPLE_NONE;
 	desc8.Width           = width;
 	desc8.Height          = height;
@@ -44,7 +44,7 @@ Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* pa
 	}
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -52,7 +52,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::QueryInterface(REFIID riid, void **p
 	}
 
 	if (riid == __uuidof(this) ||
-		riid == __uuidof(IUnknown))
+	    riid == __uuidof(IUnknown))
 	{
 		AddRef();
 
@@ -81,21 +81,21 @@ ULONG STDMETHODCALLTYPE Direct3DSurface8::Release()
 	return result;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDevice(Direct3DDevice8 **ppDevice)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDevice(Direct3DDevice8** ppDevice)
 {
 	if (ppDevice == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	Device->AddRef();
+	device8->AddRef();
 
-	*ppDevice = Device;
+	*ppDevice = device8;
 
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
 #if 1
 	// not needed for SADX
@@ -105,7 +105,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::SetPrivateData(REFGUID refguid, cons
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
 #if 1
 	// not needed for SADX
@@ -125,7 +125,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::FreePrivateData(REFGUID refguid)
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetContainer(REFIID riid, void **ppContainer)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetContainer(REFIID riid, void** ppContainer)
 {
 #if 1
 	// not needed for SADX
@@ -135,7 +135,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetContainer(REFIID riid, void **ppC
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8 *pDesc)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8* pDesc)
 {
 	if (pDesc == nullptr)
 	{
@@ -146,7 +146,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8 *pDesc)
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DSurface8::LockRect(D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DSurface8::LockRect(D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	return parent->LockRect(level, pLockedRect, pRect, Flags);
 }
@@ -158,7 +158,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::UnlockRect()
 
 void Direct3DSurface8::create_native()
 {
-	auto device = Device->device;
+	auto device = device8->device;
 
 	if (parent)
 	{
@@ -174,7 +174,6 @@ void Direct3DSurface8::create_native()
 
 		if (parent->is_depth_stencil)
 		{
-
 			auto hr = device->CreateDepthStencilView(parent->texture.Get(), &depth_vdesc, &depth_stencil);
 
 			if (FAILED(hr))

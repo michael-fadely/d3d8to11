@@ -33,7 +33,7 @@ void CBufferBase::add(size_t size)
 
 void CBufferBase::reset()
 {
-	offset_ = 0;
+	offset_    = 0;
 	alignment_ = 0;
 }
 

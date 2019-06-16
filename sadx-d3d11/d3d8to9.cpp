@@ -7,7 +7,7 @@
 #include "d3d8to9.hpp"
 
 #ifndef D3D8TO9NOLOG
- // Very simple logging for the purpose of debugging only.
+// Very simple logging for the purpose of debugging only.
 std::ofstream LOG;
 #endif
 
@@ -876,9 +876,20 @@ size_t dxgi_stride(DXGI_FORMAT format)
 
 D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip)
 {
-	if (mag == D3DTEXF_NONE) mag = D3DTEXF_POINT;
-	if (min == D3DTEXF_NONE) min = D3DTEXF_POINT;
-	if (mip == D3DTEXF_NONE) mip = D3DTEXF_POINT;
+	if (mag == D3DTEXF_NONE)
+	{
+		mag = D3DTEXF_POINT;
+	}
+
+	if (min == D3DTEXF_NONE)
+	{
+		min = D3DTEXF_POINT;
+	}
+
+	if (mip == D3DTEXF_NONE)
+	{
+		mip = D3DTEXF_POINT;
+	}
 
 	if (min == D3DTEXF_POINT && mag == D3DTEXF_POINT && mip == D3DTEXF_POINT)
 	{

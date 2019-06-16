@@ -16,6 +16,7 @@
 #include "CBufferWriter.h"
 #include "Material.h"
 #include "ShaderIncluder.h"
+#include "safe_release.h"
 
 using namespace Microsoft::WRL;
 
@@ -1650,10 +1651,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 
 void Direct3DDevice8::update_wv_inv_t()
 {
-	const matrix m = (per_model.worldMatrix.data() * per_scene.viewMatrix.data()).Invert();
+	const matrix m = (per_model.world_matrix.data() * per_scene.view_matrix.data()).Invert();
 
 	// don't need to transpose for reasons
-	per_model.wvMatrixInvT = m;
+	per_model.wv_matrix_inv_t = m;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE State, const matrix* pMatrix)
@@ -1667,25 +1668,25 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 	{
 		case D3DTS_VIEW:
 		{
-			per_scene.viewMatrix = *pMatrix;
+			per_scene.view_matrix = *pMatrix;
 
-			const auto inverse = per_scene.viewMatrix.data().Invert();
-			per_scene.viewPosition = inverse.Translation();
+			const auto inverse = per_scene.view_matrix.data().Invert();
+			per_scene.view_position = inverse.Translation();
 
 			update_wv_inv_t();
 			break;
 		}
 
 		case D3DTS_PROJECTION:
-			per_scene.projectionMatrix = *pMatrix;
+			per_scene.projection_matrix = *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			per_model.textureMatrix = *pMatrix;
+			per_model.texture_matrix = *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			per_model.worldMatrix = *pMatrix;
+			per_model.world_matrix = *pMatrix;
 			update_wv_inv_t();
 			break;
 
@@ -1706,19 +1707,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE St
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			*pMatrix = per_scene.viewMatrix;
+			*pMatrix = per_scene.view_matrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			*pMatrix = per_scene.projectionMatrix;
+			*pMatrix = per_scene.projection_matrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			*pMatrix = per_model.textureMatrix;
+			*pMatrix = per_model.texture_matrix;
 			break;
 
 		case D3DTS_WORLD:
-			*pMatrix = per_model.worldMatrix;
+			*pMatrix = per_model.world_matrix;
 			break;
 
 		default:
@@ -1738,19 +1739,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::MultiplyTransform(D3DTRANSFORMSTATETY
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			per_scene.viewMatrix = per_scene.viewMatrix * *pMatrix;
+			per_scene.view_matrix = per_scene.view_matrix * *pMatrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			per_scene.projectionMatrix = per_scene.projectionMatrix * *pMatrix;
+			per_scene.projection_matrix = per_scene.projection_matrix * *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
-			per_model.textureMatrix = per_model.textureMatrix * *pMatrix;
+			per_model.texture_matrix = per_model.texture_matrix * *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			per_model.worldMatrix = per_model.worldMatrix * *pMatrix;
+			per_model.world_matrix = per_model.world_matrix * *pMatrix;
 			break;
 
 		default:
@@ -1852,19 +1853,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8* pLig
 
 	const auto& light = per_model.lights[Index].data();
 
-	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.Type);
-	pLight->Diffuse      = { light.Diffuse.x, light.Diffuse.y, light.Diffuse.z, light.Diffuse.w };
-	pLight->Specular     = { light.Diffuse.x, light.Diffuse.y, light.Diffuse.z, light.Diffuse.w };
-	pLight->Ambient      = { light.Ambient.x, light.Ambient.y, light.Ambient.z, light.Ambient.w };
-	pLight->Position     = { light.Position.x, light.Position.y, light.Position.z };
-	pLight->Direction    = { light.Direction.x, light.Direction.y, light.Direction.z };
-	pLight->Range        = light.Range;
-	pLight->Falloff      = light.Falloff;
-	pLight->Attenuation0 = light.Attenuation0;
-	pLight->Attenuation1 = light.Attenuation1;
-	pLight->Attenuation2 = light.Attenuation2;
-	pLight->Theta        = light.Theta;
-	pLight->Phi          = light.Phi;
+	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.type);
+	pLight->Diffuse      = { light.diffuse.x, light.diffuse.y, light.diffuse.z, light.diffuse.w };
+	pLight->Specular     = { light.diffuse.x, light.diffuse.y, light.diffuse.z, light.diffuse.w };
+	pLight->Ambient      = { light.ambient.x, light.ambient.y, light.ambient.z, light.ambient.w };
+	pLight->Position     = { light.position.x, light.position.y, light.position.z };
+	pLight->Direction    = { light.direction.x, light.direction.y, light.direction.z };
+	pLight->Range        = light.range;
+	pLight->Falloff      = light.falloff;
+	pLight->Attenuation0 = light.attenuation0;
+	pLight->Attenuation1 = light.attenuation1;
+	pLight->Attenuation2 = light.attenuation2;
+	pLight->Theta        = light.theta;
+	pLight->Phi          = light.phi;
 
 	return D3D_OK;
 }
@@ -1877,7 +1878,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::LightEnable(DWORD Index, BOOL Enable)
 	}
 
 	Light light = per_model.lights[Index].data();
-	light.Enabled = Enable == TRUE;
+	light.enabled = Enable == TRUE;
 	per_model.lights[Index] = light;
 	return D3D_OK;
 }
@@ -1894,7 +1895,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLightEnable(DWORD Index, BOOL* pEn
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pEnable = per_model.lights[Index].data().Enabled;
+	*pEnable = per_model.lights[Index].data().enabled;
 	return D3D_OK;
 }
 
@@ -1905,7 +1906,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetClipPlane(DWORD Index, const float
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(StoredClipPlanes[Index], pPlane, sizeof(StoredClipPlanes[0]));
+	memcpy(stored_clip_planes[Index], pPlane, sizeof(stored_clip_planes[0]));
 	return D3D_OK;
 }
 
@@ -1916,7 +1917,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetClipPlane(DWORD Index, float* pPla
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(pPlane, StoredClipPlanes[Index], sizeof(StoredClipPlanes[0]));
+	memcpy(pPlane, stored_clip_planes[Index], sizeof(stored_clip_planes[0]));
 	return D3D_OK;
 }
 
@@ -1982,7 +1983,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		}
 
 		case D3DRS_TEXTUREFACTOR:
-			per_pixel.textureFactor = to_color4(Value);
+			per_pixel.texture_factor = to_color4(Value);
 			break;
 
 		case D3DRS_FOGSTART:
@@ -2000,19 +2001,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_ALPHATESTENABLE:
 		{
-			per_pixel.alphaReject = Value != 0;
+			per_pixel.alpha_reject = Value != 0;
 			break;
 		}
 
 		case D3DRS_ALPHAFUNC:
 		{
-			per_pixel.alphaRejectMode = Value;
+			per_pixel.alpha_reject_mode = Value;
 			break;
 		}
 
 		case D3DRS_ALPHAREF:
 		{
-			per_pixel.alphaRejectThreshold = static_cast<float>(Value) / 255.0f;
+			per_pixel.alpha_reject_threshold = static_cast<float>(Value) / 255.0f;
 			break;
 		}
 
@@ -2089,23 +2090,23 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:
-			per_model.materialSources.diffuse = Value;
+			per_model.material_sources.diffuse = Value;
 			break;
 
 		case D3DRS_SPECULARMATERIALSOURCE:
-			per_model.materialSources.specular = Value;
+			per_model.material_sources.specular = Value;
 			break;
 
 		case D3DRS_AMBIENTMATERIALSOURCE:
-			per_model.materialSources.ambient = Value;
+			per_model.material_sources.ambient = Value;
 			break;
 
 		case D3DRS_EMISSIVEMATERIALSOURCE:
-			per_model.materialSources.emissive = Value;
+			per_model.material_sources.emissive = Value;
 			break;
 
 		case D3DRS_COLORVERTEX:
-			per_model.colorVertex = !!Value;
+			per_model.color_vertex = !!Value;
 			break;
 
 		case D3DRS_SRCBLEND:
@@ -2308,7 +2309,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 		if (it != textures.end())
 		{
-			it->second->Release();
+			safe_release(&it->second);
 			textures.erase(it);
 		}
 
@@ -2327,7 +2328,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	if (it != textures.end())
 	{
-		it->second->Release();
+		safe_release(&it->second);
 		it->second = texture;
 		texture->AddRef();
 	}
@@ -2380,53 +2381,53 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 			break;
 
 		case D3DTSS_COLOROP:
-			*pValue = per_texture.stages[Stage].colorOp;
+			*pValue = per_texture.stages[Stage].color_op;
 			break;
 		case D3DTSS_COLORARG1:
-			*pValue = per_texture.stages[Stage].colorArg1;
+			*pValue = per_texture.stages[Stage].color_arg1;
 			break;
 		case D3DTSS_COLORARG2:
-			*pValue = per_texture.stages[Stage].colorArg2;
+			*pValue = per_texture.stages[Stage].color_arg2;
 			break;
 		case D3DTSS_ALPHAOP:
-			*pValue = per_texture.stages[Stage].alphaOp;
+			*pValue = per_texture.stages[Stage].alpha_op;
 			break;
 		case D3DTSS_ALPHAARG1:
-			*pValue = per_texture.stages[Stage].alphaArg1;
+			*pValue = per_texture.stages[Stage].alpha_arg1;
 			break;
 		case D3DTSS_ALPHAARG2:
-			*pValue = per_texture.stages[Stage].alphaArg2;
+			*pValue = per_texture.stages[Stage].alpha_arg2;
 			break;
 		case D3DTSS_BUMPENVMAT00:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat00;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat00;
 			break;
 		case D3DTSS_BUMPENVMAT01:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat01;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat01;
 			break;
 		case D3DTSS_BUMPENVMAT10:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat10;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat10;
 			break;
 		case D3DTSS_BUMPENVMAT11:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvMat11;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat11;
 			break;
 		case D3DTSS_TEXCOORDINDEX:
-			*pValue = per_texture.stages[Stage].texCoordIndex;
+			*pValue = per_texture.stages[Stage].tex_coord_index;
 			break;
 		// TODO: case D3DTSS_BORDERCOLOR:
 		case D3DTSS_BUMPENVLSCALE:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvLScale;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_lscale;
 			break;
 		case D3DTSS_BUMPENVLOFFSET:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bumpEnvLOffset;
+			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_loffset;
 			break;
 		case D3DTSS_TEXTURETRANSFORMFLAGS:
-			*pValue = per_texture.stages[Stage].textureTransformFlags;
+			*pValue = per_texture.stages[Stage].texture_transform_flags;
 			break;
 		case D3DTSS_COLORARG0:
-			*pValue = per_texture.stages[Stage].colorArg0;
+			*pValue = per_texture.stages[Stage].color_arg0;
 			break;
 		case D3DTSS_ALPHAARG0:
-			*pValue = per_texture.stages[Stage].alphaArg0;
+			*pValue = per_texture.stages[Stage].alpha_arg0;
 			break;
 		// TODO: case D3DTSS_RESULTARG:
 
@@ -2470,7 +2471,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			break;
 
 		case D3DTSS_COLOROP:
-			per_texture.stages[Stage].colorOp = static_cast<D3DTEXTUREOP>(Value);
+			per_texture.stages[Stage].color_op = static_cast<D3DTEXTUREOP>(Value);
 
 			switch (Value)
 			{
@@ -2486,13 +2487,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			}
 			break;
 		case D3DTSS_COLORARG1:
-			per_texture.stages[Stage].colorArg1 = Value;
+			per_texture.stages[Stage].color_arg1 = Value;
 			break;
 		case D3DTSS_COLORARG2:
-			per_texture.stages[Stage].colorArg2 = Value;
+			per_texture.stages[Stage].color_arg2 = Value;
 			break;
 		case D3DTSS_ALPHAOP:
-			per_texture.stages[Stage].alphaOp = static_cast<D3DTEXTUREOP>(Value);
+			per_texture.stages[Stage].alpha_op = static_cast<D3DTEXTUREOP>(Value);
 
 			switch (Value)
 			{
@@ -2508,25 +2509,25 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			}
 			break;
 		case D3DTSS_ALPHAARG1:
-			per_texture.stages[Stage].alphaArg1 = Value;
+			per_texture.stages[Stage].alpha_arg1 = Value;
 			break;
 		case D3DTSS_ALPHAARG2:
-			per_texture.stages[Stage].alphaArg2 = Value;
+			per_texture.stages[Stage].alpha_arg2 = Value;
 			break;
 		case D3DTSS_BUMPENVMAT00:
-			per_texture.stages[Stage].bumpEnvMat00 = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_mat00 = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_BUMPENVMAT01:
-			per_texture.stages[Stage].bumpEnvMat01 = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_mat01 = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_BUMPENVMAT10:
-			per_texture.stages[Stage].bumpEnvMat10 = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_mat10 = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_BUMPENVMAT11:
-			per_texture.stages[Stage].bumpEnvMat11 = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_mat11 = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_TEXCOORDINDEX:
-			per_texture.stages[Stage].texCoordIndex = Value;
+			per_texture.stages[Stage].tex_coord_index = Value;
 			break;
 
 		case D3DTSS_BORDERCOLOR:
@@ -2539,19 +2540,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 		}
 
 		case D3DTSS_BUMPENVLSCALE:
-			per_texture.stages[Stage].bumpEnvLScale = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_lscale = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_BUMPENVLOFFSET:
-			per_texture.stages[Stage].bumpEnvLOffset = *reinterpret_cast<float*>(&Value);
+			per_texture.stages[Stage].bump_env_loffset = *reinterpret_cast<float*>(&Value);
 			break;
 		case D3DTSS_TEXTURETRANSFORMFLAGS:
-			per_texture.stages[Stage].textureTransformFlags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
+			per_texture.stages[Stage].texture_transform_flags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
 			break;
 		case D3DTSS_COLORARG0:
-			per_texture.stages[Stage].colorArg0 = Value;
+			per_texture.stages[Stage].color_arg0 = Value;
 			break;
 		case D3DTSS_ALPHAARG0:
-			per_texture.stages[Stage].alphaArg0 = Value;
+			per_texture.stages[Stage].alpha_arg0 = Value;
 			break;
 		//case D3DTSS_RESULTARG: // TODO
 
@@ -2641,9 +2642,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 #endif
 }
 
-bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const
+bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE primitive_type) const
 {
-	const auto topology = to_d3d11(PrimitiveType);
+	const auto topology = to_d3d11(primitive_type);
 
 	if (topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
 	{
@@ -2654,9 +2655,9 @@ bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const
 	return false;
 }
 
-bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uint32_t& count)
+bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count)
 {
-	switch (PrimitiveType)
+	switch (primitive_type)
 	{
 		case D3DPT_TRIANGLELIST:
 			count *= 3;
@@ -2763,7 +2764,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	auto count = PrimitiveCount;
 	primitive_vertex_count(PrimitiveType, count);
 
-	context->DrawIndexed(count, StartIndex, CurrentBaseVertexIndex);
+	context->DrawIndexed(count, StartIndex, current_base_vertex_index);
 	return D3D_OK;
 }
 
@@ -2893,7 +2894,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 		shader_flags |= fvf;
 		FVF = fvf;
 
-		CurrentVertexShaderHandle = 0;
+		current_vertex_shader_handle = 0;
 		hr = D3D_OK;
 	}
 	else
@@ -2922,7 +2923,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShader(DWORD* pHandle)
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (CurrentVertexShaderHandle == 0)
+	if (current_vertex_shader_handle == 0)
 	{
 		*pHandle = FVF;
 		return D3D_OK;
@@ -3044,11 +3045,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Di
 	if (it == stream_sources.end())
 	{
 		stream_sources[StreamNumber] = pair;
-
-		if (pStreamData)
-		{
-			pStreamData->AddRef();
-		}
+		safe_addref(pStreamData);
 	}
 	else
 	{
@@ -3057,17 +3054,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Di
 			return D3D_OK;
 		}
 
-		if (it->second.buffer)
-		{
-			it->second.buffer->Release();
-		}
+		safe_release(&it->second.buffer);
 
 		it->second = pair;
 
-		if (pStreamData)
-		{
-			pStreamData->AddRef();
-		}
+		safe_addref(pStreamData);
 	}
 
 	if (pStreamData == nullptr)
@@ -3132,7 +3123,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pInd
 	}
 
 	index_buffer = pIndexData;
-	CurrentBaseVertexIndex = static_cast<INT>(BaseVertexIndex);
+	current_base_vertex_index = static_cast<INT>(BaseVertexIndex);
 	const auto dxgi = to_dxgi(index_buffer->desc8.Format);
 	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, 0);
 	return D3D_OK;
@@ -3157,7 +3148,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetIndices(Direct3DIndexBuffer8** ppI
 
 	if (pBaseVertexIndex != nullptr)
 	{
-		*pBaseVertexIndex = static_cast<UINT>(CurrentBaseVertexIndex);
+		*pBaseVertexIndex = static_cast<UINT>(current_base_vertex_index);
 	}
 
 	return D3D_OK;
@@ -3553,11 +3544,11 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_per_pixel()
 {
-	per_pixel.fogMode    = render_state_values[D3DRS_FOGTABLEMODE];
-	per_pixel.fogStart   = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGSTART].data());
-	per_pixel.fogEnd     = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGEND].data());
-	per_pixel.fogDensity = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGDENSITY].data());
-	per_pixel.set_color(render_state_values[D3DRS_FOGCOLOR]);
+	per_pixel.fog_mode    = render_state_values[D3DRS_FOGTABLEMODE];
+	per_pixel.fog_start   = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGSTART].data());
+	per_pixel.fog_end     = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGEND].data());
+	per_pixel.fog_density = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGDENSITY].data());
+	per_pixel.fog_color   = to_color4(render_state_values[D3DRS_FOGCOLOR]);
 
 	if (!per_pixel.dirty())
 	{
@@ -3593,7 +3584,7 @@ void Direct3DDevice8::commit_per_model()
 
 void Direct3DDevice8::commit_per_scene()
 {
-	per_scene.screenDimensions = { viewport.Width, viewport.Height };
+	per_scene.screen_dimensions = { viewport.Width, viewport.Height };
 
 	if (!per_scene.dirty())
 	{

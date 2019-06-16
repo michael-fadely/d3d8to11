@@ -7,20 +7,20 @@ class CBufferBase;
 
 struct Light
 {
-	bool   Enabled      = false; /* Light enabled state */
-	int    Type         = 0;     /* Type of light source */
-	float4 Diffuse      = {};    /* Diffuse color of light */
-	float4 Specular     = {};    /* Specular color of light */
-	float4 Ambient      = {};    /* Ambient color of light */
-	float3 Position     = {};    /* Position in world space */
-	float3 Direction    = {};    /* Direction in world space */
-	float  Range        = 0.0f;  /* Cutoff range */
-	float  Falloff      = 0.0f;  /* Falloff */
-	float  Attenuation0 = 0.0f;  /* Constant attenuation */
-	float  Attenuation1 = 0.0f;  /* Linear attenuation */
-	float  Attenuation2 = 0.0f;  /* Quadratic attenuation */
-	float  Theta        = 0.0f;  /* Inner angle of spotlight cone */
-	float  Phi          = 0.0f;  /* Outer angle of spotlight cone */
+	bool   enabled      = false; /* Light enabled state */
+	int    type         = 0;     /* Type of light source */
+	float4 diffuse      = {};    /* Diffuse color of light */
+	float4 specular     = {};    /* Specular color of light */
+	float4 ambient      = {};    /* Ambient color of light */
+	float3 position     = {};    /* Position in world space */
+	float3 direction    = {};    /* Direction in world space */
+	float  range        = 0.0f;  /* Cutoff range */
+	float  falloff      = 0.0f;  /* Falloff */
+	float  attenuation0 = 0.0f;  /* Constant attenuation */
+	float  attenuation1 = 0.0f;  /* Linear attenuation */
+	float  attenuation2 = 0.0f;  /* Quadratic attenuation */
+	float  theta        = 0.0f;  /* Inner angle of spotlight cone */
+	float  phi          = 0.0f;  /* Outer angle of spotlight cone */
 
 	         Light() = default;
 	explicit Light(const D3DLIGHT8& rhs);

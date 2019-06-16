@@ -12,10 +12,10 @@ class __declspec(uuid("1DD9E8DA-1C77-4D40-B0CF-98FEFDFF9512")) Direct3D8;
 class Direct3D8 : public Unknown
 {
 public:
-	Direct3D8(const Direct3D8&) = delete;
+	Direct3D8(const Direct3D8&)            = delete;
 	Direct3D8& operator=(const Direct3D8&) = delete;
 
-	Direct3D8() = default;
+	Direct3D8()  = default;
 	~Direct3D8() = default;
 
 	void create_native();
@@ -39,8 +39,8 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE CreateDevice(UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DDevice8** ppReturnedDeviceInterface);
 
 private:
-	static const UINT MaxAdapters             = 8;
-	UINT CurrentAdapterCount                  = 0;
-	UINT CurrentAdapterModeCount[MaxAdapters] = {};
-	std::vector<DXGI_MODE_DESC> CurrentAdapterModes[MaxAdapters];
+	static const UINT max_adapters                = 8;
+	UINT current_adapter_count                    = 0;
+	UINT current_adapter_mode_count[max_adapters] = {};
+	std::vector<DXGI_MODE_DESC> current_adapter_modes[max_adapters];
 };

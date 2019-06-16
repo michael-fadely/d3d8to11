@@ -9,7 +9,11 @@ class CBufferBase;
 struct CBufferAlign
 {
 	size_t size;
-	explicit CBufferAlign(size_t size_ = VECTOR_SIZE) : size(size_) {}
+
+	explicit CBufferAlign(size_t size_ = VECTOR_SIZE)
+		: size(size_)
+	{
+	}
 };
 
 __forceinline CBufferAlign cbuff_align(size_t size = VECTOR_SIZE)
@@ -23,7 +27,7 @@ public:
 	virtual ~ICBuffer() = default;
 	virtual void write(CBufferBase& cbuf) const = 0;
 
-	size_t cbuffer_size() const;
+	[[nodiscard]] size_t cbuffer_size() const;
 
 	template <typename T>
 	static size_t cbuffer_size()
@@ -36,7 +40,7 @@ public:
 class CBufferBase
 {
 protected:
-	size_t offset_ = 0;
+	size_t offset_    = 0;
 	size_t alignment_ = 0;
 
 public:
@@ -45,8 +49,8 @@ public:
 	void add(size_t size);
 	void reset();
 
-	size_t offset() const { return offset_; }
-	size_t alignment() const { return alignment_; }
+	[[nodiscard]] size_t offset() const { return offset_; }
+	[[nodiscard]] size_t alignment() const { return alignment_; }
 
 	template <typename T>
 	CBufferBase& operator<<(const T& data) = delete;
@@ -67,7 +71,7 @@ public:
 	}
 
 	template <size_t size>
-	CBufferBase& operator<<(const float(&array)[size])
+	CBufferBase& operator<<(const float (&array)[size])
 	{
 		write(&array[0], size * sizeof(float));
 		return *this;

@@ -9,7 +9,7 @@ class __declspec(uuid("8AEEEAC7-05F9-44D4-B591-000B0DF1CB95")) Direct3DVertexBuf
 class Direct3DVertexBuffer8 : public Direct3DResource8
 {
 public:
-	Direct3DVertexBuffer8(const Direct3DVertexBuffer8&) = delete;
+	Direct3DVertexBuffer8(const Direct3DVertexBuffer8&)            = delete;
 	Direct3DVertexBuffer8& operator=(const Direct3DVertexBuffer8&) = delete;
 
 	void create_native();
@@ -41,9 +41,9 @@ public:
 	D3DVERTEXBUFFER_DESC desc8 {};
 
 private:
-	bool locked = false;
+	bool locked      = false;
 	UINT lock_offset = 0;
-	UINT lock_size = 0;
+	UINT lock_size   = 0;
 	DWORD lock_flags = 0;
-	Direct3DDevice8* const Device;
+	Direct3DDevice8* const device8;
 };

@@ -29,6 +29,7 @@ using Microsoft::WRL::ComPtr;
 struct ShaderFlags
 {
 	using type = uint64_t;
+
 	enum T : type
 	{
 		none,
@@ -138,7 +139,7 @@ class Direct3DDevice8 : public Unknown
 	bool freeing_shaders = false;
 
 public:
-	Direct3DDevice8(const Direct3DDevice8&) = delete;
+	Direct3DDevice8(const Direct3DDevice8&)            = delete;
 	Direct3DDevice8& operator=(const Direct3DDevice8&) = delete;
 
 	Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters);
@@ -252,8 +253,8 @@ public:
 	void create_depth_stencil();
 	void create_render_target();
 	void create_native();
-	bool set_primitive_type(D3DPRIMITIVETYPE PrimitiveType) const;
-	static bool primitive_vertex_count(D3DPRIMITIVETYPE PrimitiveType, uint32_t& count);
+	bool set_primitive_type(D3DPRIMITIVETYPE primitive_type) const;
+	static bool primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count);
 	bool update_input_layout();
 	void commit_per_pixel();
 	void commit_per_model();
@@ -269,7 +270,7 @@ public:
 	void free_shaders();
 	void update_wv_inv_t();
 
-	ShaderFlags::type shader_flags = ShaderFlags::none;
+	ShaderFlags::type shader_flags      = ShaderFlags::none;
 	ShaderFlags::type last_shader_flags = ShaderFlags::mask;
 
 	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
@@ -326,14 +327,14 @@ protected:
 	TextureStages per_texture {};
 
 
-	INT CurrentBaseVertexIndex = 0;
+	INT current_base_vertex_index = 0;
 	//const BOOL ZBufferDiscarding = FALSE;
-	DWORD CurrentVertexShaderHandle = 0;
+	DWORD current_vertex_shader_handle = 0;
 	//DWORD CurrentPixelShaderHandle = 0;
 	bool palette_flag = false;
 
-	static constexpr size_t MAX_CLIP_PLANES = 6;
-	float StoredClipPlanes[MAX_CLIP_PLANES][4] = {};
+	static constexpr size_t MAX_CLIP_PLANES    = 6;
+	float stored_clip_planes[MAX_CLIP_PLANES][4] = {};
 	//DWORD ClipPlaneRenderState = 0;
 
 	D3D11_VIEWPORT viewport {};

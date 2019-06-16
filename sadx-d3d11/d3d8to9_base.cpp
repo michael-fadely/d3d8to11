@@ -31,7 +31,7 @@ void Direct3D8::create_native()
 
 	HRESULT result = S_OK;
 
-	for (size_t adapter_index = 0; adapter_index < MaxAdapters && result == S_OK; adapter_index++)
+	for (size_t adapter_index = 0; adapter_index < max_adapters && result == S_OK; adapter_index++)
 	{
 		ComPtr<IDXGIAdapter> adapter;
 		result = factory->EnumAdapters(adapter_index, &adapter);
@@ -41,7 +41,7 @@ void Direct3D8::create_native()
 			continue;
 		}
 
-		++CurrentAdapterCount;
+		++current_adapter_count;
 
 		ComPtr<IDXGIOutput> output;
 
@@ -76,9 +76,9 @@ void Direct3D8::create_native()
 				continue;
 			}
 
-			auto& stored_modes = CurrentAdapterModes[adapter_index];
+			auto& stored_modes = current_adapter_modes[adapter_index];
 			stored_modes.insert(stored_modes.end(), modes.begin(), modes.end());
-			CurrentAdapterModeCount[adapter_index] += modes.size();
+			current_adapter_mode_count[adapter_index] += modes.size();
 		}
 	}
 }
@@ -91,7 +91,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::QueryInterface(REFIID riid, void** ppvObj)
 	}
 
 	if (riid == __uuidof(this) ||
-		riid == __uuidof(IUnknown))
+	    riid == __uuidof(IUnknown))
 	{
 		AddRef();
 
@@ -129,7 +129,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::RegisterSoftwareDevice(void* pInitializeFun
 
 UINT STDMETHODCALLTYPE Direct3D8::GetAdapterCount()
 {
-	return CurrentAdapterCount;
+	return current_adapter_count;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterIdentifier(UINT Adapter, DWORD Flags, D3DADAPTER_IDENTIFIER8* pIdentifier)
@@ -169,17 +169,17 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterIdentifier(UINT Adapter, DWORD Fl
 
 UINT STDMETHODCALLTYPE Direct3D8::GetAdapterModeCount(UINT Adapter)
 {
-	return CurrentAdapterModeCount[Adapter];
+	return current_adapter_mode_count[Adapter];
 }
 
 HRESULT STDMETHODCALLTYPE Direct3D8::EnumAdapterModes(UINT Adapter, UINT Mode, D3DDISPLAYMODE* pMode)
 {
-	if (pMode == nullptr || !(Adapter < CurrentAdapterCount && Mode < CurrentAdapterModeCount[Adapter]))
+	if (pMode == nullptr || !(Adapter < current_adapter_count && Mode < current_adapter_mode_count[Adapter]))
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto& mode = CurrentAdapterModes[Adapter];
+	auto& mode = current_adapter_modes[Adapter];
 
 	pMode->Format      = to_d3d8(mode.at(Mode).Format);
 	pMode->Height      = mode.at(Mode).Height;
@@ -198,7 +198,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterDisplayMode(UINT Adapter, D3DDISP
 
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceType(UINT Adapter, D3DDEVTYPE CheckType, D3DFORMAT DisplayFormat, D3DFORMAT BackBufferFormat, BOOL bWindowed)
 {
-	const auto& modes = CurrentAdapterModes[Adapter];
+	const auto& modes = current_adapter_modes[Adapter];
 
 	const DXGI_FORMAT format = to_dxgi(BackBufferFormat);
 

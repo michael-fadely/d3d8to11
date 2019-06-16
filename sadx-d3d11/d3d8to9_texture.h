@@ -23,7 +23,7 @@ class __declspec(uuid("E4CDD575-2866-4F01-B12E-7EECE1EC9358")) Direct3DTexture8;
 class Direct3DTexture8 : public Direct3DBaseTexture8
 {
 public:
-	Direct3DTexture8(const Direct3DTexture8&) = delete;
+	Direct3DTexture8(const Direct3DTexture8&)            = delete;
 	Direct3DTexture8& operator=(const Direct3DTexture8&) = delete;
 
 	void create_native(ID3D11Texture2D* view_of = nullptr);
@@ -57,12 +57,12 @@ public:
 	ComPtr<ID3D11Texture2D> texture;
 	ComPtr<ID3D11ShaderResourceView> srv;
 
-	UINT      Width;
-	UINT      Height;
-	UINT      Levels;
-	DWORD     Usage;
-	D3DFORMAT Format;
-	D3DPOOL   Pool;
+	UINT      width_;
+	UINT      height_;
+	UINT      levels_;
+	DWORD     usage_;
+	D3DFORMAT format_;
+	D3DPOOL   pool_;
 
 	D3D11_TEXTURE2D_DESC desc {};
 	D3D11_DEPTH_STENCIL_DESC depth_desc {};
@@ -74,7 +74,7 @@ private:
 	std::vector<ComPtr<Direct3DSurface8>> surfaces;
 
 	bool convert(UINT Level);
-	Direct3DDevice8* const Device;
+	Direct3DDevice8* const device8;
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
 	std::unordered_map<UINT, std::vector<uint8_t>> texture_levels;

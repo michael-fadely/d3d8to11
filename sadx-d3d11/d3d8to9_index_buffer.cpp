@@ -12,12 +12,12 @@
 
 void Direct3DIndexBuffer8::create_native()
 {
-	auto device = Device->device;
+	auto device = device8->device;
 
 	D3D11_BUFFER_DESC desc = {};
 
 #ifdef USE_SUBRESOURCE
-	desc.Usage          = D3D11_USAGE_DEFAULT;
+	desc.Usage = D3D11_USAGE_DEFAULT;
 #else
 	desc.Usage          = D3D11_USAGE_DYNAMIC;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -35,8 +35,8 @@ void Direct3DIndexBuffer8::create_native()
 	buffer.shrink_to_fit();
 }
 // IDirect3DIndexBuffer8
-Direct3DIndexBuffer8::Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool) :
-	Device(Device)
+Direct3DIndexBuffer8::Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
+	: device8(Device)
 {
 	desc8.Type   = D3DRTYPE_INDEXBUFFER;
 	desc8.Size   = Length;
@@ -45,7 +45,7 @@ Direct3DIndexBuffer8::Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length,
 	desc8.Pool   = Pool;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::QueryInterface(REFIID riid, void **ppvObj)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
 	{
@@ -53,8 +53,8 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::QueryInterface(REFIID riid, void
 	}
 
 	if (riid == __uuidof(this) ||
-		riid == __uuidof(IUnknown) ||
-		riid == __uuidof(Direct3DResource8))
+	    riid == __uuidof(IUnknown) ||
+	    riid == __uuidof(Direct3DResource8))
 	{
 		AddRef();
 
@@ -83,21 +83,21 @@ ULONG STDMETHODCALLTYPE Direct3DIndexBuffer8::Release()
 	return result;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetDevice(Direct3DDevice8 **ppDevice)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetDevice(Direct3DDevice8** ppDevice)
 {
 	if (ppDevice == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	Device->AddRef();
+	device8->AddRef();
 
-	*ppDevice = Device;
+	*ppDevice = device8;
 
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
 #if 1
 	// not needed for SADX
@@ -107,7 +107,7 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::SetPrivateData(REFGUID refguid, 
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
 #if 1
 	// not needed for SADX
@@ -160,7 +160,7 @@ D3DRESOURCETYPE STDMETHODCALLTYPE Direct3DIndexBuffer8::GetType()
 	return D3DRTYPE_INDEXBUFFER;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT SizeToLock, BYTE **ppbData, DWORD Flags)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT SizeToLock, BYTE** ppbData, DWORD Flags)
 {
 	if (!ppbData || locked)
 	{
@@ -202,8 +202,8 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 	}
 
 	locked = false;
-	auto context = Device->context;
-	
+	auto context = device8->context;
+
 #ifdef USE_SUBRESOURCE
 	D3D11_BOX box {};
 
@@ -241,7 +241,7 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 	return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetDesc(D3DINDEXBUFFER_DESC *pDesc)
+HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::GetDesc(D3DINDEXBUFFER_DESC* pDesc)
 {
 	if (!pDesc)
 	{

@@ -3,11 +3,11 @@
 
 struct Material
 {
-	float4 Diffuse  = {};   /* Diffuse color RGBA */
-	float4 Ambient  = {};   /* Ambient color RGB */
-	float4 Specular = {};   /* Specular 'shininess' */
-	float4 Emissive = {};   /* Emissive color RGB */
-	float  Power    = 0.0f; /* Sharpness if specular highlight */
+	float4 diffuse  = {};   /* Diffuse color RGBA */
+	float4 ambient  = {};   /* Ambient color RGB */
+	float4 specular = {};   /* Specular 'shininess' */
+	float4 emissive = {};   /* Emissive color RGB */
+	float  power    = 0.0f; /* Sharpness if specular highlight */
 
 	Material() = default;
 

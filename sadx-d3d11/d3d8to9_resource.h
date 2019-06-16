@@ -6,12 +6,13 @@
 class Direct3DDevice8;
 
 class __declspec(uuid("1B36BB7B-09B7-410A-B445-7D1430D7B33F")) Direct3DResource8;
+
 class Direct3DResource8 : public Unknown
 {
 public:
-	virtual HRESULT STDMETHODCALLTYPE GetDevice(Direct3DDevice8 **ppDevice) = 0;
-	virtual HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID refguid, const void *pData, DWORD SizeOfData, DWORD Flags) = 0;
-	virtual HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID refguid, void *pData, DWORD *pSizeOfData) = 0;
+	virtual HRESULT STDMETHODCALLTYPE GetDevice(Direct3DDevice8** ppDevice) = 0;
+	virtual HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags) = 0;
+	virtual HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData) = 0;
 	virtual HRESULT STDMETHODCALLTYPE FreePrivateData(REFGUID refguid) = 0;
 	virtual DWORD STDMETHODCALLTYPE SetPriority(DWORD PriorityNew) = 0;
 	virtual DWORD STDMETHODCALLTYPE GetPriority() = 0;

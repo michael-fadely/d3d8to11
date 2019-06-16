@@ -9,3 +9,14 @@ void safe_release(T** ptr)
 		*ptr = nullptr;
 	}
 }
+
+template <typename T>
+ULONG safe_addref(T* ptr)
+{
+	if (ptr)
+	{
+		return ptr->AddRef();
+	}
+
+	return 0;
+}

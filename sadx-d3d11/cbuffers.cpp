@@ -3,29 +3,29 @@
 
 void PerSceneBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << this->viewMatrix << this->projectionMatrix << this->screenDimensions << this->viewPosition;
+	cbuf << this->view_matrix << this->projection_matrix << this->screen_dimensions << this->view_position;
 }
 
 bool PerSceneBuffer::dirty() const
 {
-	return viewMatrix.dirty() || projectionMatrix.dirty() ||
-	       screenDimensions.dirty() || viewPosition.dirty();
+	return view_matrix.dirty() || projection_matrix.dirty() ||
+	       screen_dimensions.dirty() || view_position.dirty();
 }
 
 void PerSceneBuffer::clear()
 {
-	viewMatrix.clear();
-	projectionMatrix.clear();
-	screenDimensions.clear();
-	viewPosition.clear();
+	view_matrix.clear();
+	projection_matrix.clear();
+	screen_dimensions.clear();
+	view_position.clear();
 }
 
 void PerSceneBuffer::mark()
 {
-	viewMatrix.mark();
-	projectionMatrix.mark();
-	screenDimensions.mark();
-	viewPosition.mark();
+	view_matrix.mark();
+	projection_matrix.mark();
+	screen_dimensions.mark();
+	view_position.mark();
 }
 
 bool MaterialSources::dirty() const
@@ -63,8 +63,8 @@ inline CBufferBase& operator<<(CBufferBase& buffer, const MaterialSources& data)
 
 void PerModelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << worldMatrix << wvMatrixInvT << textureMatrix
-		<< materialSources << ambient << colorVertex;
+	cbuf << world_matrix << wv_matrix_inv_t << texture_matrix
+		<< material_sources << ambient << color_vertex;
 
 	for (const auto& light : lights)
 	{
@@ -84,8 +84,8 @@ bool PerModelBuffer::dirty() const
 		}
 	}
 
-	return worldMatrix.dirty() || wvMatrixInvT.dirty() || textureMatrix.dirty() ||
-	       material.dirty() || materialSources.dirty() || ambient.dirty() || colorVertex.dirty();
+	return world_matrix.dirty() || wv_matrix_inv_t.dirty() || texture_matrix.dirty() ||
+	       material.dirty() || material_sources.dirty() || ambient.dirty() || color_vertex.dirty();
 }
 
 void PerModelBuffer::clear()
@@ -95,13 +95,13 @@ void PerModelBuffer::clear()
 		light.clear();
 	}
 
-	worldMatrix.clear();
-	wvMatrixInvT.clear();
-	textureMatrix.clear();
+	world_matrix.clear();
+	wv_matrix_inv_t.clear();
+	texture_matrix.clear();
 	material.clear();
-	materialSources.clear();
+	material_sources.clear();
 	ambient.clear();
-	colorVertex.clear();
+	color_vertex.clear();
 }
 
 void PerModelBuffer::mark()
@@ -111,126 +111,121 @@ void PerModelBuffer::mark()
 		light.mark();
 	}
 
-	worldMatrix.mark();
-	wvMatrixInvT.mark();
-	textureMatrix.mark();
+	world_matrix.mark();
+	wv_matrix_inv_t.mark();
+	texture_matrix.mark();
 	material.mark();
-	materialSources.mark();
+	material_sources.mark();
 	ambient.mark();
-	colorVertex.mark();
+	color_vertex.mark();
 }
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << fogMode << fogStart << fogEnd << fogDensity << fogColor
-		<< alphaReject << alphaRejectMode << alphaRejectThreshold << textureFactor;
+	cbuf << fog_mode << fog_start << fog_end << fog_density << fog_color
+		<< alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
 }
 
 bool PerPixelBuffer::dirty() const
 {
-	return fogMode.dirty() ||
-	       fogStart.dirty() ||
-	       fogEnd.dirty() ||
-	       fogDensity.dirty() ||
-	       fogColor.dirty() ||
-	       alphaReject.dirty() ||
-	       alphaRejectMode.dirty() ||
-	       alphaRejectThreshold.dirty() ||
-	       textureFactor.dirty();
+	return fog_mode.dirty() ||
+	       fog_start.dirty() ||
+	       fog_end.dirty() ||
+	       fog_density.dirty() ||
+	       fog_color.dirty() ||
+	       alpha_reject.dirty() ||
+	       alpha_reject_mode.dirty() ||
+	       alpha_reject_threshold.dirty() ||
+	       texture_factor.dirty();
 }
 
 void PerPixelBuffer::clear()
 {
-	fogMode.clear();
-	fogStart.clear();
-	fogEnd.clear();
-	fogDensity.clear();
-	fogColor.clear();
-	alphaReject.clear();
-	alphaRejectMode.clear();
-	alphaRejectThreshold.clear();
-	textureFactor.clear();
+	fog_mode.clear();
+	fog_start.clear();
+	fog_end.clear();
+	fog_density.clear();
+	fog_color.clear();
+	alpha_reject.clear();
+	alpha_reject_mode.clear();
+	alpha_reject_threshold.clear();
+	texture_factor.clear();
 }
 
 void PerPixelBuffer::mark()
 {
-	fogMode.mark();
-	fogStart.mark();
-	fogEnd.mark();
-	fogDensity.mark();
-	fogColor.mark();
-	alphaReject.mark();
-	alphaRejectMode.mark();
-	alphaRejectThreshold.mark();
-	textureFactor.mark();
-}
-
-void PerPixelBuffer::set_color(uint color)
-{
-	fogColor = to_color4(color);
+	fog_mode.mark();
+	fog_start.mark();
+	fog_end.mark();
+	fog_density.mark();
+	fog_color.mark();
+	alpha_reject.mark();
+	alpha_reject_mode.mark();
+	alpha_reject_threshold.mark();
+	texture_factor.mark();
 }
 
 bool TextureStage::dirty() const
 {
 	return bound.dirty() ||
-	       colorOp.dirty() ||
-	       colorArg1.dirty() ||
-	       colorArg2.dirty() ||
-	       alphaOp.dirty() ||
-	       alphaArg1.dirty() ||
-	       alphaArg2.dirty() ||
-	       bumpEnvMat00.dirty() ||
-	       bumpEnvMat01.dirty() ||
-	       bumpEnvMat10.dirty() ||
-	       bumpEnvMat11.dirty() ||
-	       texCoordIndex.dirty() ||
-	       bumpEnvLScale.dirty() ||
-	       bumpEnvLOffset.dirty() ||
-	       textureTransformFlags.dirty() ||
-	       colorArg0.dirty() ||
-	       alphaArg0.dirty();
+	       color_op.dirty() ||
+	       color_arg1.dirty() ||
+	       color_arg2.dirty() ||
+	       alpha_op.dirty() ||
+	       alpha_arg1.dirty() ||
+	       alpha_arg2.dirty() ||
+	       bump_env_mat00.dirty() ||
+	       bump_env_mat01.dirty() ||
+	       bump_env_mat10.dirty() ||
+	       bump_env_mat11.dirty() ||
+	       tex_coord_index.dirty() ||
+	       bump_env_lscale.dirty() ||
+	       bump_env_loffset.dirty() ||
+	       texture_transform_flags.dirty() ||
+	       color_arg0.dirty() ||
+	       alpha_arg0.dirty();
 }
 
 void TextureStage::clear()
 {
 	bound.clear();
-	colorOp.clear();
-	colorArg1.clear();
-	colorArg2.clear();
-	alphaOp.clear();
-	alphaArg1.clear();
-	alphaArg2.clear();
-	bumpEnvMat00.clear();
-	bumpEnvMat01.clear();
-	bumpEnvMat10.clear();
-	bumpEnvMat11.clear();
-	texCoordIndex.clear();
-	bumpEnvLScale.clear();
-	bumpEnvLOffset.clear();
-	textureTransformFlags.clear();
-	colorArg0.clear();
-	alphaArg0.clear();
+	color_op.clear();
+	color_arg1.clear();
+	color_arg2.clear();
+	alpha_op.clear();
+	alpha_arg1.clear();
+	alpha_arg2.clear();
+	bump_env_mat00.clear();
+	bump_env_mat01.clear();
+	bump_env_mat10.clear();
+	bump_env_mat11.clear();
+	tex_coord_index.clear();
+	bump_env_lscale.clear();
+	bump_env_loffset.clear();
+	texture_transform_flags.clear();
+	color_arg0.clear();
+	alpha_arg0.clear();
 }
 
 void TextureStage::mark()
 {
 	bound.mark();
-	colorOp.mark();
-	colorArg1.mark();
-	colorArg2.mark();
-	alphaOp.mark();
-	alphaArg1.mark();
-	alphaArg2.mark();
-	bumpEnvMat00.mark();
-	bumpEnvMat01.mark();
-	bumpEnvMat10.mark();
-	bumpEnvMat11.mark();
-	texCoordIndex.mark();
-	bumpEnvLScale.mark();
-	bumpEnvLOffset.mark();
-	textureTransformFlags.mark();
-	colorArg0.mark();
-	alphaArg0.mark();
+	color_op.mark();
+	color_arg1.mark();
+	color_arg2.mark();
+	alpha_op.mark();
+	alpha_arg1.mark();
+	alpha_arg2.mark();
+	bump_env_mat00.mark();
+	bump_env_mat01.mark();
+	bump_env_mat10.mark();
+	bump_env_mat11.mark();
+	tex_coord_index.mark();
+	bump_env_lscale.mark();
+	bump_env_loffset.mark();
+	texture_transform_flags.mark();
+	color_arg0.mark();
+	alpha_arg0.mark();
 }
 
 void TextureStages::write(CBufferBase& cbuf) const
@@ -239,22 +234,22 @@ void TextureStages::write(CBufferBase& cbuf) const
 	{
 		cbuf
 			<< it.bound
-			<< static_cast<uint>(it.colorOp.data())
-			<< it.colorArg1
-			<< it.colorArg2
-			<< static_cast<uint>(it.alphaOp.data())
-			<< it.alphaArg1
-			<< it.alphaArg2
-			<< it.bumpEnvMat00
-			<< it.bumpEnvMat01
-			<< it.bumpEnvMat10
-			<< it.bumpEnvMat11
-			<< it.texCoordIndex
-			<< it.bumpEnvLScale
-			<< it.bumpEnvLOffset
-			<< static_cast<uint>(it.textureTransformFlags.data())
-			<< it.colorArg0
-			<< it.alphaArg0
+			<< static_cast<uint>(it.color_op.data())
+			<< it.color_arg1
+			<< it.color_arg2
+			<< static_cast<uint>(it.alpha_op.data())
+			<< it.alpha_arg1
+			<< it.alpha_arg2
+			<< it.bump_env_mat00
+			<< it.bump_env_mat01
+			<< it.bump_env_mat10
+			<< it.bump_env_mat11
+			<< it.tex_coord_index
+			<< it.bump_env_lscale
+			<< it.bump_env_loffset
+			<< static_cast<uint>(it.texture_transform_flags.data())
+			<< it.color_arg0
+			<< it.alpha_arg0
 			<< CBufferAlign();
 	}
 }

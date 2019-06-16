@@ -11,11 +11,11 @@
 
 struct Material
 {
-	float4 Diffuse;  /* Diffuse color RGBA */
-	float4 Ambient;  /* Ambient color RGB */
-	float4 Specular; /* Specular 'shininess' */
-	float4 Emissive; /* Emissive color RGB */
-	float  Power;    /* Sharpness if specular highlight */
+	float4 diffuse;  /* Diffuse color RGBA */
+	float4 ambient;  /* Ambient color RGB */
+	float4 specular; /* Specular 'shininess' */
+	float4 emissive; /* Emissive color RGB */
+	float  power;    /* Sharpness if specular highlight */
 };
 
 struct MaterialSources
@@ -28,41 +28,41 @@ struct MaterialSources
 
 struct Light
 {
-	bool   Enabled;
-	uint   Type;         /* Type of light source */
-	float4 Diffuse;      /* Diffuse color of light */
-	float4 Specular;     /* Specular color of light */
-	float4 Ambient;      /* Ambient color of light */
-	float3 Position;     /* Position in world space */
-	float3 Direction;    /* Direction in world space */
-	float  Range;        /* Cutoff range */
-	float  Falloff;      /* Falloff */
-	float  Attenuation0; /* Constant attenuation */
-	float  Attenuation1; /* Linear attenuation */
-	float  Attenuation2; /* Quadratic attenuation */
-	float  Theta;        /* Inner angle of spotlight cone */
-	float  Phi;          /* Outer angle of spotlight cone */
+	bool   enabled;
+	uint   type;         /* Type of light source */
+	float4 diffuse;      /* Diffuse color of light */
+	float4 specular;     /* Specular color of light */
+	float4 ambient;      /* Ambient color of light */
+	float3 position;     /* Position in world space */
+	float3 direction;    /* Direction in world space */
+	float  range;        /* Cutoff range */
+	float  falloff;      /* Falloff */
+	float  attenuation0; /* Constant attenuation */
+	float  attenuation1; /* Linear attenuation */
+	float  attenuation2; /* Quadratic attenuation */
+	float  theta;        /* Inner angle of spotlight cone */
+	float  phi;          /* Outer angle of spotlight cone */
 };
 
 struct TextureStage
 {
-	bool  bound;                 // indicates if the texture is bound
-	uint  colorOp;               // D3DTOP
-	uint  colorArg1;             // D3DTA
-	uint  colorArg2;             // D3DTA
-	uint  alphaOp;               // D3DTOP
-	uint  alphaArg1;             // D3DTA
-	uint  alphaArg2;             // D3DTA
-	float bumpEnvMat00;
-	float bumpEnvMat01;
-	float bumpEnvMat10;
-	float bumpEnvMat11;
-	uint  texCoordIndex;         // D3DTSS_TCI
-	float bumpEnvLScale;
-	float bumpEnvLOffset;
-	uint  textureTransformFlags;
-	uint  colorArg0;             // D3DTA
-	uint  alphaArg0;             // D3DTA
+	bool  bound;                  // indicates if the texture is bound
+	uint  color_op;               // D3DTOP
+	uint  color_arg1;             // D3DTA
+	uint  color_arg2;             // D3DTA
+	uint  alpha_op;               // D3DTOP
+	uint  alpha_arg1;             // D3DTA
+	uint  alpha_arg2;             // D3DTA
+	float bump_env_mat00;
+	float bump_env_mat01;
+	float bump_env_mat10;
+	float bump_env_mat11;
+	uint  tex_coord_index;         // D3DTSS_TCI
+	float bump_env_lscale;
+	float bump_env_loffset;
+	uint  texture_transform_flags;
+	uint  color_arg0;             // D3DTA
+	uint  alpha_arg0;             // D3DTA
 };
 
 #define MAKE_TEXN(N) \
@@ -112,8 +112,8 @@ struct VS_INPUT
 
 struct FVFTexCoordOut
 {
-	nointerpolation uint componentCount;
-	nointerpolation bool divByLast;
+	nointerpolation uint component_count;
+	nointerpolation bool div_by_last;
 };
 
 struct VS_OUTPUT
@@ -132,21 +132,21 @@ struct VS_OUTPUT
 
 cbuffer PerSceneBuffer : register(b0)
 {
-	matrix viewMatrix;
-	matrix projectionMatrix;
-	float2 screenDimensions;
-	float3 viewPosition;
+	matrix view_matrix;
+	matrix projection_matrix;
+	float2 screen_dimensions;
+	float3 view_position;
 };
 
 cbuffer PerModelBuffer : register(b1)
 {
-	matrix worldMatrix;
-	matrix wvMatrixInvT;
-	matrix textureMatrix;
+	matrix world_matrix;
+	matrix wv_matrix_inv_t;
+	matrix texture_matrix;
 
-	MaterialSources materialSources;
-	float4 globalAmbient;
-	bool colorVertex;
+	MaterialSources material_sources;
+	float4 global_ambient;
+	bool color_vertex;
 
 	Light lights[LIGHT_COUNT];
 	Material material;
@@ -154,48 +154,48 @@ cbuffer PerModelBuffer : register(b1)
 
 cbuffer PerPixelBuffer : register(b2)
 {
-	uint   fogMode;
-	float  fogStart;
-	float  fogEnd;
-	float  fogDensity;
-	float4 fogColor;
+	uint   fog_mode;
+	float  fog_start;
+	float  fog_end;
+	float  fog_density;
+	float4 fog_color;
 
-	bool  alphaReject;
-	uint  alphaRejectMode;
-	float alphaRejectThreshold;
+	bool  alpha_reject;
+	uint  alpha_reject_mode;
+	float alpha_reject_threshold;
 
-	float4 textureFactor;
+	float4 texture_factor;
 };
 
 cbuffer TextureStages : register(b3)
 {
-	TextureStage textureStages[TEXTURE_STAGE_COUNT];
+	TextureStage texture_stages[TEXTURE_STAGE_COUNT];
 }
 
 Texture2D<float4> textures[TEXTURE_STAGE_COUNT];
 SamplerState samplers[TEXTURE_STAGE_COUNT];
 
-// From FixedFuncEMU.fx
+// From FixedFuncEMU.fx, originally calc_fog
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.
 // Calculates fog factor based upon distance
-float CalcFogFactor(float d)
+float calc_fog(float d)
 {
-	float fogCoeff = 1.0;
+	float fog_coeff = 1.0;
 
-	if (FOGMODE_LINEAR == fogMode)
+	if (FOGMODE_LINEAR == fog_mode)
 	{
-		fogCoeff = (fogEnd - d) / (fogEnd - fogStart);
+		fog_coeff = (fog_end - d) / (fog_end - fog_start);
 	}
-	else if (FOGMODE_EXP == fogMode)
+	else if (FOGMODE_EXP == fog_mode)
 	{
-		fogCoeff = 1.0 / pow(E, d*fogDensity);
+		fog_coeff = 1.0 / pow(E, d*fog_density);
 	}
-	else if (FOGMODE_EXP2 == fogMode)
+	else if (FOGMODE_EXP2 == fog_mode)
 	{
-		fogCoeff = 1.0 / pow(E, d * d * fogDensity * fogDensity);
+		fog_coeff = 1.0 / pow(E, d * d * fog_density * fog_density);
 	}
 
-	return clamp(fogCoeff, 0, 1);
+	return clamp(fog_coeff, 0, 1);
 }
 
 float4 white_not_lit(float4 color)
@@ -220,11 +220,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 {
 	VS_OUTPUT result = (VS_OUTPUT)0;
 
-	float4 worldPosition = (float4)0;
+	float4 world_position = (float4)0;
 
 #ifdef FVF_RHW
 	float4 p = input.position;
-	float2 screen = screenDimensions - 0.5;
+	float2 screen = screen_dimensions - 0.5;
 
 	p.xy = round(p.xy);
 	p.x = ((p.x / screen.x) * 2) - 1;
@@ -233,20 +233,20 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	result.position = p;
 #else
 	input.position.w = 1;
-	result.position = mul(worldMatrix, input.position);
+	result.position = mul(world_matrix, input.position);
 
-	worldPosition = result.position;
+	world_position = result.position;
 
-	result.position = mul(viewMatrix, result.position);
+	result.position = mul(view_matrix, result.position);
 
 	result.fog = result.position.z;
 
-	result.position = mul(projectionMatrix, result.position);
+	result.position = mul(projection_matrix, result.position);
 #endif
 
 	result.depth = result.position.zw;
 
-	if (colorVertex == true)
+	if (color_vertex == true)
 	{
 	#ifndef RS_LIGHTING
 		#ifdef FVF_DIFFUSE
@@ -261,17 +261,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			result.specular = float4(0, 0, 0, 0);
 		#endif
 	#else
-		switch (materialSources.ambient)
+		switch (material_sources.ambient)
 		{
 			case CS_MATERIAL:
-				result.ambient = black_not_lit(material.Ambient);
+				result.ambient = black_not_lit(material.ambient);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.ambient = input.diffuse;
 			#else
-				result.ambient = black_not_lit(material.Ambient);
+				result.ambient = black_not_lit(material.ambient);
 			#endif
 				break;
 
@@ -279,7 +279,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.ambient = input.specular;
 			#else
-				result.ambient = black_not_lit(material.Ambient);
+				result.ambient = black_not_lit(material.ambient);
 			#endif
 				break;
 
@@ -288,17 +288,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				break;
 		}
 
-		switch (materialSources.diffuse)
+		switch (material_sources.diffuse)
 		{
 			case CS_MATERIAL:
-				result.diffuse = white_not_lit(material.Diffuse);
+				result.diffuse = white_not_lit(material.diffuse);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.diffuse = input.diffuse;
 			#else
-				result.diffuse = white_not_lit(material.Diffuse);
+				result.diffuse = white_not_lit(material.diffuse);
 			#endif
 				break;
 
@@ -306,7 +306,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.diffuse = input.specular;
 			#else
-				result.diffuse = white_not_lit(material.Diffuse);
+				result.diffuse = white_not_lit(material.diffuse);
 			#endif
 				break;
 
@@ -315,17 +315,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				break;
 		}
 
-		switch (materialSources.specular)
+		switch (material_sources.specular)
 		{
 			case CS_MATERIAL:
-				result.specular = black_not_lit(material.Specular);
+				result.specular = black_not_lit(material.specular);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.specular = input.diffuse;
 			#else
-				result.specular = black_not_lit(material.Specular);
+				result.specular = black_not_lit(material.specular);
 			#endif
 				break;
 
@@ -333,7 +333,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.specular = input.specular;
 			#else
-				result.specular = black_not_lit(material.Specular);
+				result.specular = black_not_lit(material.specular);
 			#endif
 				break;
 
@@ -342,17 +342,17 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				break;
 		}
 
-		switch (materialSources.emissive)
+		switch (material_sources.emissive)
 		{
 			case CS_MATERIAL:
-				result.emissive = black_not_lit(material.Emissive);
+				result.emissive = black_not_lit(material.emissive);
 				break;
 
 			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.emissive = input.diffuse;
 			#else
-				result.emissive = black_not_lit(material.Emissive);
+				result.emissive = black_not_lit(material.emissive);
 			#endif
 				break;
 
@@ -360,7 +360,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			#ifdef FVF_SPECULAR
 				result.emissive = input.specular;
 			#else
-				result.emissive = black_not_lit(material.Emissive);
+				result.emissive = black_not_lit(material.emissive);
 			#endif
 				break;
 
@@ -372,8 +372,8 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 	else
 	{
-		result.diffuse = white_not_lit(material.Diffuse);
-		result.specular = black_not_lit(material.Specular);
+		result.diffuse = white_not_lit(material.diffuse);
+		result.specular = black_not_lit(material.specular);
 	}
 
 #if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
@@ -381,28 +381,29 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	float4 diffuse  = float4(0, 0, 0, 0);
 	float4 specular = float4(0, 0, 0, 0);
 
-	float4 Ca = result.ambient;
-	float4 Cd = result.diffuse;
-	float4 Cs = result.specular;
+	float4 c_a = result.ambient;
+	float4 c_d = result.diffuse;
+	float4 c_s = result.specular;
 
-	float3 N = normalize(mul((float3x3)worldMatrix, input.normal));
+	float3 N = normalize(mul((float3x3)world_matrix, input.normal));
 
 	#ifdef RS_SPECULAR
-		float P = max(0, material.Power);
-		float3 viewDir = normalize(viewPosition - worldPosition.xyz);
+		float p = max(0, material.power);
+		float3 view_dir = normalize(view_position - world_position.xyz);
 	#endif
 
 	for (uint i = 0; i < LIGHT_COUNT; ++i)
 	{
-		if (lights[i].Enabled == false)
+		if (lights[i].enabled == false)
 		{
 			break;
 		}
 
+		// exceptions to the naming style for the sake of the formula
 		float Atten;
 		float Spot;
 
-		switch (lights[i].Type)
+		switch (lights[i].type)
 		{
 			default:
 				Atten = 1.0f;
@@ -411,12 +412,12 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 			case LIGHT_POINT:
 			{
-				float d = length(worldPosition.xyz - lights[i].Position);
+				float d = length(world_position.xyz - lights[i].position);
 
-				if (d <= lights[i].Range)
+				if (d <= lights[i].range)
 				{
 					float d2 = d * d;
-					Atten = 1.0f / (lights[i].Attenuation0 + lights[i].Attenuation1 * d + lights[i].Attenuation2 * d2);
+					Atten = 1.0f / (lights[i].attenuation0 + lights[i].attenuation1 * d + lights[i].attenuation2 * d2);
 				}
 				else
 				{
@@ -429,19 +430,19 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 			case LIGHT_SPOT:
 			{
-				float3 Ldcs = normalize(-mul(mul((float3x3)worldMatrix, lights[i].Direction), (float3x3)viewMatrix));
-				float3 Ldir = normalize(worldPosition.xyz - lights[i].Position);
+				float3 Ldcs = normalize(-mul(mul((float3x3)world_matrix, lights[i].direction), (float3x3)view_matrix));
+				float3 Ldir = normalize(world_position.xyz - lights[i].position);
 
 				float rho = dot(Ldcs, Ldir);
 
-				float theta      = clamp(lights[i].Theta, 0.0f, M_PI);
+				float theta      = clamp(lights[i].theta, 0.0f, M_PI);
 				float theta2     = theta / 2.0f;
 				float cos_theta2 = cos(theta2);
-				float phi        = clamp(lights[i].Phi, theta, M_PI);
+				float phi        = clamp(lights[i].phi, theta, M_PI);
 				float phi2       = phi / 2.0f;
 				float cos_phi2   = cos(phi2);
 
-				float falloff  = lights[i].Falloff;
+				float falloff  = lights[i].falloff;
 
 				if (rho > cos_theta2)
 				{
@@ -460,25 +461,26 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			}
 		}
 
-		float4 Ld       = lights[i].Diffuse;
-		float3 Ldir     = normalize(-lights[i].Direction);
+		// exceptions to the naming style for the sake of the formula
+		float4 Ld       = lights[i].diffuse;
+		float3 Ldir     = normalize(-lights[i].direction);
 		float  NdotLdir = saturate(dot(N, Ldir));
 
-		// Diffuse Lighting = sum[Cd*Ld*(N.Ldir)*Atten*Spot]
-		diffuse += Cd * Ld * NdotLdir * Atten * Spot;
+		// Diffuse Lighting = sum[c_d*Ld*(N.Ldir)*Atten*Spot]
+		diffuse += c_d * Ld * NdotLdir * Atten * Spot;
 
 		// sum(Atteni*Spoti*Lai)
-		ambient += Atten * Spot * lights[i].Ambient;
+		ambient += Atten * Spot * lights[i].ambient;
 
 		#ifdef RS_SPECULAR
-			float4 Ls = lights[i].Specular;
-			float3 H = normalize(viewDir + normalize(Ldir));
-			specular += Ls * pow(dot(N, H), P) * Atten * Spot;
+			float4 Ls = lights[i].specular;
+			float3 H = normalize(view_dir + normalize(Ldir));
+			specular += Ls * pow(dot(N, H), p) * Atten * Spot;
 		#endif
 	}
 
-	// Ambient Lighting = Ca*[Ga + sum(Atteni*Spoti*Lai)]
-	ambient = saturate(Ca * saturate(globalAmbient + saturate(ambient)));
+	// Ambient Lighting = c_a*[Ga + sum(Atteni*Spoti*Lai)]
+	ambient = saturate(c_a * saturate(global_ambient + saturate(ambient)));
 
 	/*
 		Diffuse components are clamped to be from 0 to 255, after all lights are processed and interpolated separately.
@@ -487,7 +489,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	diffuse = saturate(diffuse);
 
 	#ifdef RS_SPECULAR
-		specular = float4(saturate(Cs * saturate(specular)).rgb, 0);
+		specular = float4(saturate(c_s * saturate(specular)).rgb, 0);
 	#endif
 
 	result.ambient.rgb  = ambient.rgb;
@@ -496,7 +498,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 0
-	result.uvmeta[0].componentCount = FVF_TEXCOORD0_SIZE;
+	result.uvmeta[0].component_count = FVF_TEXCOORD0_SIZE;
 
 	#if FVF_TEXCOORD0_SIZE == 1
 		result.uv[0].x = input.tex0;
@@ -510,7 +512,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 1
-	result.uvmeta[1].componentCount = FVF_TEXCOORD1_SIZE;
+	result.uvmeta[1].component_count = FVF_TEXCOORD1_SIZE;
 
 	#if FVF_TEXCOORD1_SIZE == 1
 		result.uv[1].x = input.tex1;
@@ -524,7 +526,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 2
-	result.uvmeta[2].componentCount = FVF_TEXCOORD2_SIZE;
+	result.uvmeta[2].component_count = FVF_TEXCOORD2_SIZE;
 
 	#if FVF_TEXCOORD2_SIZE == 1
 		result.uv[2].x = input.tex2;
@@ -538,7 +540,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 3
-	result.uvmeta[3].componentCount = FVF_TEXCOORD3_SIZE;
+	result.uvmeta[3].component_count = FVF_TEXCOORD3_SIZE;
 
 	#if FVF_TEXCOORD3_SIZE == 1
 		result.uv[3].x = input.tex3;
@@ -552,7 +554,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 4
-	result.uvmeta[4].componentCount = FVF_TEXCOORD4_SIZE;
+	result.uvmeta[4].component_count = FVF_TEXCOORD4_SIZE;
 
 	#if FVF_TEXCOORD4_SIZE == 1
 		result.uv[4].x = input.tex4;
@@ -566,7 +568,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 5
-	result.uvmeta[5].componentCount = FVF_TEXCOORD5_SIZE;
+	result.uvmeta[5].component_count = FVF_TEXCOORD5_SIZE;
 
 	#if FVF_TEXCOORD5_SIZE == 1
 		result.uv[5].x = input.tex5;
@@ -580,7 +582,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 6
-	result.uvmeta[6].componentCount = FVF_TEXCOORD6_SIZE;
+	result.uvmeta[6].component_count = FVF_TEXCOORD6_SIZE;
 
 	#if FVF_TEXCOORD6_SIZE == 1
 		result.uv[6].x = input.tex6;
@@ -594,7 +596,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 7
-	result.uvmeta[7].componentCount = FVF_TEXCOORD7_SIZE;
+	result.uvmeta[7].component_count = FVF_TEXCOORD7_SIZE;
 
 	#if FVF_TEXCOORD7_SIZE == 1
 		result.uv[7].x = input.tex7;
@@ -635,7 +637,7 @@ bool compare(uint mode, float a, float b)
 	}
 }
 
-float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, float4 inputDiffuse, float4 inputSpecular)
+float4 get_arg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, float4 in_diffuse, float4 in_specular)
 {
 	float4 result;
 
@@ -643,14 +645,14 @@ float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 curr
 	{
 		case TA_DIFFUSE:
 		#ifdef FVF_DIFFUSE
-			result = inputDiffuse;
+			result = in_diffuse;
 		#else
 			result = float4(1, 1, 1, 1);
 		#endif
 			break;
 
 		case TA_CURRENT:
-			result = !stageNum ? inputDiffuse : current;
+			result = !stageNum ? in_diffuse : current;
 			break;
 
 		case TA_TEXTURE:
@@ -658,12 +660,12 @@ float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 curr
 			break;
 
 		case TA_TFACTOR:
-			result = textureFactor;
+			result = texture_factor;
 			break;
 
 		case TA_SPECULAR:
 		#ifdef FVF_SPECULAR
-			result = inputSpecular;
+			result = in_specular;
 		#else
 			result = float4(1, 1, 1, 1);
 		#endif
@@ -689,78 +691,78 @@ float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 curr
 	return result;
 }
 
-float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorArg0, float4 texel, float4 current, float4 inputDiffuse)
+float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 color_arg0, float4 texel, float4 current, float4 in_diffuse)
 {
-	if (colorOp == TOP_SELECTARG1)
+	if (color_op == TOP_SELECTARG1)
 	{
-		return colorArg1;
+		return color_arg1;
 	}
 
-	if (colorOp == TOP_SELECTARG2)
+	if (color_op == TOP_SELECTARG2)
 	{
-		return colorArg2;
+		return color_arg2;
 	}
 
 	float4 result = (float4)0;
 
-	switch (colorOp)
+	switch (color_op)
 	{
 		default:
 			result = float4(1, 0, 0, 1);
 			break;
 
 		case TOP_MODULATE:
-			result = colorArg1 * colorArg2;
+			result = color_arg1 * color_arg2;
 			break;
 		case TOP_MODULATE2X:
-			result = 2 * (colorArg1 * colorArg2);
+			result = 2 * (color_arg1 * color_arg2);
 			break;
 		case TOP_MODULATE4X:
-			result = 4 * (colorArg1 * colorArg2);
+			result = 4 * (color_arg1 * color_arg2);
 			break;
 		case TOP_ADD:
-			result = colorArg1 + colorArg2;
+			result = color_arg1 + color_arg2;
 			break;
 		case TOP_ADDSIGNED:
-			result = (colorArg1 + colorArg2) - 0.5;
+			result = (color_arg1 + color_arg2) - 0.5;
 			break;
 		case TOP_ADDSIGNED2X:
-			result = 2 * ((colorArg1 + colorArg2) - 0.5);
+			result = 2 * ((color_arg1 + color_arg2) - 0.5);
 			break;
 		case TOP_SUBTRACT:
-			result = colorArg1 - colorArg2;
+			result = color_arg1 - color_arg2;
 			break;
 		case TOP_ADDSMOOTH:
-			result = (colorArg1 + colorArg2) - (colorArg1 * colorArg2);
+			result = (color_arg1 + color_arg2) - (color_arg1 * color_arg2);
 			break;
 		case TOP_BLENDDIFFUSEALPHA:
 		{
-			float alpha = inputDiffuse.a;
-			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			float alpha = in_diffuse.a;
+			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
 		case TOP_BLENDTEXTUREALPHA:
 		{
 			float alpha = texel.a;
-			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
 		case TOP_BLENDFACTORALPHA:
 		{
-			float alpha = textureFactor.a;
-			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			float alpha = texture_factor.a;
+			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
 		case TOP_BLENDTEXTUREALPHAPM:
 		{
 			float alpha = texel.a;
-			result = colorArg1 + (colorArg2 * (1 - alpha));
+			result = color_arg1 + (color_arg2 * (1 - alpha));
 			break;
 		}
 		case TOP_BLENDCURRENTALPHA:
 		{
 			float alpha = current.a;
-			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
 
@@ -768,16 +770,16 @@ float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorA
 			break;
 
 		case TOP_MODULATEALPHA_ADDCOLOR:
-			result = float4(colorArg1.rgb + (colorArg2.rgb * colorArg1.a), colorArg1.a * colorArg2.a);
+			result = float4(color_arg1.rgb + (color_arg2.rgb * color_arg1.a), color_arg1.a * color_arg2.a);
 			break;
 		case TOP_MODULATECOLOR_ADDALPHA:
-			result = float4(colorArg1.rgb * colorArg2.rgb, colorArg1.a + colorArg2.a);
+			result = float4(color_arg1.rgb * color_arg2.rgb, color_arg1.a + color_arg2.a);
 			break;
 		case TOP_MODULATEINVALPHA_ADDCOLOR:
-			result = float4(colorArg1.rgb + (colorArg2.rgb * (1 - colorArg1.a)), colorArg1.a * colorArg2.a);
+			result = float4(color_arg1.rgb + (color_arg2.rgb * (1 - color_arg1.a)), color_arg1.a * color_arg2.a);
 			break;
 		case TOP_MODULATEINVCOLOR_ADDALPHA:
-			result = float4((1 - colorArg1.rgb) * colorArg2.rgb, colorArg1.a + colorArg2.a);
+			result = float4((1 - color_arg1.rgb) * color_arg2.rgb, color_arg1.a + color_arg2.a);
 			break;
 
 		case TOP_BUMPENVMAP: // TODO: NOT SUPPORTED
@@ -788,11 +790,11 @@ float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorA
 			break;
 
 		case TOP_MULTIPLYADD:
-			result = colorArg1 + colorArg2 * colorArg0;
+			result = color_arg1 + color_arg2 * color_arg0;
 			break;
 
 		case TOP_LERP:
-			result = lerp(colorArg2, colorArg0, colorArg1.r);
+			result = lerp(color_arg2, color_arg0, color_arg1.r);
 			break;
 	}
 
@@ -812,10 +814,10 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	for (uint s = 0; s < TEXTURE_STAGE_COUNT; s++)
 	{
-		uint coordIndex = textureStages[s].texCoordIndex & TSS_TCI_COORD_MASK;
+		uint coordIndex = texture_stages[s].tex_coord_index & TSS_TCI_COORD_MASK;
 		float4 texcoord = input.uv[coordIndex];
 
-		if (textureStages[s].bound)
+		if (texture_stages[s].bound)
 		{
 			samples[s] = textures[s].Sample(samplers[s], texcoord);
 		}
@@ -825,46 +827,46 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		}
 	}
 
-	bool colorDone = false;
-	bool alphaDone = false;
+	bool color_done = false;
+	bool alpha_done = false;
 
 	for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
-		TextureStage stage = textureStages[i];
+		TextureStage stage = texture_stages[i];
 
-		if (stage.colorOp <= TOP_DISABLE && stage.alphaOp <= TOP_DISABLE)
+		if (stage.color_op <= TOP_DISABLE && stage.alpha_op <= TOP_DISABLE)
 		{
 			break;
 		}
 
 		float4 texel = samples[i];
 
-		if (stage.colorOp <= TOP_DISABLE)
+		if (stage.color_op <= TOP_DISABLE)
 		{
-			colorDone = true;
+			color_done = true;
 		}
 
-		if (!colorDone)
+		if (!color_done)
 		{
-			float4 colorArg1 = getArg(i, stage, stage.colorArg1, current, texel, tempreg, input.diffuse, input.specular);
-			float4 colorArg2 = getArg(i, stage, stage.colorArg2, current, texel, tempreg, input.diffuse, input.specular);
-			float4 colorArg0 = getArg(i, stage, stage.colorArg0, current, texel, tempreg, input.diffuse, input.specular);
+			float4 color_arg1 = get_arg(i, stage, stage.color_arg1, current, texel, tempreg, input.diffuse, input.specular);
+			float4 color_arg2 = get_arg(i, stage, stage.color_arg2, current, texel, tempreg, input.diffuse, input.specular);
+			float4 color_arg0 = get_arg(i, stage, stage.color_arg0, current, texel, tempreg, input.diffuse, input.specular);
 
-			current.rgb = textureOp(stage.colorOp, colorArg1, colorArg2, colorArg0, texel, current, input.diffuse).rgb;
+			current.rgb = texture_op(stage.color_op, color_arg1, color_arg2, color_arg0, texel, current, input.diffuse).rgb;
 		}
 
-		if (stage.alphaOp <= TOP_DISABLE)
+		if (stage.alpha_op <= TOP_DISABLE)
 		{
-			alphaDone = true;
+			alpha_done = true;
 		}
 
-		if (!alphaDone)
+		if (!alpha_done)
 		{
-			float4 alphaArg1 = getArg(i, stage, stage.alphaArg1, current, texel, tempreg, input.diffuse, input.specular);
-			float4 alphaArg2 = getArg(i, stage, stage.alphaArg2, current, texel, tempreg, input.diffuse, input.specular);
-			float4 alphaArg0 = getArg(i, stage, stage.alphaArg0, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alpha_arg1 = get_arg(i, stage, stage.alpha_arg1, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alpha_arg2 = get_arg(i, stage, stage.alpha_arg2, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alpha_arg0 = get_arg(i, stage, stage.alpha_arg0, current, texel, tempreg, input.diffuse, input.specular);
 
-			current.a = textureOp(stage.alphaOp, alphaArg1, alphaArg2, alphaArg0, texel, current, input.diffuse).a;
+			current.a = texture_op(stage.alpha_op, alpha_arg1, alpha_arg2, alpha_arg0, texel, current, input.diffuse).a;
 		}
 
 		// TODO: D3DTTFF_PROJECTED
@@ -891,17 +893,17 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
-	if (alphaReject == true)
+	if (alpha_reject == true)
 	{
 		uint alpha = floor(result.a * 255);
-		uint threshold = floor(alphaRejectThreshold * 255);
-		clip(compare(alphaRejectMode, alpha, threshold) ? 1 : -1);
+		uint threshold = floor(alpha_reject_threshold * 255);
+		clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 	}
 #endif
 
 #ifdef RS_FOG
-	float factor = CalcFogFactor(input.fog);
-	result.rgb = (factor * result + (1.0 - factor) * fogColor).rgb;
+	float factor = calc_fog(input.fog);
+	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
 #endif
 
 	return result;
