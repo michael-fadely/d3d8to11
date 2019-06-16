@@ -418,7 +418,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 #endif
 }
 
-bool Direct3DTexture8::convert(UINT Level)
+bool Direct3DTexture8::convert(UINT level)
 {
 	if (IsWindows8OrGreater())
 	{
@@ -426,9 +426,9 @@ bool Direct3DTexture8::convert(UINT Level)
 	}
 
 	D3DSURFACE_DESC8 level_desc {};
-	GetLevelDesc(Level, &level_desc);
+	GetLevelDesc(level, &level_desc);
 
-	std::vector<uint8_t>& buffer = texture_levels[Level];
+	std::vector<uint8_t>& buffer = texture_levels[level];
 	const DXGI_FORMAT format = to_dxgi(format_);
 
 	std::vector<uint32_t> rgba;
@@ -526,7 +526,7 @@ bool Direct3DTexture8::convert(UINT Level)
 			return false;
 	}
 
-	device8->context->UpdateSubresource(texture.Get(), Level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
+	device8->context->UpdateSubresource(texture.Get(), level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
 	return true;
 }
 

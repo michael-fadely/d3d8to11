@@ -74,7 +74,7 @@ public:
 private:
 	dynarray<ComPtr<Direct3DSurface8>> surfaces;
 
-	bool convert(UINT Level);
+	bool convert(UINT level);
 	Direct3DDevice8* const device8;
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
