@@ -240,7 +240,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		shader_preproc_defs.push_back({ "RS_LIGHTING", "1" });
 	}
 
-	if ((flags & (ShaderFlags::rs_specular | ShaderFlags::rs_lighting)) == (ShaderFlags::rs_specular | ShaderFlags::rs_lighting))
+	if (flags & ShaderFlags::rs_specular)
 	{
 		shader_preproc_defs.push_back({ "RS_SPECULAR", "1" });
 	}
@@ -605,11 +605,6 @@ ShaderFlags::type ShaderFlags::sanitize(type flags)
 	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
 	{
 		flags &= ~rs_lighting;
-	}
-
-	if (flags & rs_specular && !(flags & rs_lighting))
-	{
-		flags &= ~rs_specular;
 	}
 
 	return flags;

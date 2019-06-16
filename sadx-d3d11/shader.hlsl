@@ -254,7 +254,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 			result.diffuse = float4(1, 1, 1, 1);
 		#endif
 
-		#if defined(RS_SPECULAR) && defined(FVF_SPECULAR)
+		#ifdef FVF_SPECULAR
 			result.specular = input.specular;
 		#else
 			result.specular = float4(0, 0, 0, 0);
@@ -395,7 +395,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	{
 		if (lights[i].Enabled == false)
 		{
-			continue;
+			break;
 		}
 
 		float Atten;
@@ -490,7 +490,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	#endif
 
 	result.ambient.rgb  = ambient.rgb;
-	result.diffuse.rgb  = diffuse.rgb;
+	result.diffuse.rgb  = saturate(diffuse.rgb + ambient.rgb);
 	result.specular.rgb = specular.rgb;
 #endif
 
@@ -537,22 +537,26 @@ bool compare(uint mode, float a, float b)
 	}
 }
 
-float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, in VS_OUTPUT input)
+float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, float4 inputDiffuse, float4 inputSpecular)
 {
 	float4 result;
 
 	switch (textureArg & TA_SELECTMASK)
 	{
 		case TA_DIFFUSE:
-			result = input.diffuse;
+		#ifdef FVF_DIFFUSE
+			result = inputDiffuse;
+		#else
+			result = float4(1, 1, 1, 1);
+		#endif
 			break;
 
 		case TA_CURRENT:
-			result = !stageNum ? input.diffuse : current;
+			result = !stageNum ? inputDiffuse : current;
 			break;
 
 		case TA_TEXTURE:
-			result = texel;
+			result = texel; // TODO: check if texture is bound
 			break;
 
 		case TA_TFACTOR:
@@ -560,7 +564,11 @@ float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 curr
 			break;
 
 		case TA_SPECULAR:
-			result = input.specular;
+		#ifdef FVF_SPECULAR
+			result = inputSpecular;
+		#else
+			result = float4(1, 1, 1, 1);
+		#endif
 			break;
 
 		case TA_TEMP:
@@ -724,30 +732,30 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 		float4 texel = samples[i];
 
-		if (stage.colorOp == TOP_DISABLE)
+		if (stage.colorOp <= TOP_DISABLE)
 		{
 			colorDone = true;
 		}
 
 		if (!colorDone)
 		{
-			float4 colorArg1 = getArg(i, stage, stage.colorArg1, current, texel, tempreg, input);
-			float4 colorArg2 = getArg(i, stage, stage.colorArg2, current, texel, tempreg, input);
-			float4 colorArg0 = getArg(i, stage, stage.colorArg0, current, texel, tempreg, input);
+			float4 colorArg1 = getArg(i, stage, stage.colorArg1, current, texel, tempreg, input.diffuse, input.specular);
+			float4 colorArg2 = getArg(i, stage, stage.colorArg2, current, texel, tempreg, input.diffuse, input.specular);
+			float4 colorArg0 = getArg(i, stage, stage.colorArg0, current, texel, tempreg, input.diffuse, input.specular);
 
 			current.rgb = textureOp(stage.colorOp, colorArg1, colorArg2, colorArg0, texel, current, input.diffuse).rgb;
 		}
 
-		if (stage.alphaOp == TOP_DISABLE)
+		if (stage.alphaOp <= TOP_DISABLE)
 		{
 			alphaDone = true;
 		}
 
 		if (!alphaDone)
 		{
-			float4 alphaArg1 = getArg(i, stage, stage.alphaArg1, current, texel, tempreg, input);
-			float4 alphaArg2 = getArg(i, stage, stage.alphaArg2, current, texel, tempreg, input);
-			float4 alphaArg0 = getArg(i, stage, stage.alphaArg0, current, texel, tempreg, input);
+			float4 alphaArg1 = getArg(i, stage, stage.alphaArg1, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alphaArg2 = getArg(i, stage, stage.alphaArg2, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alphaArg0 = getArg(i, stage, stage.alphaArg0, current, texel, tempreg, input.diffuse, input.specular);
 
 			current.a = textureOp(stage.alphaOp, alphaArg1, alphaArg2, alphaArg0, texel, current, input.diffuse).a;
 		}
@@ -762,14 +770,15 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		*/
 	}
 
-	float4 result = current;
+	float4 result = saturate(current);
 #else
 	float4 result = (float4)1;
 #endif
 
-	result = saturate(result * saturate(input.diffuse + input.ambient));
+#ifdef RS_SPECULAR
 	result.rgb = saturate(result.rgb + input.specular.rgb);
 	result.rgb = saturate(result.rgb + input.emissive.rgb);
+#endif
 
 #ifdef RS_ALPHA
 	if (alphaReject == true)

@@ -45,8 +45,8 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr type vs_mask = fvf_mask | rs_alpha | rs_lighting | rs_specular;
-	static constexpr type ps_mask = D3DFVF_TEXCOUNT_MASK | rs_alpha | rs_fog;
+	static constexpr type vs_mask = mask;
+	static constexpr type ps_mask = (mask & ~fvf_mask) | D3DFVF_SPECULAR | D3DFVF_DIFFUSE;
 #endif
 
 	static type sanitize(type flags);
