@@ -12,10 +12,10 @@ void Direct3DIndexBuffer8::create_native()
 
 	D3D11_BUFFER_DESC desc = {};
 
-	desc.Usage          = D3D11_USAGE_DYNAMIC;
+	desc.Usage          = D3D11_USAGE_DEFAULT;
 	desc.ByteWidth      = desc8.Size;
 	desc.BindFlags      = D3D11_BIND_INDEX_BUFFER;
-	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	//desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	if (FAILED(device->CreateBuffer(&desc, nullptr, &buffer_resource)))
 	{
@@ -158,7 +158,14 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 		return D3DERR_INVALIDCALL;
 	}
 
-	if ((uint64_t)OffsetToLock + (uint64_t)SizeToLock > (uint64_t)buffer.size())
+	if (OffsetToLock >= buffer.size())
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	const uint64_t remainder = buffer.size() - OffsetToLock;
+
+	if (SizeToLock > remainder)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -167,12 +174,12 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 	*ppbData = reinterpret_cast<BYTE*>(&buffer[OffsetToLock]);
 
 	this->lock_offset = OffsetToLock;
-	this->lock_size   = SizeToLock;
+	this->lock_size   = SizeToLock ? SizeToLock : buffer.size();
 	this->lock_flags  = Flags;
 
 	if (Flags & D3DLOCK_DISCARD)
 	{
-		memset(*ppbData, 0, SizeToLock);
+		memset(*ppbData, 0, lock_size);
 	}
 
 	return D3D_OK;
@@ -188,31 +195,20 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 	locked = false;
 	auto context = Device->context;
 
-	D3D11_MAPPED_SUBRESOURCE mapped {};
+	D3D11_BOX box {};
 
-	D3D11_MAP map_type = D3D11_MAP_WRITE_DISCARD;
+	box.left   = lock_offset;
+	box.right  = lock_offset + lock_size;
+	box.bottom = 1;
+	box.back   = 1;
 
-	if (lock_flags & D3DLOCK_NOOVERWRITE)
-	{
-		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
-	}
-
-	auto hr = context->Map(buffer_resource.Get(), 0, map_type, 0, &mapped);
-
-	if (FAILED(hr))
+	if (box.left >= box.right)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (mapped.pData == nullptr)
-	{
-		return D3DERR_INVALIDCALL;
-	}
+	context->UpdateSubresource(buffer_resource.Get(), 0, &box, &buffer[lock_offset], 0, 0);
 
-	//memcpy(reinterpret_cast<uint8_t*>(mapped.pData) + lock_offset, buffer.data() + lock_offset, lock_size);
-	memcpy(mapped.pData, buffer.data(), buffer.size());
-
-	context->Unmap(buffer_resource.Get(), 0);
 	return D3D_OK;
 }
 
