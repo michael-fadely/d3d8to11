@@ -2301,13 +2301,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseTexture8* pTexture)
 {
-	if (Stage > 0)
-	{
-		std::stringstream ss;
-		ss << __FUNCTION__ << " Non-zero texture stage: " << Stage << std::endl;
-		OutputDebugStringA(ss.str().c_str());
-	}
-
 	auto it = textures.find(Stage);
 
 	if (pTexture == nullptr)
@@ -2537,7 +2530,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_TEXCOORDINDEX:
 			per_texture.stages[Stage].texCoordIndex = Value;
 			break;
-		//case D3DTSS_BORDERCOLOR: // TODO
+
+		case D3DTSS_BORDERCOLOR:
+		{
+			std::stringstream ss;
+			ss << "Border color: " << std::setfill('0') << std::setw(8)
+				<< std::hex << Value << std::endl;
+			OutputDebugStringA(ss.str().c_str());
+			break;
+		}
+
 		case D3DTSS_BUMPENVLSCALE:
 			per_texture.stages[Stage].bumpEnvLScale = *reinterpret_cast<float*>(&Value);
 			break;
