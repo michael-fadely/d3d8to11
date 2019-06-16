@@ -6,16 +6,25 @@
 #include "stdafx.h"
 #include "d3d8to9.hpp"
 
+#ifndef USE_SUBRESOURCE
+#define USE_SUBRESOURCE
+#endif
+
 void Direct3DIndexBuffer8::create_native()
 {
 	auto device = Device->device;
 
 	D3D11_BUFFER_DESC desc = {};
 
+#ifdef USE_SUBRESOURCE
 	desc.Usage          = D3D11_USAGE_DEFAULT;
-	desc.ByteWidth      = desc8.Size;
-	desc.BindFlags      = D3D11_BIND_INDEX_BUFFER;
-	//desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+#else
+	desc.Usage          = D3D11_USAGE_DYNAMIC;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+#endif
+
+	desc.ByteWidth = desc8.Size;
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
 	if (FAILED(device->CreateBuffer(&desc, nullptr, &buffer_resource)))
 	{
@@ -179,7 +188,7 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 
 	if (Flags & D3DLOCK_DISCARD)
 	{
-		memset(*ppbData, 0, lock_size);
+		//memset(*ppbData, 0, lock_size);
 	}
 
 	return D3D_OK;
@@ -194,7 +203,8 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 
 	locked = false;
 	auto context = Device->context;
-
+	
+#ifdef USE_SUBRESOURCE
 	D3D11_BOX box {};
 
 	box.left   = lock_offset;
@@ -208,6 +218,25 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 	}
 
 	context->UpdateSubresource(buffer_resource.Get(), 0, &box, &buffer[lock_offset], 0, 0);
+#else
+	D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
+
+	if (lock_flags & D3DLOCK_NOOVERWRITE)
+	{
+		map = D3D11_MAP_WRITE_NO_OVERWRITE;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE resource {};
+	auto hr = context->Map(buffer_resource.Get(), 0, map, 0, &resource);
+
+	if (FAILED(hr))
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	memcpy(resource.pData, buffer.data(), buffer.size());
+	context->Unmap(buffer_resource.Get(), 0);
+#endif
 
 	return D3D_OK;
 }
