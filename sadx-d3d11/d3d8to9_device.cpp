@@ -2483,6 +2483,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 
 		case D3DTSS_COLOROP:
 			per_texture.stages[Stage].colorOp = static_cast<D3DTEXTUREOP>(Value);
+
+			switch (Value)
+			{
+				case D3DTOP_PREMODULATE:
+				case D3DTOP_BUMPENVMAP:
+				case D3DTOP_BUMPENVMAPLUMINANCE:
+				case D3DTOP_DOTPRODUCT3:
+					OutputDebugStringA("WARNING: Unsupported texture blending operation!");
+					break;
+
+				default:
+					break;
+			}
 			break;
 		case D3DTSS_COLORARG1:
 			per_texture.stages[Stage].colorArg1 = Value;
@@ -2492,6 +2505,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			break;
 		case D3DTSS_ALPHAOP:
 			per_texture.stages[Stage].alphaOp = static_cast<D3DTEXTUREOP>(Value);
+
+			switch (Value)
+			{
+				case D3DTOP_PREMODULATE:
+				case D3DTOP_BUMPENVMAP:
+				case D3DTOP_BUMPENVMAPLUMINANCE:
+				case D3DTOP_DOTPRODUCT3:
+					OutputDebugStringA("WARNING: Unsupported texture blending operation!");
+					break;
+
+				default:
+					break;
+			}
 			break;
 		case D3DTSS_ALPHAARG1:
 			per_texture.stages[Stage].alphaArg1 = Value;

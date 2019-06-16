@@ -48,6 +48,49 @@
 #define LIGHT_SPOT        2
 #define LIGHT_DIRECTIONAL 3
 
+#define TA_SELECTMASK        0x0000000f  // mask for arg selector
+#define TA_DIFFUSE           0x00000000  // select diffuse color (read only)
+#define TA_CURRENT           0x00000001  // select stage destination register (read/write)
+#define TA_TEXTURE           0x00000002  // select texture color (read only)
+#define TA_TFACTOR           0x00000003  // select D3DRS_TEXTUREFACTOR (read only)
+#define TA_SPECULAR          0x00000004  // select specular color (read only)
+#define TA_TEMP              0x00000005  // select temporary register color (read/write)
+#define TA_COMPLEMENT        0x00000010  // take 1.0 - x (read modifier)
+#define TA_ALPHAREPLICATE    0x00000020  // replicate alpha to color components (read modifier)
+
+#define TOP_DISABLE                    1
+#define TOP_SELECTARG1                 2
+#define TOP_SELECTARG2                 3
+#define TOP_MODULATE                   4
+#define TOP_MODULATE2X                 5
+#define TOP_MODULATE4X                 6
+#define TOP_ADD                        7
+#define TOP_ADDSIGNED                  8
+#define TOP_ADDSIGNED2X                9
+#define TOP_SUBTRACT                  10
+#define TOP_ADDSMOOTH                 11
+#define TOP_BLENDDIFFUSEALPHA         12
+#define TOP_BLENDTEXTUREALPHA         13
+#define TOP_BLENDFACTORALPHA          14
+#define TOP_BLENDTEXTUREALPHAPM       15
+#define TOP_BLENDCURRENTALPHA         16
+#define TOP_PREMODULATE               17
+#define TOP_MODULATEALPHA_ADDCOLOR    18
+#define TOP_MODULATECOLOR_ADDALPHA    19
+#define TOP_MODULATEINVALPHA_ADDCOLOR 20
+#define TOP_MODULATEINVCOLOR_ADDALPHA 21
+#define TOP_BUMPENVMAP                22
+#define TOP_BUMPENVMAPLUMINANCE       23
+#define TOP_DOTPRODUCT3               24
+#define TOP_MULTIPLYADD               25
+#define TOP_LERP                      26
+
+#define TSS_TCI_SELECT_MASK                          0x000F0000
+#define TSS_TCI_COORD_MASK                           0x0000FFFF
+#define TSS_TCI_CAMERASPACENORMAL                    0x00010000
+#define TSS_TCI_CAMERASPACEPOSITION                  0x00020000
+#define TSS_TCI_CAMERASPACEREFLECTIONVECTOR          0x00030000
+
 /*
 // Magic number to consider a null-entry.
 static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;

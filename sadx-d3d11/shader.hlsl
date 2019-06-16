@@ -46,10 +46,10 @@ struct Light
 
 struct TextureStage
 {
-	uint  colorOp;
+	uint  colorOp;               // D3DTOP
 	uint  colorArg1;             // D3DTA
 	uint  colorArg2;             // D3DTA
-	uint  alphaOp;
+	uint  alphaOp;               // D3DTOP
 	uint  alphaArg1;             // D3DTA
 	uint  alphaArg2;             // D3DTA
 	float bumpEnvMat00;
@@ -111,9 +111,8 @@ struct VS_INPUT
 
 struct FVFTexCoordOut
 {
-	uint componentCount;
-	bool divByLast;
-	float4 components;
+	nointerpolation uint componentCount;
+	nointerpolation bool divByLast;
 };
 
 struct VS_OUTPUT
@@ -126,7 +125,8 @@ struct VS_OUTPUT
 	float2 depth    : DEPTH;
 	float  fog      : FOG;
 
-	FVFTexCoordOut uv[8] : TEXCOORD;
+	FVFTexCoordOut uvmeta[8] : TEXCOORDMETA;
+	float4 uv[8] : TEXCOORD;
 };
 
 cbuffer PerSceneBuffer : register(b0)
@@ -495,16 +495,16 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 #if FVF_TEXCOUNT > 0
-	result.uv[0].componentCount = FVF_TEXCOORD0_SIZE;
+	result.uvmeta[0].componentCount = FVF_TEXCOORD0_SIZE;
 
 	#if FVF_TEXCOORD0_SIZE == 1
-		result.uv[0].components.x = input.tex0;
+		result.uv[0].x = input.tex0;
 	#elif FVF_TEXCOORD0_SIZE == 2
-		result.uv[0].components.xy = input.tex0.xy;
+		result.uv[0].xy = input.tex0.xy;
 	#elif FVF_TEXCOORD0_SIZE == 3
-		result.uv[0].components.xyz = input.tex0.xyz;
+		result.uv[0].xyz = input.tex0.xyz;
 	#elif FVF_TEXCOORD0_SIZE == 4
-		result.uv[0].components.xyzw = input.tex0.xyzw;
+		result.uv[0].xyzw = input.tex0.xyzw;
 	#endif
 
 #endif
@@ -537,16 +537,221 @@ bool compare(uint mode, float a, float b)
 	}
 }
 
+float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, in VS_OUTPUT input)
+{
+	float4 result;
+
+	switch (textureArg & TA_SELECTMASK)
+	{
+		case TA_DIFFUSE:
+			result = input.diffuse;
+			break;
+
+		case TA_CURRENT:
+			result = !stageNum ? input.diffuse : current;
+			break;
+
+		case TA_TEXTURE:
+			result = texel;
+			break;
+
+		case TA_TFACTOR:
+			result = float4(textureFactor, textureFactor, textureFactor, textureFactor);
+			break;
+
+		case TA_SPECULAR:
+			result = input.specular;
+			break;
+
+		case TA_TEMP:
+			result = tempreg;
+			break;
+	}
+
+	uint modifiers = textureArg & ~TA_SELECTMASK;
+
+	if (modifiers & TA_COMPLEMENT)
+	{
+		result = 1.0 - result;
+	}
+
+	if (modifiers & TA_ALPHAREPLICATE)
+	{
+		result.xyz = result.aaa;
+	}
+
+	return result;
+}
+
+float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorArg0, float4 texel, float4 current, float4 inputDiffuse)
+{
+	if (colorOp == TOP_SELECTARG1)
+	{
+		return colorArg1;
+	}
+
+	if (colorOp == TOP_SELECTARG2)
+	{
+		return colorArg2;
+	}
+
+	float4 result = (float4)0;
+
+	switch (colorOp)
+	{
+		default:
+			break;
+
+		case TOP_MODULATE:
+			result = colorArg1 * colorArg2;
+			break;
+		case TOP_MODULATE2X:
+			result = 2 * (colorArg1 * colorArg2);
+			break;
+		case TOP_MODULATE4X:
+			result = 4 * (colorArg1 * colorArg2);
+			break;
+		case TOP_ADD:
+			result = colorArg1 + colorArg2;
+			break;
+		case TOP_ADDSIGNED:
+			result = (colorArg1 + colorArg2) - 0.5;
+			break;
+		case TOP_ADDSIGNED2X:
+			result = 2 * ((colorArg1 + colorArg2) - 0.5);
+			break;
+		case TOP_SUBTRACT:
+			result = colorArg1 - colorArg2;
+			break;
+		case TOP_ADDSMOOTH:
+			result = (colorArg1 + colorArg2) - (colorArg1 * colorArg2);
+			break;
+		case TOP_BLENDDIFFUSEALPHA:
+		{
+			float alpha = inputDiffuse.a;
+			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			break;
+		}
+		case TOP_BLENDTEXTUREALPHA:
+		{
+			float alpha = texel.a;
+			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			break;
+		}
+		case TOP_BLENDFACTORALPHA:
+		{
+			float alpha = textureFactor;
+			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			break;
+		}
+		case TOP_BLENDTEXTUREALPHAPM:
+		{
+			float alpha = texel.a;
+			result = colorArg1 + (colorArg2 * (1 - alpha));
+			break;
+		}
+		case TOP_BLENDCURRENTALPHA:
+		{
+			float alpha = current.a;
+			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
+			break;
+		}
+
+		case TOP_PREMODULATE: // TODO: NOT SUPPORTED
+			break;
+
+		case TOP_MODULATEALPHA_ADDCOLOR:
+			result = float4(colorArg1.rgb + (colorArg2.rgb * colorArg1.a), colorArg1.a * colorArg2.a);
+			break;
+		case TOP_MODULATECOLOR_ADDALPHA:
+			result = float4(colorArg1.rgb * colorArg2.rgb, colorArg1.a + colorArg2.a);
+			break;
+		case TOP_MODULATEINVALPHA_ADDCOLOR:
+			result = float4(colorArg1.rgb + (colorArg2.rgb * (1 - colorArg1.a)), colorArg1.a * colorArg2.a);
+			break;
+		case TOP_MODULATEINVCOLOR_ADDALPHA:
+			result = float4((1 - colorArg1.rgb) * colorArg2.rgb, colorArg1.a + colorArg2.a);
+			break;
+
+		case TOP_BUMPENVMAP: // TODO: NOT SUPPORTED
+			break;
+		case TOP_BUMPENVMAPLUMINANCE: // TODO: NOT SUPPORTED
+			break;
+		case TOP_DOTPRODUCT3: // TODO: NOT SUPPORTED
+			break;
+
+		case TOP_MULTIPLYADD:
+			result = colorArg1 + colorArg2 * colorArg0;
+			break;
+
+		case TOP_LERP:
+			result = lerp(colorArg2, colorArg0, colorArg1.r);
+			break;
+	}
+
+	return result;
+}
+
 #ifndef RS_ALPHA
 [earlydepthstencil]
 #endif
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
-	float4 result = (float4)1;
-
 #if TEXTURE_STAGE_COUNT > 0
+	float4 current = (float4)0;
+	float4 tempreg = (float4)0;
+
+	float4 samples[TEXTURE_STAGE_COUNT];
+
+	for (uint s = 0; s < TEXTURE_STAGE_COUNT; s++)
 	{
-		int i = 0;
+		uint coordIndex = textureStages[s].texCoordIndex & TSS_TCI_COORD_MASK;
+		float4 texcoord = input.uv[coordIndex];
+		samples[s] = textures[s].Sample(samplers[s], texcoord);
+	}
+
+	bool colorDone = false;
+	bool alphaDone = false;
+
+	for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	{
+		TextureStage stage = textureStages[i];
+
+		if (stage.colorOp <= TOP_DISABLE && stage.alphaOp <= TOP_DISABLE)
+		{
+			break;
+		}
+
+		float4 texel = samples[i];
+
+		if (stage.colorOp == TOP_DISABLE)
+		{
+			colorDone = true;
+		}
+
+		if (!colorDone)
+		{
+			float4 colorArg1 = getArg(i, stage, stage.colorArg1, current, texel, tempreg, input);
+			float4 colorArg2 = getArg(i, stage, stage.colorArg2, current, texel, tempreg, input);
+			float4 colorArg0 = getArg(i, stage, stage.colorArg0, current, texel, tempreg, input);
+
+			current.rgb = textureOp(stage.colorOp, colorArg1, colorArg2, colorArg0, texel, current, input.diffuse).rgb;
+		}
+
+		if (stage.alphaOp == TOP_DISABLE)
+		{
+			alphaDone = true;
+		}
+
+		if (!alphaDone)
+		{
+			float4 alphaArg1 = getArg(i, stage, stage.alphaArg1, current, texel, tempreg, input);
+			float4 alphaArg2 = getArg(i, stage, stage.alphaArg2, current, texel, tempreg, input);
+			float4 alphaArg0 = getArg(i, stage, stage.alphaArg0, current, texel, tempreg, input);
+
+			current.a = textureOp(stage.alphaOp, alphaArg1, alphaArg2, alphaArg0, texel, current, input.diffuse).a;
+		}
+
 		// TODO: D3DTTFF_PROJECTED
 		/*
 			When texture projection is enabled for a texture stage, all four floating point
@@ -555,15 +760,16 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 			if this flag is specified with the D3DTTFF_COUNT3 flag, the first and second texture
 			coordinates are divided by the third coordinate before being passed to the rasterizer.
 		*/
-		TextureStage stage = textureStages[i];
-
-		result = textures[i].Sample(samplers[i], input.uv[i].components);
 	}
+
+	float4 result = current;
+#else
+	float4 result = (float4)1;
 #endif
 
 	result = saturate(result * saturate(input.diffuse + input.ambient));
-	result = saturate(result + input.specular);
-	result = saturate(result + input.emissive);
+	result.rgb = saturate(result.rgb + input.specular.rgb);
+	result.rgb = saturate(result.rgb + input.emissive.rgb);
 
 #ifdef RS_ALPHA
 	if (alphaReject == true)
