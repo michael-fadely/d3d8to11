@@ -10,8 +10,8 @@
 class PerSceneBuffer : public ICBuffer, dirty_impl
 {
 public:
-	dirty_t<matrix> view_matrix;
-	dirty_t<matrix> projection_matrix;
+	dirty_t<matrix, dirty_mode::on_assignment> view_matrix;
+	dirty_t<matrix, dirty_mode::on_assignment> projection_matrix;
 	dirty_t<float2> screen_dimensions;
 	dirty_t<float3> view_position;
 
@@ -38,14 +38,14 @@ public:
 class PerModelBuffer : public ICBuffer, dirty_impl
 {
 public:
-	dirty_t<matrix>                         world_matrix;
-	dirty_t<matrix>                         wv_matrix_inv_t;
-	dirty_t<matrix>                         texture_matrix;
-	std::array<dirty_t<Light>, LIGHT_COUNT> lights;
-	dirty_t<Material>                       material;
-	MaterialSources                         material_sources;
-	dirty_t<float4>                         ambient;
-	dirty_t<bool>                           color_vertex = dirty_t<bool>(true);
+	dirty_t<matrix, dirty_mode::on_assignment> world_matrix;
+	dirty_t<matrix, dirty_mode::on_assignment> wv_matrix_inv_t;
+	dirty_t<matrix, dirty_mode::on_assignment> texture_matrix;
+	std::array<dirty_t<Light>, LIGHT_COUNT>    lights;
+	dirty_t<Material>                          material;
+	MaterialSources                            material_sources;
+	dirty_t<float4>                            ambient;
+	dirty_t<bool>                              color_vertex = dirty_t<bool>(true);
 
 	void write(CBufferBase& cbuf) const override;
 

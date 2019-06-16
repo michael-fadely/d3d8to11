@@ -9,7 +9,11 @@ enum class dirty_mode
 	/**
 	* \brief Fast - always compare until marked as dirty.
 	*/
-	until_dirty
+	until_dirty,
+	/**
+	 * \brief Slowest - check upon each assignment, even if marked dirty.
+	 */
+	continuous
 };
 
 class dirty_impl
@@ -21,8 +25,25 @@ public:
 	virtual void mark() = 0;
 };
 
-template <typename T, dirty_mode set_mode = dirty_mode::until_dirty>
-class dirty_t
+template <typename T, dirty_mode set_mode, typename enable = void>
+class last_t;
+
+template <typename T, dirty_mode set_mode>
+class last_t<T, set_mode, std::enable_if_t<set_mode == dirty_mode::continuous>>
+{
+protected:
+	T _last {};
+};
+
+template <typename T, dirty_mode set_mode>
+class last_t<T, set_mode, std::enable_if_t<set_mode != dirty_mode::continuous>>
+{
+protected:
+	// nothing
+};
+
+template <typename T, dirty_mode set_mode = dirty_mode::continuous>
+class dirty_t : public last_t<T, set_mode>
 {
 protected:
 	T    _data {};
@@ -44,6 +65,11 @@ public:
 	void clear()
 	{
 		_dirty = false;
+
+		if constexpr (set_mode == dirty_mode::continuous)
+		{
+			_last = _data;
+		}
 	}
 
 	void mark()
@@ -85,6 +111,10 @@ protected:
 			{
 				_dirty = value != _data;
 			}
+		}
+		else if constexpr (set_mode == dirty_mode::continuous)
+		{
+			_dirty = _last != value;
 		}
 
 		_data = value;
