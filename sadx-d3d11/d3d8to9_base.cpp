@@ -136,6 +136,12 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterIdentifier(UINT Adapter, DWORD Fl
 {
 #if 1
 	// TODO
+	if (pIdentifier)
+	{
+		*pIdentifier = {};
+		return D3D_OK; // HACK
+	}
+
 	return D3DERR_INVALIDCALL;
 #else
 	if (pIdentifier == nullptr)
@@ -191,8 +197,19 @@ HRESULT STDMETHODCALLTYPE Direct3D8::EnumAdapterModes(UINT Adapter, UINT Mode, D
 
 HRESULT STDMETHODCALLTYPE Direct3D8::GetAdapterDisplayMode(UINT Adapter, D3DDISPLAYMODE* pMode)
 {
-	// TODO
-	return D3DERR_INVALIDCALL;
+	if (!pMode)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	const auto& element = *(current_adapter_modes[Adapter].end() - 1);
+
+	pMode->Format      = to_d3d8(element.Format);
+	pMode->Width       = element.Width;
+	pMode->Height      = element.Height;
+	pMode->RefreshRate = element.RefreshRate.Numerator / element.RefreshRate.Denominator;
+
+	return D3D_OK;
 	//return ProxyInterface->GetAdapterDisplayMode(Adapter, pMode);
 }
 
