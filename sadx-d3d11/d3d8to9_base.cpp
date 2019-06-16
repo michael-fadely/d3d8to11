@@ -54,7 +54,7 @@ void Direct3D8::create_native()
 		{
 			const DXGI_FORMAT dxgi = to_dxgi(format);
 
-			UINT count;
+			UINT count = 0;
 			auto hr = output->GetDisplayModeList(dxgi, 0, &count, nullptr);
 
 			if (FAILED(hr))
