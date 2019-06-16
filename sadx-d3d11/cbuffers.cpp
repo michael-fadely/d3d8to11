@@ -172,7 +172,8 @@ void PerPixelBuffer::set_color(uint color)
 
 bool TextureStage::dirty() const
 {
-	return colorOp.dirty() ||
+	return bound.dirty() ||
+	       colorOp.dirty() ||
 	       colorArg1.dirty() ||
 	       colorArg2.dirty() ||
 	       alphaOp.dirty() ||
@@ -192,6 +193,7 @@ bool TextureStage::dirty() const
 
 void TextureStage::clear()
 {
+	bound.clear();
 	colorOp.clear();
 	colorArg1.clear();
 	colorArg2.clear();
@@ -212,6 +214,7 @@ void TextureStage::clear()
 
 void TextureStage::mark()
 {
+	bound.mark();
 	colorOp.mark();
 	colorArg1.mark();
 	colorArg2.mark();
@@ -235,6 +238,7 @@ void TextureStages::write(CBufferBase& cbuf) const
 	for (auto& it : stages)
 	{
 		cbuf
+			<< it.bound
 			<< static_cast<uint>(it.colorOp.data())
 			<< it.colorArg1
 			<< it.colorArg2

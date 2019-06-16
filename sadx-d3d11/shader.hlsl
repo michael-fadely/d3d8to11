@@ -46,6 +46,7 @@ struct Light
 
 struct TextureStage
 {
+	bool  bound;                 // indicates if the texture is bound
 	uint  colorOp;               // D3DTOP
 	uint  colorArg1;             // D3DTA
 	uint  colorArg2;             // D3DTA
@@ -715,7 +716,15 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	{
 		uint coordIndex = textureStages[s].texCoordIndex & TSS_TCI_COORD_MASK;
 		float4 texcoord = input.uv[coordIndex];
-		samples[s] = textures[s].Sample(samplers[s], texcoord);
+
+		if (textureStages[s].bound)
+		{
+			samples[s] = textures[s].Sample(samplers[s], texcoord);
+		}
+		else
+		{
+			samples[s] = float4(1, 1, 1, 1);
+		}
 	}
 
 	bool colorDone = false;

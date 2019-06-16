@@ -2312,6 +2312,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	if (pTexture == nullptr)
 	{
+		per_texture.stages[Stage].bound = false;
 		context->PSSetShaderResources(Stage, 0, nullptr);
 
 		if (it != textures.end())
@@ -2345,6 +2346,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 		texture->AddRef();
 	}
 
+	per_texture.stages[Stage].bound = true;
 	context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
 	return D3D_OK;
 }

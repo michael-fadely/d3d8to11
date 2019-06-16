@@ -79,6 +79,7 @@ public:
 
 struct TextureStage : public dirty_impl
 {
+	dirty_t<bool>                     bound;
 	dirty_t<D3DTEXTUREOP>             colorOp;
 	dirty_t<uint>                     colorArg1; // D3DTA
 	dirty_t<uint>                     colorArg2; // D3DTA
