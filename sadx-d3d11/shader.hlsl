@@ -162,6 +162,8 @@ cbuffer PerPixelBuffer : register(b2)
 	bool  alphaReject;
 	uint  alphaRejectMode;
 	float alphaRejectThreshold;
+
+	float textureFactor;
 };
 
 cbuffer TextureStages : register(b3)
@@ -169,23 +171,8 @@ cbuffer TextureStages : register(b3)
 	TextureStage textureStages[TEXTURE_STAGE_COUNT];
 }
 
-Texture2D<float4> texture0 : register(t0);
-Texture2D<float4> texture1 : register(t1);
-Texture2D<float4> texture2 : register(t2);
-Texture2D<float4> texture3 : register(t3);
-Texture2D<float4> texture4 : register(t4);
-Texture2D<float4> texture5 : register(t5);
-Texture2D<float4> texture6 : register(t6);
-Texture2D<float4> texture7 : register(t7);
-
-SamplerState sampler0 : register(s0);
-SamplerState sampler1 : register(s1);
-SamplerState sampler2 : register(s2);
-SamplerState sampler3 : register(s3);
-SamplerState sampler4 : register(s4);
-SamplerState sampler5 : register(s5);
-SamplerState sampler6 : register(s6);
-SamplerState sampler7 : register(s7);
+Texture2D<float4> textures[TEXTURE_STAGE_COUNT];
+SamplerState samplers[TEXTURE_STAGE_COUNT];
 
 // From FixedFuncEMU.fx
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.
@@ -449,10 +436,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 				float theta      = clamp(lights[i].Theta, 0.0f, M_PI);
 				float theta2     = theta / 2.0f;
 				float cos_theta2 = cos(theta2);
-
-				float phi      = clamp(lights[i].Phi, theta, M_PI);
-				float phi2     = phi / 2.0f;
-				float cos_phi2 = cos(phi2);
+				float phi        = clamp(lights[i].Phi, theta, M_PI);
+				float phi2       = phi / 2.0f;
+				float cos_phi2   = cos(phi2);
 
 				float falloff  = lights[i].Falloff;
 
@@ -526,6 +512,31 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return result;
 }
 
+bool compare(uint mode, float a, float b)
+{
+	switch (mode)
+	{
+		case CMP_ALWAYS:
+			return true;
+		case CMP_NEVER:
+			return false;
+		case CMP_LESS:
+			return a < b;
+		case CMP_EQUAL:
+			return a == b;
+		case CMP_LESSEQUAL:
+			return a <= b;
+		case CMP_GREATER:
+			return a > b;
+		case CMP_NOTEQUAL:
+			return a != b;
+		case CMP_GREATEREQUAL:
+			return a >= b;
+		default:
+			return false;
+	}
+}
+
 #ifndef RS_ALPHA
 [earlydepthstencil]
 #endif
@@ -546,7 +557,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		*/
 		TextureStage stage = textureStages[i];
 
-		result = texture0.Sample(sampler0, input.uv[i].components);
+		result = textures[i].Sample(samplers[i], input.uv[i].components);
 	}
 #endif
 
@@ -559,35 +570,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	{
 		uint alpha = floor(result.a * 255);
 		uint threshold = floor(alphaRejectThreshold * 255);
-
-		switch (alphaRejectMode)
-		{
-			case CMP_NEVER:
-				clip(-1);
-				break;
-			case CMP_LESS:
-				clip(alpha < threshold ? 1 : -1);
-				break;
-			case CMP_EQUAL:
-				clip(alpha == threshold ? 1 : -1);
-				break;
-			case CMP_LESSEQUAL:
-				clip(alpha <= threshold ? 1 : -1);
-				break;
-			case CMP_GREATER:
-				clip(alpha > threshold ? 1 : -1);
-				break;
-			case CMP_NOTEQUAL:
-				clip(alpha != threshold ? 1 : -1);
-				break;
-			case CMP_GREATEREQUAL:
-				clip(alpha >= threshold ? 1 : -1);
-				break;
-
-			default:
-				result = float4(1, 0, 0, 1);
-				break;
-		}
+		clip(compare(alphaRejectMode, alpha, threshold) ? 1 : -1);
 	}
 #endif
 

@@ -1949,6 +1949,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		return D3DERR_INVALIDCALL;
 	}
 
+	// even if we do custom handling for a render state, we
+	// store its value so the caller can retrieve it later in
+	// Direct3DDevice8::GetRenderState
 	auto& ref = render_state_values[State];
 	ref = Value;
 
@@ -1984,6 +1987,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			blend_flags = (blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
 			break;
 		}
+
+		case D3DRS_TEXTUREFACTOR:
+			per_pixel.textureFactor = *reinterpret_cast<float*>(&Value);
+			break;
 
 		case D3DRS_FOGSTART:
 		case D3DRS_FOGEND:
