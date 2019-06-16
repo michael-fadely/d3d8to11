@@ -32,7 +32,6 @@ void Direct3DVertexBuffer8::create_native()
 	}
 
 	buffer.resize(desc8.Size);
-	buffer.shrink_to_fit();
 }
 // IDirect3DVertexBuffer8
 Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool)

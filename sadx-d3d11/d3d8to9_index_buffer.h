@@ -43,6 +43,6 @@ private:
 	UINT lock_offset = 0;
 	UINT lock_size   = 0;
 	DWORD lock_flags = 0;
-	std::vector<uint8_t> buffer;
+	dynarray<uint8_t> buffer;
 	Direct3DDevice8* const device8;
 };
