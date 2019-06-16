@@ -55,7 +55,7 @@ public:
 
 		if (size_ && old)
 		{
-			for (size_t i = 0; i < size_; i++)
+			for (size_t i = 0; i < std::min(size_, new_size); i++)
 			{
 				data_[i] = std::move(old[i]);
 			}
