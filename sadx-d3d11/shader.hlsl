@@ -777,6 +777,9 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 #ifdef RS_SPECULAR
 	result.rgb = saturate(result.rgb + input.specular.rgb);
+#endif
+
+#ifdef RS_LIGHTING
 	result.rgb = saturate(result.rgb + input.emissive.rgb);
 #endif
 
