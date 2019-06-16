@@ -409,6 +409,8 @@ void Direct3DDevice8::create_native()
 
 	palette_flag = supports_palettes();
 
+	// TODO: use more modern swap chain creation and management
+
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount       = 1;
