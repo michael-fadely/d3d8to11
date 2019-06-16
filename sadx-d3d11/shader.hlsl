@@ -164,7 +164,7 @@ cbuffer PerPixelBuffer : register(b2)
 	uint  alphaRejectMode;
 	float alphaRejectThreshold;
 
-	float textureFactor;
+	float4 textureFactor;
 };
 
 cbuffer TextureStages : register(b3)
@@ -507,7 +507,104 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	#elif FVF_TEXCOORD0_SIZE == 4
 		result.uv[0].xyzw = input.tex0.xyzw;
 	#endif
+#endif
 
+#if FVF_TEXCOUNT > 1
+	result.uvmeta[1].componentCount = FVF_TEXCOORD1_SIZE;
+
+	#if FVF_TEXCOORD1_SIZE == 1
+		result.uv[1].x = input.tex1;
+	#elif FVF_TEXCOORD1_SIZE == 2
+		result.uv[1].xy = input.tex1.xy;
+	#elif FVF_TEXCOORD1_SIZE == 3
+		result.uv[1].xyz = input.tex1.xyz;
+	#elif FVF_TEXCOORD1_SIZE == 4
+		result.uv[1].xyzw = input.tex1.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 2
+	result.uvmeta[2].componentCount = FVF_TEXCOORD2_SIZE;
+
+	#if FVF_TEXCOORD2_SIZE == 1
+		result.uv[2].x = input.tex2;
+	#elif FVF_TEXCOORD2_SIZE == 2
+		result.uv[2].xy = input.tex2.xy;
+	#elif FVF_TEXCOORD2_SIZE == 3
+		result.uv[2].xyz = input.tex2.xyz;
+	#elif FVF_TEXCOORD2_SIZE == 4
+		result.uv[2].xyzw = input.tex2.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 3
+	result.uvmeta[3].componentCount = FVF_TEXCOORD3_SIZE;
+
+	#if FVF_TEXCOORD3_SIZE == 1
+		result.uv[3].x = input.tex3;
+	#elif FVF_TEXCOORD3_SIZE == 2
+		result.uv[3].xy = input.tex3.xy;
+	#elif FVF_TEXCOORD3_SIZE == 3
+		result.uv[3].xyz = input.tex3.xyz;
+	#elif FVF_TEXCOORD3_SIZE == 4
+		result.uv[3].xyzw = input.tex3.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 4
+	result.uvmeta[4].componentCount = FVF_TEXCOORD4_SIZE;
+
+	#if FVF_TEXCOORD4_SIZE == 1
+		result.uv[4].x = input.tex4;
+	#elif FVF_TEXCOORD4_SIZE == 2
+		result.uv[4].xy = input.tex4.xy;
+	#elif FVF_TEXCOORD4_SIZE == 3
+		result.uv[4].xyz = input.tex4.xyz;
+	#elif FVF_TEXCOORD4_SIZE == 4
+		result.uv[4].xyzw = input.tex4.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 5
+	result.uvmeta[5].componentCount = FVF_TEXCOORD5_SIZE;
+
+	#if FVF_TEXCOORD5_SIZE == 1
+		result.uv[5].x = input.tex5;
+	#elif FVF_TEXCOORD5_SIZE == 2
+		result.uv[5].xy = input.tex5.xy;
+	#elif FVF_TEXCOORD5_SIZE == 3
+		result.uv[5].xyz = input.tex5.xyz;
+	#elif FVF_TEXCOORD5_SIZE == 4
+		result.uv[5].xyzw = input.tex5.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 6
+	result.uvmeta[6].componentCount = FVF_TEXCOORD6_SIZE;
+
+	#if FVF_TEXCOORD6_SIZE == 1
+		result.uv[6].x = input.tex6;
+	#elif FVF_TEXCOORD6_SIZE == 2
+		result.uv[6].xy = input.tex6.xy;
+	#elif FVF_TEXCOORD6_SIZE == 3
+		result.uv[6].xyz = input.tex6.xyz;
+	#elif FVF_TEXCOORD6_SIZE == 4
+		result.uv[6].xyzw = input.tex6.xyzw;
+	#endif
+#endif
+
+#if FVF_TEXCOUNT > 7
+	result.uvmeta[7].componentCount = FVF_TEXCOORD7_SIZE;
+
+	#if FVF_TEXCOORD7_SIZE == 1
+		result.uv[7].x = input.tex7;
+	#elif FVF_TEXCOORD7_SIZE == 2
+		result.uv[7].xy = input.tex7.xy;
+	#elif FVF_TEXCOORD7_SIZE == 3
+		result.uv[7].xyz = input.tex7.xyz;
+	#elif FVF_TEXCOORD7_SIZE == 4
+		result.uv[7].xyzw = input.tex7.xyzw;
+	#endif
 #endif
 
 	return result;
@@ -561,7 +658,7 @@ float4 getArg(uint stageNum, in TextureStage stage, uint textureArg, float4 curr
 			break;
 
 		case TA_TFACTOR:
-			result = float4(textureFactor, textureFactor, textureFactor, textureFactor);
+			result = textureFactor;
 			break;
 
 		case TA_SPECULAR:
@@ -609,6 +706,7 @@ float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorA
 	switch (colorOp)
 	{
 		default:
+			result = float4(1, 0, 0, 1);
 			break;
 
 		case TOP_MODULATE:
@@ -649,7 +747,7 @@ float4 textureOp(uint colorOp, float4 colorArg1, float4 colorArg2, float4 colorA
 		}
 		case TOP_BLENDFACTORALPHA:
 		{
-			float alpha = textureFactor;
+			float alpha = textureFactor.a;
 			result = (colorArg1 * alpha) + (colorArg2 * (1 - alpha));
 			break;
 		}

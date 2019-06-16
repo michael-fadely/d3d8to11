@@ -65,7 +65,7 @@ public:
 	dirty_t<bool>   alphaReject;
 	dirty_t<uint>   alphaRejectMode;
 	dirty_t<float>  alphaRejectThreshold;
-	dirty_t<float>  textureFactor;
+	dirty_t<float4> textureFactor;
 
 	void write(CBufferBase& cbuf) const override;
 

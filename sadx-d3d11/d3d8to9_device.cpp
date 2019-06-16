@@ -1975,8 +1975,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 		}
 
-		// TODO: D3DRS_TEXTUREFACTOR (multi-texture blending)
-
 		case D3DRS_COLORWRITEENABLE:
 		{
 			blend_flags = (blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
@@ -1984,7 +1982,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		}
 
 		case D3DRS_TEXTUREFACTOR:
-			per_pixel.textureFactor = *reinterpret_cast<float*>(&Value);
+			per_pixel.textureFactor = to_color4(Value);
 			break;
 
 		case D3DRS_FOGSTART:
@@ -2849,7 +2847,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT MinVertexIndex, UINT NumVertexIndices, UINT PrimitiveCount, const void* pIndexData, D3DFORMAT IndexDataFormat, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
 #if 1
-	// TODO: LotR RotK
+	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
 	ApplyClipPlanes();
