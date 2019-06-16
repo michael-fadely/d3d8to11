@@ -20,7 +20,7 @@ class dirty_impl
 {
 public:
 	virtual ~dirty_impl() = default;
-	virtual bool dirty() const = 0;
+	[[nodiscard]] virtual bool dirty() const = 0;
 	virtual void clear() = 0;
 	virtual void mark() = 0;
 };
@@ -57,7 +57,7 @@ public:
 		_data = initial_value;
 	}
 
-	bool dirty() const
+	[[nodiscard]] bool dirty() const
 	{
 		return _dirty;
 	}
@@ -77,7 +77,7 @@ public:
 		_dirty = true;
 	}
 
-	const T& data() const
+	[[nodiscard]] const T& data() const
 	{
 		return _data;
 	}
