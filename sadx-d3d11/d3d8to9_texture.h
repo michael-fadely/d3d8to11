@@ -4,6 +4,7 @@
 #include <vector>
 #include "d3d8types.hpp"
 #include "d3d8to9_resource.h"
+#include "dynarray.h"
 
 class Direct3DDevice8;
 class Direct3DSurface8;
@@ -71,7 +72,7 @@ public:
 	bool is_depth_stencil = false;
 
 private:
-	std::vector<ComPtr<Direct3DSurface8>> surfaces;
+	dynarray<ComPtr<Direct3DSurface8>> surfaces;
 
 	bool convert(UINT Level);
 	Direct3DDevice8* const device8;

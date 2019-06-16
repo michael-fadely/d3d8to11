@@ -6,8 +6,9 @@
 #include "stdafx.h"
 #include <iomanip>
 #include "d3d8to9.hpp"
+#include "dynarray.h"
 
-// TODO: instead of storing in map/vector, let d3d do the work if possible
+// TODO: let d3d do the memory management work if possible
 
 void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 {
@@ -131,14 +132,13 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	}
 
 	surfaces.resize(levels_);
-	surfaces.shrink_to_fit();
 
 	size_t level = 0;
 
-	for (auto& i : surfaces)
+	for (auto& it : surfaces)
 	{
-		i = new Direct3DSurface8(device8, this, level++);
-		i->create_native();
+		it = new Direct3DSurface8(device8, this, level++);
+		it->create_native();
 	}
 }
 // IDirect3DTexture8

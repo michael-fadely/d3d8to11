@@ -172,6 +172,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
+    <ClInclude Include="dynarray.h" />
     <ClInclude Include="hash_combine.h" />
     <ClInclude Include="int_multiple.h" />
     <ClInclude Include="Light.h" />
