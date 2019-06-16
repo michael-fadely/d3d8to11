@@ -77,8 +77,8 @@ public:
 		return *this;
 	}
 
-	template <typename T>
-	CBufferBase& operator<<(const dirty_t<T>& value)
+	template <typename T, dirty_mode set_mode>
+	CBufferBase& operator<<(const dirty_t<T, set_mode>& value)
 	{
 		return *this << value.data();
 	}
