@@ -103,8 +103,10 @@ static std::unordered_map<uint32_t, std::string> rs_strings = {
 	{ D3DRS_NORMALORDER, "D3DRS_NORMALORDER" }
 };
 
-static const D3D_FEATURE_LEVEL FEATURE_LEVELS[2] =
+static const std::array<D3D_FEATURE_LEVEL, 4> FEATURE_LEVELS =
 {
+	D3D_FEATURE_LEVEL_12_1,
+	D3D_FEATURE_LEVEL_12_0,
 	D3D_FEATURE_LEVEL_11_1,
 	D3D_FEATURE_LEVEL_11_0
 };
@@ -432,16 +434,13 @@ void Direct3DDevice8::create_native()
 #endif
 
 	auto error = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flag,
-	                                           FEATURE_LEVELS, 2,
+	                                           FEATURE_LEVELS.data(), static_cast<UINT>(FEATURE_LEVELS.size()),
 	                                           D3D11_SDK_VERSION, &desc, &swap_chain,
 	                                           &device, &feature_level, &context);
 
 	if (feature_level < D3D_FEATURE_LEVEL_11_0)
 	{
-		std::string msg = "Device does not meet the minimum required feature level (D3D_FEATURE_LEVEL_11_0).";
-		msg.append("\r\nThis mod utilizes interlocked operations which are only available in DirectX 11.X and Shader Model 5.X.");
-
-		throw std::runtime_error(msg.c_str());
+		throw std::runtime_error("Device does not meet the minimum required feature level (D3D_FEATURE_LEVEL_11_0).");
 	}
 
 	if (error != S_OK)
@@ -453,7 +452,6 @@ void Direct3DDevice8::create_native()
 
 	if (info_queue)
 	{
-		//printf("D3D11 debug info queue enabled\n");
 		OutputDebugStringA("D3D11 debug info queue enabled\n");
 		info_queue->SetMuteDebugOutput(FALSE);
 	}
@@ -3827,7 +3825,7 @@ void Direct3DDevice8::update_depth()
 	OutputDebugStringA(shit.str().c_str());
 
 	depth_desc.DepthEnable    = !!(depth_flags & DepthFlags::test_enabled);
-	depth_desc.DepthWriteMask = !!(depth_flags & DepthFlags::write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth_desc.DepthWriteMask = (depth_flags & DepthFlags::write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 
 	depth_desc.DepthFunc = static_cast<D3D11_COMPARISON_FUNC>(depth_flags & DepthFlags::comparison_mask);
 	depth_desc.FrontFace = {
