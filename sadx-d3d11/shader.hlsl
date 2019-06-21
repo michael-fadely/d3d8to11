@@ -814,11 +814,10 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	for (uint s = 0; s < TEXTURE_STAGE_COUNT; s++)
 	{
-		uint coordIndex = texture_stages[s].tex_coord_index & TSS_TCI_COORD_MASK;
-		float4 texcoord = input.uv[coordIndex];
-
 		if (texture_stages[s].bound)
 		{
+			uint coordIndex = texture_stages[s].tex_coord_index & TSS_TCI_COORD_MASK;
+			float4 texcoord = input.uv[coordIndex];
 			samples[s] = textures[s].Sample(samplers[s], texcoord);
 		}
 		else
