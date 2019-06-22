@@ -282,6 +282,14 @@ const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string
 	return shader_sources[path];
 }
 
+static constexpr auto SHADER_COMPILER_FLAGS =
+	D3DCOMPILE_PREFER_FLOW_CONTROL |
+	D3DCOMPILE_DEBUG
+#ifndef _DEBUG
+	| D3DCOMPILE_OPTIMIZATION_LEVEL3
+#endif
+;
+
 VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
@@ -306,7 +314,7 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
 	constexpr auto path = "shader.hlsl";
 	const auto& src = get_shader_source(path);
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -350,7 +358,7 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags)
 	constexpr auto path = "shader.hlsl";
 	const auto& src = get_shader_source(path);
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
 	if (FAILED(hr))
 	{
@@ -560,9 +568,34 @@ void Direct3DDevice8::create_native()
 	OutputDebugStringA("done\n");
 #endif
 
-	for (size_t i = 0; i < render_state_values.size(); i++)
+	blend_flags  = 0;
+	raster_flags = 0;
+	depth_flags  = 0;
+
+	// TODO: properly set default for D3DRS_ZENABLE; see below
+	// The default value for this render state is D3DZB_TRUE if a depth stencil was created along with the swap chain by setting
+	// the EnableAutoDepthStencil member of the D3DPRESENT_PARAMETERS structure to TRUE, and D3DZB_FALSE otherwise. 
+	SetRenderState(D3DRS_ZENABLE, TRUE);
+
+	SetRenderState(D3DRS_ZWRITEENABLE,     TRUE);
+	SetRenderState(D3DRS_FILLMODE,         D3DFILL_SOLID);
+	SetRenderState(D3DRS_SRCBLEND,         D3DBLEND_ONE);
+	SetRenderState(D3DRS_DESTBLEND,        D3DBLEND_ZERO);
+	SetRenderState(D3DRS_CULLMODE,         D3DCULL_CCW);
+	SetRenderState(D3DRS_ZFUNC,            D3DCMP_LESS);
+	SetRenderState(D3DRS_ALPHAFUNC,        D3DCMP_ALWAYS);
+	SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+	SetRenderState(D3DRS_FOGENABLE,        FALSE);
+	SetRenderState(D3DRS_SPECULARENABLE,   TRUE);
+	SetRenderState(D3DRS_LIGHTING,         TRUE);
+	SetRenderState(D3DRS_COLORVERTEX,      TRUE);
+	SetRenderState(D3DRS_LOCALVIEWER,      TRUE);
+	SetRenderState(D3DRS_BLENDOP,          D3DBLENDOP_ADD);
+	SetRenderState(D3DRS_COLORWRITEENABLE, 0xF);
+
+	for (auto& state : render_state_values)
 	{
-		SetRenderState(static_cast<D3DRENDERSTATETYPE>(i), render_state_values[i].data());
+		state.mark();
 	}
 
 	// set all the texture stage states to their defaults
@@ -597,6 +630,18 @@ void Direct3DDevice8::create_native()
 		SetTextureStageState(i, D3DTSS_ALPHAARG0, D3DTA_CURRENT);
 		SetTextureStageState(i, D3DTSS_RESULTARG, D3DTA_CURRENT);
 	}
+
+	blend_flags.mark();
+	raster_flags.mark();
+	depth_flags.mark();
+	FVF.mark();
+
+	per_scene.mark();
+	per_model.mark();
+	per_pixel.mark();
+	per_texture.mark();
+
+	update();
 }
 
 ShaderFlags::type ShaderFlags::sanitize(type flags)
@@ -681,31 +726,6 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	: present_params(parameters),
 	  d3d(d3d)
 {
-	blend_flags = BLEND_DEFAULT;
-	raster_flags = RASTER_DEFAULT;
-
-	render_state_values[D3DRS_ZENABLE]          = TRUE;
-	render_state_values[D3DRS_ZWRITEENABLE]     = TRUE;
-	render_state_values[D3DRS_FILLMODE]         = D3DFILL_SOLID;
-	render_state_values[D3DRS_SRCBLEND]         = D3DBLEND_ONE;
-	render_state_values[D3DRS_DESTBLEND]        = D3DBLEND_ZERO;
-	render_state_values[D3DRS_CULLMODE]         = D3DCULL_CCW;
-	render_state_values[D3DRS_ZFUNC]            = D3DCMP_LESS;
-	render_state_values[D3DRS_ALPHAFUNC]        = D3DCMP_ALWAYS;
-	render_state_values[D3DRS_ALPHABLENDENABLE] = FALSE;
-	render_state_values[D3DRS_FOGENABLE]        = FALSE;
-	render_state_values[D3DRS_SPECULARENABLE]   = TRUE;
-	render_state_values[D3DRS_LIGHTING]         = TRUE;
-	render_state_values[D3DRS_COLORVERTEX]      = TRUE;
-	render_state_values[D3DRS_LOCALVIEWER]      = TRUE;
-	render_state_values[D3DRS_BLENDOP]          = D3DBLENDOP_ADD;
-	render_state_values[D3DRS_COLORWRITEENABLE] = 0xF;
-
-	depth_flags = DepthFlags::write_enabled | DepthFlags::test_enabled | D3D11_COMPARISON_LESS_EQUAL;
-
-	per_scene.mark();
-	per_model.mark();
-	per_pixel.mark();
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)
@@ -1996,6 +2016,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_FOGENABLE:
 		{
 			// handled elsewhere
+			// TODO: don't do that shit
 			break;
 		}
 
@@ -2031,11 +2052,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_ZENABLE:
 		{
-			if (!ref.dirty())
-			{
-				break;
-			}
-
 			if (Value)
 			{
 				depth_flags = depth_flags.data() | DepthFlags::test_enabled;
@@ -2051,11 +2067,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_ZFUNC:
 		{
-			if (!ref.dirty())
-			{
-				break;
-			}
-
 			if (!Value)
 			{
 				return D3DERR_INVALIDCALL;
@@ -2068,11 +2079,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		}
 
 		case D3DRS_ZWRITEENABLE:
-			if (!ref.dirty())
-			{
-				break;
-			}
-
 			if (Value)
 			{
 				depth_flags = depth_flags.data() | DepthFlags::write_enabled;
@@ -3315,6 +3321,11 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}*/
 
+	if (!FVF.data())
+	{
+		return true;
+	}
+
 	FVF.clear();
 
 	auto key = shader_flags & ShaderFlags::vs_mask;
@@ -3810,6 +3821,7 @@ void Direct3DDevice8::update_depth()
 		return;
 	}
 
+	depth_flags.clear();
 	const auto it = depth_states.find(depth_flags);
 
 	if (it != depth_states.end())
@@ -3849,7 +3861,6 @@ void Direct3DDevice8::update_depth()
 
 	context->OMSetDepthStencilState(depth_state.Get(), 0);
 	depth_states[depth_flags] = std::move(depth_state);
-	depth_flags.clear();
 }
 
 void Direct3DDevice8::update_rasterizers()

@@ -45,7 +45,7 @@ public:
 	dirty_t<Material>                          material;
 	MaterialSources                            material_sources;
 	dirty_t<float4>                            ambient;
-	dirty_t<bool>                              color_vertex = dirty_t<bool>(true);
+	dirty_t<bool>                              color_vertex;
 
 	void write(CBufferBase& cbuf) const override;
 
