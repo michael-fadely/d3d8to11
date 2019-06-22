@@ -32,6 +32,7 @@ extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 #endif
 
 	auto result = new Direct3D8();
+	result->AddRef();
 
 	try
 	{

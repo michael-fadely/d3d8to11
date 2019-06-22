@@ -389,8 +389,7 @@ void Direct3DDevice8::create_depth_stencil()
 
 void Direct3DDevice8::create_render_target()
 {
-	// get the address of the back buffer
-	ID3D11Texture2D* pBackBuffer;
+	ID3D11Texture2D* pBackBuffer = nullptr;
 	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
 
 	D3D11_TEXTURE2D_DESC tex_desc {};
@@ -403,7 +402,6 @@ void Direct3DDevice8::create_render_target()
 
 	pBackBuffer->Release();
 
-	// set the composite render target as the back buffer
 	ComPtr<Direct3DSurface8> ds_surface;
 	depth_stencil->GetSurfaceLevel(0, &ds_surface);
 
@@ -952,6 +950,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateAdditionalSwapChain(D3DPRESENT_
 	}
 
 	*ppSwapChain = new Direct3DSwapChain8(this, SwapChainInterface);
+	(*ppSwapChain)->AddRef();
 
 	return D3D_OK;
 #endif
@@ -972,9 +971,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 	    pPresentationParameters->Windowed != present_params.Windowed)
 	{
 		present_params = *pPresentationParameters;
-		back_buffer = nullptr;
 
-		swap_chain->ResizeBuffers(0, present_params.BackBufferWidth, present_params.BackBufferHeight,
+		context->OMSetRenderTargets(0, nullptr, nullptr);
+
+		back_buffer = nullptr;
+		current_depth_stencil = nullptr;
+		current_render_target = nullptr;
+
+		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight,
 		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
 		create_depth_stencil();
@@ -1109,6 +1113,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	}
 
 	auto result = new Direct3DTexture8(this, Width, Height, Levels, Usage, Format, Pool);
+	result->AddRef();
 
 	try
 	{
@@ -1155,6 +1160,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVolumeTexture(UINT Width, UINT 
 	}
 
 	*ppVolumeTexture = new Direct3DVolumeTexture8(this, TextureInterface);
+	(*ppVolumeTexture)->AddRef();
 
 	return D3D_OK;
 #endif
@@ -1183,6 +1189,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateCubeTexture(UINT EdgeLength, UI
 	}
 
 	*ppCubeTexture = new Direct3DCubeTexture8(this, TextureInterface);
+	(*ppCubeTexture)->AddRef();
 
 	return D3D_OK;
 #endif
@@ -1197,6 +1204,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 
 	*ppVertexBuffer = nullptr;
 	auto result = new Direct3DVertexBuffer8(this, Length, Usage, FVF, Pool);
+	result->AddRef();
 
 	try
 	{
@@ -1229,6 +1237,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 
 	*ppIndexBuffer = nullptr;
 	auto result = new Direct3DIndexBuffer8(this, Length, Usage, Format, Pool);
+	result->AddRef();
 
 	try
 	{
@@ -1287,6 +1296,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateRenderTarget(UINT Width, UINT H
 	}
 
 	*ppSurface = new Direct3DSurface8(this, SurfaceInterface);
+	(*ppSurface)->AddRef();
 
 	return D3D_OK;
 #endif
@@ -1327,6 +1337,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateDepthStencilSurface(UINT Width,
 	}
 
 	*ppSurface = new Direct3DSurface8(this, SurfaceInterface);
+	(*ppSurface)->AddRef();
 
 	return D3D_OK;
 #endif
@@ -1372,6 +1383,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 	}
 
 	*ppSurface = new Direct3DSurface8(this, SurfaceInterface);
+	(*ppSurface)->AddRef();
 
 	return D3D_OK;
 #endif

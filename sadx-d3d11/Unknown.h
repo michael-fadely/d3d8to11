@@ -5,7 +5,7 @@
 
 class Unknown : public IUnknown
 {
-	volatile ULONG ref_count = 1;
+	volatile ULONG ref_count = 0;
 
 public:
 	virtual HRESULT __stdcall QueryInterface(const IID& riid, void** ppvObject) override;

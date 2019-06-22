@@ -335,6 +335,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CreateDevice(UINT Adapter, D3DDEVTYPE Devic
 	}
 
 	auto device = new Direct3DDevice8(this, present_params);
+	device->AddRef();
 
 	try
 	{
