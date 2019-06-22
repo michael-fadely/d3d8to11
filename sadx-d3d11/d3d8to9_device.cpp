@@ -2007,18 +2007,63 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_FOGSTART:
-		case D3DRS_FOGEND:
-		case D3DRS_FOGCOLOR:
-		case D3DRS_FOGTABLEMODE:
-		case D3DRS_FOGDENSITY:
-		case D3DRS_LIGHTING:
-		case D3DRS_SPECULARENABLE:
-		case D3DRS_FOGENABLE:
-		{
-			// handled elsewhere
-			// TODO: don't do that shit
+			per_pixel.fog_start = *reinterpret_cast<float*>(&Value);
 			break;
-		}
+
+		case D3DRS_FOGEND:
+			per_pixel.fog_end = *reinterpret_cast<float*>(&Value);
+			break;
+
+		case D3DRS_FOGCOLOR:
+			per_pixel.fog_color = to_color4(Value);
+			break;
+
+		case D3DRS_FOGTABLEMODE:
+			per_pixel.fog_mode = Value;
+			break;
+
+		case D3DRS_FOGDENSITY:
+			per_pixel.fog_density = *reinterpret_cast<float*>(&Value);
+			break;
+
+		case D3DRS_SPECULARENABLE:
+			if (Value != 0)
+			{
+				shader_flags |= ShaderFlags::rs_specular;
+			}
+			else
+			{
+				shader_flags &= ~ShaderFlags::rs_specular;
+			}
+
+			ref.clear();
+			break;
+
+		case D3DRS_LIGHTING:
+			if (Value != 1)
+			{
+				shader_flags &= ~ShaderFlags::rs_lighting;
+			}
+			else
+			{
+				shader_flags |= ShaderFlags::rs_lighting;
+			}
+
+			ref.clear();
+			break;
+
+		case D3DRS_FOGENABLE:
+			if (Value != 0)
+			{
+				shader_flags |= ShaderFlags::rs_fog;
+			}
+			else
+			{
+				shader_flags &= ~ShaderFlags::rs_fog;
+			}
+
+			ref.clear();
+			break;
 
 		case D3DRS_ALPHATESTENABLE:
 		{
@@ -2126,6 +2171,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_ALPHABLENDENABLE:
 			ref.clear();
 			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
+
+			if (Value != 1)
+			{
+				shader_flags &= ~ShaderFlags::rs_alpha;
+			}
+			else
+			{
+				shader_flags |= ShaderFlags::rs_alpha;
+			}
+
 			break;
 
 		case D3DRS_BLENDOP:
@@ -3555,12 +3610,6 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_per_pixel()
 {
-	per_pixel.fog_mode    = render_state_values[D3DRS_FOGTABLEMODE];
-	per_pixel.fog_start   = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGSTART].data());
-	per_pixel.fog_end     = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGEND].data());
-	per_pixel.fog_density = *reinterpret_cast<const float*>(&render_state_values[D3DRS_FOGDENSITY].data());
-	per_pixel.fog_color   = to_color4(render_state_values[D3DRS_FOGCOLOR]);
-
 	if (!per_pixel.dirty())
 	{
 		return;
@@ -3694,57 +3743,7 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 
 void Direct3DDevice8::update_shaders()
 {
-	auto& fog_enable = render_state_values[D3DRS_FOGENABLE];
-
-	if (fog_enable.data() != 0)
-	{
-		shader_flags |= ShaderFlags::rs_fog;
-	}
-	else
-	{
-		shader_flags &= ~ShaderFlags::rs_fog;
-	}
-
-	fog_enable.clear();
-
-	auto& lighting = render_state_values[D3DRS_LIGHTING];
-
-	if (lighting != 1 && shader_flags & D3DFVF_NORMAL)
-	{
-		shader_flags &= ~ShaderFlags::rs_lighting;
-	}
-	else
-	{
-		shader_flags |= ShaderFlags::rs_lighting;
-	}
-
-	lighting.clear();
-
-	auto& specular = render_state_values[D3DRS_SPECULARENABLE];
-
-	if (specular.data() != 0 && shader_flags & ShaderFlags::rs_lighting)
-	{
-		shader_flags |= ShaderFlags::rs_specular;
-	}
-	else
-	{
-		shader_flags &= ~ShaderFlags::rs_specular;
-	}
-
-	specular.clear();
-
-	auto& alpha = render_state_values[D3DRS_ALPHABLENDENABLE];
-
-	if (alpha.data() != 1)
-	{
-		shader_flags &= ~ShaderFlags::rs_alpha;
-	}
-	else
-	{
-		shader_flags |= ShaderFlags::rs_alpha;
-	}
-
-	alpha.clear();
+	shader_flags = ShaderFlags::sanitize(shader_flags);
 
 	if (last_shader_flags == shader_flags)
 	{
