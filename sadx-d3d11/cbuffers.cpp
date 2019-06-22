@@ -63,7 +63,7 @@ inline CBufferBase& operator<<(CBufferBase& buffer, const MaterialSources& data)
 
 void PerModelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << world_matrix << wv_matrix_inv_t << texture_matrix
+	cbuf << world_matrix << wv_matrix_inv_t
 		<< material_sources << ambient << color_vertex;
 
 	for (const auto& light : lights)
@@ -84,7 +84,7 @@ bool PerModelBuffer::dirty() const
 		}
 	}
 
-	return world_matrix.dirty() || wv_matrix_inv_t.dirty() || texture_matrix.dirty() ||
+	return world_matrix.dirty() || wv_matrix_inv_t.dirty() ||
 	       material.dirty() || material_sources.dirty() || ambient.dirty() || color_vertex.dirty();
 }
 
@@ -97,7 +97,6 @@ void PerModelBuffer::clear()
 
 	world_matrix.clear();
 	wv_matrix_inv_t.clear();
-	texture_matrix.clear();
 	material.clear();
 	material_sources.clear();
 	ambient.clear();
@@ -113,7 +112,6 @@ void PerModelBuffer::mark()
 
 	world_matrix.mark();
 	wv_matrix_inv_t.mark();
-	texture_matrix.mark();
 	material.mark();
 	material_sources.mark();
 	ambient.mark();
@@ -168,6 +166,7 @@ void PerPixelBuffer::mark()
 bool TextureStage::dirty() const
 {
 	return bound.dirty() ||
+	       transform.dirty() ||
 	       color_op.dirty() ||
 	       color_arg1.dirty() ||
 	       color_arg2.dirty() ||
@@ -189,6 +188,7 @@ bool TextureStage::dirty() const
 void TextureStage::clear()
 {
 	bound.clear();
+	transform.clear();
 	color_op.clear();
 	color_arg1.clear();
 	color_arg2.clear();
@@ -210,6 +210,7 @@ void TextureStage::clear()
 void TextureStage::mark()
 {
 	bound.mark();
+	transform.mark();
 	color_op.mark();
 	color_arg1.mark();
 	color_arg2.mark();
@@ -234,6 +235,7 @@ void TextureStages::write(CBufferBase& cbuf) const
 	{
 		cbuf
 			<< it.bound
+			<< it.transform
 			<< static_cast<uint>(it.color_op.data())
 			<< it.color_arg1
 			<< it.color_arg2

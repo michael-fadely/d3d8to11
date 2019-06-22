@@ -40,7 +40,6 @@ class PerModelBuffer : public ICBuffer, dirty_impl
 public:
 	dirty_t<matrix, dirty_mode::on_assignment> world_matrix;
 	dirty_t<matrix, dirty_mode::on_assignment> wv_matrix_inv_t;
-	dirty_t<matrix, dirty_mode::on_assignment> texture_matrix;
 	std::array<dirty_t<Light>, LIGHT_COUNT>    lights;
 	dirty_t<Material>                          material;
 	MaterialSources                            material_sources;
@@ -77,23 +76,24 @@ public:
 
 struct TextureStage : dirty_impl
 {
-	dirty_t<bool>                     bound;
-	dirty_t<D3DTEXTUREOP>             color_op;
-	dirty_t<uint>                     color_arg1; // D3DTA
-	dirty_t<uint>                     color_arg2; // D3DTA
-	dirty_t<D3DTEXTUREOP>             alpha_op;
-	dirty_t<uint>                     alpha_arg1; // D3DTA
-	dirty_t<uint>                     alpha_arg2; // D3DTA
-	dirty_t<float>                    bump_env_mat00;
-	dirty_t<float>                    bump_env_mat01;
-	dirty_t<float>                    bump_env_mat10;
-	dirty_t<float>                    bump_env_mat11;
-	dirty_t<uint>                     tex_coord_index; // D3DTSS_TCI
-	dirty_t<float>                    bump_env_lscale;
-	dirty_t<float>                    bump_env_loffset;
-	dirty_t<D3DTEXTURETRANSFORMFLAGS> texture_transform_flags;
-	dirty_t<uint>                     color_arg0; // D3DTA
-	dirty_t<uint>                     alpha_arg0; // D3DTA
+	dirty_t<bool>                            bound;
+	dirty_t<matrix, dirty_mode::until_dirty> transform;
+	dirty_t<D3DTEXTUREOP>                    color_op;
+	dirty_t<uint>                            color_arg1; // D3DTA
+	dirty_t<uint>                            color_arg2; // D3DTA
+	dirty_t<D3DTEXTUREOP>                    alpha_op;
+	dirty_t<uint>                            alpha_arg1; // D3DTA
+	dirty_t<uint>                            alpha_arg2; // D3DTA
+	dirty_t<float>                           bump_env_mat00;
+	dirty_t<float>                           bump_env_mat01;
+	dirty_t<float>                           bump_env_mat10;
+	dirty_t<float>                           bump_env_mat11;
+	dirty_t<uint>                            tex_coord_index; // D3DTSS_TCI
+	dirty_t<float>                           bump_env_lscale;
+	dirty_t<float>                           bump_env_loffset;
+	dirty_t<D3DTEXTURETRANSFORMFLAGS>        texture_transform_flags;
+	dirty_t<uint>                            color_arg0; // D3DTA
+	dirty_t<uint>                            alpha_arg0; // D3DTA
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;

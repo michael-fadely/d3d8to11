@@ -87,6 +87,7 @@
 
 #define TSS_TCI_SELECT_MASK                          0x000F0000
 #define TSS_TCI_COORD_MASK                           0x0000FFFF
+#define TSS_TCI_PASSTHRU                             0x00000000
 #define TSS_TCI_CAMERASPACENORMAL                    0x00010000
 #define TSS_TCI_CAMERASPACEPOSITION                  0x00020000
 #define TSS_TCI_CAMERASPACEREFLECTIONVECTOR          0x00030000

@@ -1714,7 +1714,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 			break;
 
 		case D3DTS_TEXTURE0:
-			per_model.texture_matrix = *pMatrix;
+		case D3DTS_TEXTURE1:
+		case D3DTS_TEXTURE2:
+		case D3DTS_TEXTURE3:
+		case D3DTS_TEXTURE4:
+		case D3DTS_TEXTURE5:
+		case D3DTS_TEXTURE6:
+		case D3DTS_TEXTURE7:
+			per_texture.stages[State - D3DTS_TEXTURE0].transform = *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
@@ -1747,7 +1754,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE St
 			break;
 
 		case D3DTS_TEXTURE0:
-			*pMatrix = per_model.texture_matrix;
+		case D3DTS_TEXTURE1:
+		case D3DTS_TEXTURE2:
+		case D3DTS_TEXTURE3:
+		case D3DTS_TEXTURE4:
+		case D3DTS_TEXTURE5:
+		case D3DTS_TEXTURE6:
+		case D3DTS_TEXTURE7:
+			*pMatrix = per_texture.stages[State - D3DTS_TEXTURE0].transform;
 			break;
 
 		case D3DTS_WORLD:
@@ -1779,8 +1793,18 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::MultiplyTransform(D3DTRANSFORMSTATETY
 			break;
 
 		case D3DTS_TEXTURE0:
-			per_model.texture_matrix = per_model.texture_matrix * *pMatrix;
+		case D3DTS_TEXTURE1:
+		case D3DTS_TEXTURE2:
+		case D3DTS_TEXTURE3:
+		case D3DTS_TEXTURE4:
+		case D3DTS_TEXTURE5:
+		case D3DTS_TEXTURE6:
+		case D3DTS_TEXTURE7:
+		{
+			auto& t = per_texture.stages[State - D3DTS_TEXTURE0].transform;
+			t = t * *pMatrix;
 			break;
+		}
 
 		case D3DTS_WORLD:
 			per_model.world_matrix = per_model.world_matrix * *pMatrix;

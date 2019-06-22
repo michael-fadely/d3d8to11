@@ -49,23 +49,24 @@ struct Light
 
 struct TextureStage
 {
-	bool  bound;                  // indicates if the texture is bound
-	uint  color_op;               // D3DTOP
-	uint  color_arg1;             // D3DTA
-	uint  color_arg2;             // D3DTA
-	uint  alpha_op;               // D3DTOP
-	uint  alpha_arg1;             // D3DTA
-	uint  alpha_arg2;             // D3DTA
-	float bump_env_mat00;
-	float bump_env_mat01;
-	float bump_env_mat10;
-	float bump_env_mat11;
-	uint  tex_coord_index;         // D3DTSS_TCI
-	float bump_env_lscale;
-	float bump_env_loffset;
-	uint  texture_transform_flags;
-	uint  color_arg0;             // D3DTA
-	uint  alpha_arg0;             // D3DTA
+	bool   bound;                  // indicates if the texture is bound
+	matrix transform;              // texture coordinate transformation
+	uint   color_op;               // D3DTOP
+	uint   color_arg1;             // D3DTA
+	uint   color_arg2;             // D3DTA
+	uint   alpha_op;               // D3DTOP
+	uint   alpha_arg1;             // D3DTA
+	uint   alpha_arg2;             // D3DTA
+	float  bump_env_mat00;
+	float  bump_env_mat01;
+	float  bump_env_mat10;
+	float  bump_env_mat11;
+	uint   tex_coord_index;         // D3DTSS_TCI
+	float  bump_env_lscale;
+	float  bump_env_loffset;
+	uint   texture_transform_flags;
+	uint   color_arg0;             // D3DTA
+	uint   alpha_arg0;             // D3DTA
 };
 
 #define MAKE_TEXN(N) \
@@ -122,6 +123,8 @@ struct FVFTexCoordOut
 struct VS_OUTPUT
 {
 	float4 position : SV_POSITION;
+	float3 normal   : NORMAL0;
+	float3 w_normal : NORMAL1;
 	float4 ambient  : COLOR0;
 	float4 diffuse  : COLOR1;
 	float4 specular : COLOR2;
@@ -145,7 +148,6 @@ cbuffer PerModelBuffer : register(b1)
 {
 	matrix world_matrix;
 	matrix wv_matrix_inv_t;
-	matrix texture_matrix;
 
 	MaterialSources material_sources;
 	float4 global_ambient;
@@ -252,6 +254,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 #endif
 
 	result.depth = result.position.zw;
+
+#ifdef FVF_NORMAL
+	result.normal   = input.normal;
+	result.w_normal = normalize(mul((float3x3)world_matrix, input.normal));
+#endif
 
 	if (color_vertex == true)
 	{
@@ -392,7 +399,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	float4 c_d = result.diffuse;
 	float4 c_s = result.specular;
 
-	float3 N = normalize(mul((float3x3)world_matrix, input.normal));
+	float3 N = result.w_normal;
 
 	#ifdef RS_SPECULAR
 		float p = max(0, material.power);
@@ -808,6 +815,31 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 	return result;
 }
 
+float4 fix_coord_components(uint count, float4 coords)
+{
+	float4 result = coords;
+
+	switch (count)
+	{
+		case 1:
+			result.yzw = float3(0, 0, 1);
+			break;
+
+		case 2:
+			result.zw = float2(0, 1);
+			break;
+
+		case 3:
+			result.w = 1;
+			break;
+
+		default:
+			break;
+	}
+
+	return result;
+}
+
 #ifndef RS_ALPHA
 [earlydepthstencil]
 #endif
@@ -823,8 +855,36 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	{
 		if (texture_stages[s].bound)
 		{
-			uint coordIndex = texture_stages[s].tex_coord_index & TSS_TCI_COORD_MASK;
-			float4 texcoord = input.uv[coordIndex];
+			uint coord_flags = texture_stages[s].tex_coord_index;
+
+			uint coord_index = coord_flags & TSS_TCI_COORD_MASK;
+			uint coord_caps = coord_flags & TSS_TCI_SELECT_MASK;
+			uint component_count = input.uvmeta[s].component_count;
+
+			float4 texcoord = input.uv[coord_index];
+
+			switch (coord_caps)
+			{
+				case TSS_TCI_PASSTHRU:
+					break;
+
+				case TSS_TCI_CAMERASPACENORMAL:
+					texcoord = mul(input.normal, wv_matrix_inv_t);
+					texcoord = mul(texture_stages[s].transform, fix_coord_components(component_count, texcoord));
+					break;
+
+				case TSS_TCI_CAMERASPACEPOSITION:
+					// TODO: TSS_TCI_CAMERASPACEPOSITION
+					break;
+
+				case TSS_TCI_CAMERASPACEREFLECTIONVECTOR:
+					// TODO: TSS_TCI_CAMERASPACEREFLECTIONVECTOR
+					break;
+
+				default:
+					return float4(1, 0, 0, 1);
+			}
+
 			samples[s] = textures[s].Sample(samplers[s], texcoord);
 		}
 		else
