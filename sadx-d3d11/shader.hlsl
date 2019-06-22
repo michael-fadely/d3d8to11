@@ -2,12 +2,15 @@
 #include "include.hlsli"
 
 #ifndef LIGHT_COUNT
-#define LIGHT_COUNT 8
+	#define LIGHT_COUNT 8
 #endif
 
 #ifndef FVF_TEXCOUNT
 	#define FVF_TEXCOUNT 0
 #endif
+
+// Enhancements
+#define RADIAL_FOG
 
 struct Material
 {
@@ -239,7 +242,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	result.position = mul(view_matrix, result.position);
 
-	result.fog = result.position.z;
+	#ifdef RADIAL_FOG
+		result.fog = length(view_position - world_position);
+	#else
+		result.fog = result.position.z;
+	#endif
 
 	result.position = mul(projection_matrix, result.position);
 #endif
