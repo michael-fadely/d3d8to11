@@ -591,6 +591,11 @@ void Direct3DDevice8::create_native()
 	SetRenderState(D3DRS_BLENDOP,          D3DBLENDOP_ADD);
 	SetRenderState(D3DRS_COLORWRITEENABLE, 0xF);
 
+	SetRenderState(D3DRS_AMBIENTMATERIALSOURCE,  D3DMCS_MATERIAL);
+	SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE,  D3DMCS_COLOR1);
+	SetRenderState(D3DRS_SPECULARMATERIALSOURCE, D3DMCS_COLOR2);
+	SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
+
 	for (auto& state : render_state_values)
 	{
 		state.mark();
@@ -628,6 +633,10 @@ void Direct3DDevice8::create_native()
 		SetTextureStageState(i, D3DTSS_ALPHAARG0, D3DTA_CURRENT);
 		SetTextureStageState(i, D3DTSS_RESULTARG, D3DTA_CURRENT);
 	}
+
+	D3DMATERIAL8 material {};
+	material.Diffuse = { 1.0f, 1.0f, 1.0f, 1.0f };
+	SetMaterial(&material);
 
 	blend_flags.mark();
 	raster_flags.mark();
