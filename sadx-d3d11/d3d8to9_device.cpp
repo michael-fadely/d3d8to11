@@ -595,6 +595,15 @@ void Direct3DDevice8::create_native()
 	SetRenderState(D3DRS_SPECULARMATERIALSOURCE, D3DMCS_COLOR2);
 	SetRenderState(D3DRS_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
 
+	SetRenderState(D3DRS_STENCILENABLE,    FALSE);
+	SetRenderState(D3DRS_STENCILFAIL,      D3DSTENCILOP_KEEP);
+	SetRenderState(D3DRS_STENCILZFAIL,     D3DSTENCILOP_KEEP);
+	SetRenderState(D3DRS_STENCILPASS,      D3DSTENCILOP_KEEP);
+	SetRenderState(D3DRS_STENCILFUNC,      D3DCMP_ALWAYS);
+	SetRenderState(D3DRS_STENCILREF,       0);
+	SetRenderState(D3DRS_STENCILMASK,      0xFFFFFFFF);
+	SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
+
 	for (auto& state : render_state_values)
 	{
 		state.mark();
