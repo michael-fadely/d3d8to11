@@ -9,8 +9,21 @@
 	#define FVF_TEXCOUNT 0
 #endif
 
+#ifdef RS_LIGHTING
+	#ifdef FVF_RHW
+		#undef RS_LIGHTING
+	#endif
+#endif
+
 // Enhancements
+
 #define RADIAL_FOG
+
+#if 1
+	#define PIXEL_LIGHTING
+#else
+	#define VERTEX_LIGHTING
+#endif
 
 struct Material
 {
@@ -122,15 +135,16 @@ struct FVFTexCoordOut
 
 struct VS_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float3 normal   : NORMAL0;
-	float3 w_normal : NORMAL1;
-	float4 ambient  : COLOR0;
-	float4 diffuse  : COLOR1;
-	float4 specular : COLOR2;
-	float4 emissive : COLOR3;
-	float2 depth    : DEPTH;
-	float  fog      : FOG;
+	float4 position   : SV_POSITION;
+	float3 w_position : POSITION;
+	float3 normal     : NORMAL0;
+	float3 w_normal   : NORMAL1;
+	float4 ambient    : COLOR0;
+	float4 diffuse    : COLOR1;
+	float4 specular   : COLOR2;
+	float4 emissive   : COLOR3;
+	float2 depth      : DEPTH;
+	float  fog        : FOG;
 
 	FVFTexCoordOut uvmeta[8] : TEXCOORDMETA;
 	float4 uv[8] : TEXCOORD;
@@ -221,11 +235,148 @@ float4 black_not_lit(float4 color)
 #endif
 }
 
+void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 in_specular,
+                      in float3 world_position, in float3 world_normal,
+                     out float4 out_diffuse,   out float4 out_specular)
+{
+	float4 ambient  = float4(0, 0, 0, 0);
+	float4 diffuse  = float4(0, 0, 0, 0);
+	float4 specular = float4(0, 0, 0, 0);
+
+	float4 c_a = in_ambient;
+	float4 c_d = in_diffuse;
+	float4 c_s = in_specular;
+
+	out_diffuse  = c_d;
+	out_specular = c_s;
+
+	#ifdef RS_SPECULAR
+		float p = max(0, material.power);
+		float3 view_dir = normalize(view_position - world_position.xyz);
+	#endif
+
+	for (uint i = 0; i < LIGHT_COUNT; ++i)
+	{
+		if (lights[i].enabled == false)
+		{
+			break;
+		}
+
+		// exceptions to the naming style for the sake of the formula
+		float Atten = 1.0f;
+		float Spot = 1.0f;
+
+		switch (lights[i].type)
+		{
+			default:
+				Atten = 1.0f;
+				Spot = 1.0f;
+				break;
+
+			case LIGHT_POINT:
+			{
+				float d = length(world_position.xyz - lights[i].position);
+
+				if (d <= lights[i].range)
+				{
+					float d2 = d * d;
+					Atten = 1.0f / (lights[i].attenuation0 + lights[i].attenuation1 * d + lights[i].attenuation2 * d2);
+				}
+				else
+				{
+					Atten = 0.0f;
+				}
+
+				Spot = 1.0f;
+				break;
+			}
+
+			case LIGHT_SPOT:
+			{
+				float3 Ldcs = normalize(-mul(mul((float3x3)world_matrix, lights[i].direction), (float3x3)view_matrix));
+				float3 Ldir = normalize(world_position.xyz - lights[i].position);
+
+				float rho = dot(Ldcs, Ldir);
+
+				float theta      = clamp(lights[i].theta, 0.0f, M_PI);
+				float theta2     = theta / 2.0f;
+				float cos_theta2 = cos(theta2);
+				float phi        = clamp(lights[i].phi, theta, M_PI);
+				float phi2       = phi / 2.0f;
+				float cos_phi2   = cos(phi2);
+
+				float falloff  = lights[i].falloff;
+
+				if (rho > cos_theta2)
+				{
+					Spot = 1.0f;
+				}
+				else if (rho <= cos_phi2)
+				{
+					Spot = 0.0f;
+				}
+				else
+				{
+					Spot = pow(max(0, (cos_theta2 - cos_phi2) / (rho - cos_phi2)), falloff);
+				}
+
+				break;
+			}
+		}
+
+		// exceptions to the naming style for the sake of the formula
+		float4 Ld       = lights[i].diffuse;
+		float3 Ldir     = normalize(-lights[i].direction);
+
+	#ifdef FVF_NORMAL
+		float3 N = world_normal;
+		float NdotLdir = saturate(dot(N, Ldir));
+	#else
+		float NdotLdir = 0;
+	#endif
+
+		// Diffuse Lighting = sum[c_d*Ld*(N.Ldir)*Atten*Spot]
+		diffuse += c_d * Ld * NdotLdir * Atten * Spot;
+
+		// sum(Atteni*Spoti*Lai)
+		ambient += Atten * Spot * lights[i].ambient;
+
+		#ifdef RS_SPECULAR
+			float4 Ls = lights[i].specular;
+			float3 H = normalize(view_dir + normalize(Ldir));
+
+			#ifdef FVF_NORMAL
+				float NdotH = max(0, dot(N, H));
+			#else
+				float NdotH = 0;
+			#endif
+
+			specular += Ls * pow(NdotH, p) * Atten * Spot;
+		#endif
+	}
+
+	// Ambient Lighting = c_a*[Ga + sum(Atteni*Spoti*Lai)]
+	ambient = saturate(c_a * saturate(global_ambient + saturate(ambient)));
+
+	/*
+		Diffuse components are clamped to be from 0 to 255, after all lights are processed and interpolated separately.
+		The resulting diffuse lighting value is a combination of the ambient, diffuse and emissive light values.
+	*/
+	diffuse = saturate(diffuse);
+
+	#ifdef RS_SPECULAR
+		specular = float4(saturate(c_s * saturate(specular)).rgb, 0);
+	#endif
+
+	out_diffuse.rgb = saturate(diffuse.rgb + ambient.rgb);
+	out_specular.rgb = specular.rgb;
+}
+
 VS_OUTPUT vs_main(VS_INPUT input)
 {
 	VS_OUTPUT result = (VS_OUTPUT)0;
 
-	float4 world_position = (float4)0;
+	float3 world_position = (float3)0;
 
 #ifdef FVF_RHW
 	float4 p = input.position;
@@ -240,12 +391,12 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	input.position.w = 1;
 	result.position = mul(world_matrix, input.position);
 
-	world_position = result.position;
+	result.w_position = result.position.xyz;
 
 	result.position = mul(view_matrix, result.position);
 
 	#ifdef RADIAL_FOG
-		result.fog = length(view_position - world_position);
+		result.fog = length(view_position - result.w_position);
 	#else
 		result.fog = result.position.z;
 	#endif
@@ -390,124 +541,14 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		result.specular = black_not_lit(material.specular);
 	}
 
-#if defined(RS_LIGHTING) && defined(FVF_NORMAL) && !defined(FVF_RHW)
-	float4 ambient  = float4(0, 0, 0, 0);
-	float4 diffuse  = float4(0, 0, 0, 0);
-	float4 specular = float4(0, 0, 0, 0);
+#if defined(VERTEX_LIGHTING) && RS_LIGHTING == 1
+	float4 diffuse;
+	float4 specular;
 
-	float4 c_a = result.ambient;
-	float4 c_d = result.diffuse;
-	float4 c_s = result.specular;
+	perform_lighting(result.ambient, result.diffuse, result.specular, result.w_position, result.w_normal,
+	                 diffuse, specular);
 
-	float3 N = result.w_normal;
-
-	#ifdef RS_SPECULAR
-		float p = max(0, material.power);
-		float3 view_dir = normalize(view_position - world_position.xyz);
-	#endif
-
-	for (uint i = 0; i < LIGHT_COUNT; ++i)
-	{
-		if (lights[i].enabled == false)
-		{
-			break;
-		}
-
-		// exceptions to the naming style for the sake of the formula
-		float Atten;
-		float Spot;
-
-		switch (lights[i].type)
-		{
-			default:
-				Atten = 1.0f;
-				Spot = 1.0f;
-				break;
-
-			case LIGHT_POINT:
-			{
-				float d = length(world_position.xyz - lights[i].position);
-
-				if (d <= lights[i].range)
-				{
-					float d2 = d * d;
-					Atten = 1.0f / (lights[i].attenuation0 + lights[i].attenuation1 * d + lights[i].attenuation2 * d2);
-				}
-				else
-				{
-					Atten = 0.0f;
-				}
-
-				Spot = 1.0f;
-				break;
-			}
-
-			case LIGHT_SPOT:
-			{
-				float3 Ldcs = normalize(-mul(mul((float3x3)world_matrix, lights[i].direction), (float3x3)view_matrix));
-				float3 Ldir = normalize(world_position.xyz - lights[i].position);
-
-				float rho = dot(Ldcs, Ldir);
-
-				float theta      = clamp(lights[i].theta, 0.0f, M_PI);
-				float theta2     = theta / 2.0f;
-				float cos_theta2 = cos(theta2);
-				float phi        = clamp(lights[i].phi, theta, M_PI);
-				float phi2       = phi / 2.0f;
-				float cos_phi2   = cos(phi2);
-
-				float falloff  = lights[i].falloff;
-
-				if (rho > cos_theta2)
-				{
-					Spot = 1.0f;
-				}
-				else if (rho <= cos_phi2)
-				{
-					Spot = 0.0f;
-				}
-				else
-				{
-					Spot = pow(max(0, (cos_theta2 - cos_phi2) / (rho - cos_phi2)), falloff);
-				}
-
-				break;
-			}
-		}
-
-		// exceptions to the naming style for the sake of the formula
-		float4 Ld       = lights[i].diffuse;
-		float3 Ldir     = normalize(-lights[i].direction);
-		float  NdotLdir = saturate(dot(N, Ldir));
-
-		// Diffuse Lighting = sum[c_d*Ld*(N.Ldir)*Atten*Spot]
-		diffuse += c_d * Ld * NdotLdir * Atten * Spot;
-
-		// sum(Atteni*Spoti*Lai)
-		ambient += Atten * Spot * lights[i].ambient;
-
-		#ifdef RS_SPECULAR
-			float4 Ls = lights[i].specular;
-			float3 H = normalize(view_dir + normalize(Ldir));
-			specular += Ls * pow(dot(N, H), p) * Atten * Spot;
-		#endif
-	}
-
-	// Ambient Lighting = c_a*[Ga + sum(Atteni*Spoti*Lai)]
-	ambient = saturate(c_a * saturate(global_ambient + saturate(ambient)));
-
-	/*
-		Diffuse components are clamped to be from 0 to 255, after all lights are processed and interpolated separately.
-		The resulting diffuse lighting value is a combination of the ambient, diffuse and emissive light values.
-	*/
-	diffuse = saturate(diffuse);
-
-	#ifdef RS_SPECULAR
-		specular = float4(saturate(c_s * saturate(specular)).rgb, 0);
-	#endif
-
-	result.ambient.rgb  = ambient.rgb;
-	result.diffuse.rgb  = saturate(diffuse.rgb + ambient.rgb);
+	result.diffuse.rgb  = saturate(result.emissive + diffuse.rgb);
 	result.specular.rgb = specular.rgb;
 #endif
 
@@ -845,6 +886,16 @@ float4 fix_coord_components(uint count, float4 coords)
 #endif
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
 {
+	float4 diffuse = input.diffuse;
+	float4 specular = input.specular;
+
+#if defined(PIXEL_LIGHTING) && RS_LIGHTING == 1
+	perform_lighting(input.ambient, input.diffuse, input.specular, input.w_position, normalize(input.w_normal),
+	                 diffuse, specular);
+
+	diffuse = saturate(diffuse + input.emissive);
+#endif
+
 #if TEXTURE_STAGE_COUNT > 0
 	float4 current = (float4)0;
 	float4 tempreg = (float4)0;
@@ -869,7 +920,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 					break;
 
 				case TSS_TCI_CAMERASPACENORMAL:
-					texcoord = mul(input.normal, wv_matrix_inv_t);
+					texcoord = float4(mul(input.normal, (float3x3)wv_matrix_inv_t), 1);
 					texcoord = mul(texture_stages[s].transform, fix_coord_components(component_count, texcoord));
 					break;
 
@@ -914,11 +965,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 		if (!color_done)
 		{
-			float4 color_arg1 = get_arg(i, stage, stage.color_arg1, current, texel, tempreg, input.diffuse, input.specular);
-			float4 color_arg2 = get_arg(i, stage, stage.color_arg2, current, texel, tempreg, input.diffuse, input.specular);
-			float4 color_arg0 = get_arg(i, stage, stage.color_arg0, current, texel, tempreg, input.diffuse, input.specular);
+			float4 color_arg1 = get_arg(i, stage, stage.color_arg1, current, texel, tempreg, diffuse, specular);
+			float4 color_arg2 = get_arg(i, stage, stage.color_arg2, current, texel, tempreg, diffuse, specular);
+			float4 color_arg0 = get_arg(i, stage, stage.color_arg0, current, texel, tempreg, diffuse, specular);
 
-			current.rgb = texture_op(stage.color_op, color_arg1, color_arg2, color_arg0, texel, current, input.diffuse).rgb;
+			current.rgb = texture_op(stage.color_op, color_arg1, color_arg2, color_arg0, texel, current, diffuse).rgb;
 		}
 
 		if (stage.alpha_op <= TOP_DISABLE)
@@ -928,11 +979,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 		if (!alpha_done)
 		{
-			float4 alpha_arg1 = get_arg(i, stage, stage.alpha_arg1, current, texel, tempreg, input.diffuse, input.specular);
-			float4 alpha_arg2 = get_arg(i, stage, stage.alpha_arg2, current, texel, tempreg, input.diffuse, input.specular);
-			float4 alpha_arg0 = get_arg(i, stage, stage.alpha_arg0, current, texel, tempreg, input.diffuse, input.specular);
+			float4 alpha_arg1 = get_arg(i, stage, stage.alpha_arg1, current, texel, tempreg, diffuse, specular);
+			float4 alpha_arg2 = get_arg(i, stage, stage.alpha_arg2, current, texel, tempreg, diffuse, specular);
+			float4 alpha_arg0 = get_arg(i, stage, stage.alpha_arg0, current, texel, tempreg, diffuse, specular);
 
-			current.a = texture_op(stage.alpha_op, alpha_arg1, alpha_arg2, alpha_arg0, texel, current, input.diffuse).a;
+			current.a = texture_op(stage.alpha_op, alpha_arg1, alpha_arg2, alpha_arg0, texel, current, diffuse).a;
 		}
 
 		// TODO: D3DTTFF_PROJECTED
@@ -951,12 +1002,12 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_SPECULAR
-	result.rgb = saturate(result.rgb + input.specular.rgb);
+	result.rgb = saturate(result.rgb + specular.rgb);
 #endif
 
-#ifdef RS_LIGHTING
-	result.rgb = saturate(result.rgb + input.emissive.rgb);
-#endif
+//#if RS_LIGHTING == 1
+//	result.rgb = saturate(result.rgb + input.emissive.rgb);
+//#endif
 
 #ifdef RS_ALPHA
 	if (alpha_reject == true)
