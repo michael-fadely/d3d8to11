@@ -21,8 +21,6 @@
 using namespace Microsoft::WRL;
 
 static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
-static constexpr uint32_t BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8) | (D3D11_COLOR_WRITE_ENABLE_ALL << BLEND_COLORMASK_SHIFT);
-static constexpr uint32_t RASTER_DEFAULT = D3DCULL_CCW | (D3DFILL_SOLID << 2);
 
 static std::unordered_map<uint32_t, std::string> rs_strings = {
 	{ D3DRS_ZENABLE, "D3DRS_ZENABLE" },
@@ -421,15 +419,16 @@ void Direct3DDevice8::create_native()
 
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
-	desc.BufferCount       = 1;
-	desc.BufferDesc.Format = to_dxgi(present_params.BackBufferFormat);
-	desc.BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferDesc.Width  = present_params.BackBufferWidth;
-	desc.BufferDesc.Height = present_params.BackBufferHeight;
-	desc.OutputWindow      = present_params.hDeviceWindow;
-	desc.SampleDesc.Count  = 1;
-	desc.Windowed          = present_params.Windowed;
-	desc.Flags             = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	desc.BufferCount        = 1;
+	desc.BufferDesc.Format  = to_dxgi(present_params.BackBufferFormat);
+	desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	desc.BufferDesc.Width   = present_params.BackBufferWidth;
+	desc.BufferDesc.Height  = present_params.BackBufferHeight;
+	desc.BufferDesc.Scaling = DXGI_MODE_SCALING_CENTERED;
+	desc.OutputWindow       = present_params.hDeviceWindow;
+	desc.SampleDesc.Count   = 1;
+	desc.Windowed           = present_params.Windowed;
+	desc.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	auto feature_level = static_cast<D3D_FEATURE_LEVEL>(0);
 
