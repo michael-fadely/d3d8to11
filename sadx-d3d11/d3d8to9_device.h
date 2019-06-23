@@ -54,7 +54,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr type vs_mask = mask;
-	static constexpr type ps_mask = mask; // TODO
+	static constexpr type ps_mask = (mask & ~fvf_mask) | light_sanitize_flags;
 #endif
 
 	static type sanitize(type flags);
