@@ -3982,18 +3982,18 @@ void Direct3DDevice8::update_depth()
 	if (depth_desc.StencilEnable)
 	{
 		const auto& stencil_flags = depthstencil_flags.stencil_flags.data();
-		D3D11_DEPTH_STENCILOP_DESC stencil_desc {};
+		D3D11_DEPTH_STENCILOP_DESC stencil_desc;
 
 		stencil_desc.StencilFailOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::fail_shift) & StencilFlags::op_mask);
 		stencil_desc.StencilDepthFailOp = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::zfail_shift) & StencilFlags::op_mask);
 		stencil_desc.StencilPassOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::pass_shift) & StencilFlags::op_mask);
 		stencil_desc.StencilFunc        = static_cast<D3D11_COMPARISON_FUNC>((stencil_flags >> StencilFlags::func_shift) & StencilFlags::op_mask);
 
-		depth_desc.FrontFace = stencil_desc;
-		depth_desc.BackFace  = stencil_desc;
+		depth_desc.StencilReadMask  = ((stencil_flags >> StencilFlags::read_shift) & StencilFlags::rw_mask);
+		depth_desc.StencilWriteMask = ((stencil_flags >> StencilFlags::write_shift) & StencilFlags::rw_mask);
 
-		depth_desc.StencilReadMask  = ((stencil_flags >> StencilFlags::read_mask) & StencilFlags::rw_mask);
-		depth_desc.StencilWriteMask = ((stencil_flags >> StencilFlags::write_mask) & StencilFlags::rw_mask);
+		depth_desc.FrontFace = stencil_desc;
+		depth_desc.BackFace = stencil_desc;
 	}
 	else
 	{

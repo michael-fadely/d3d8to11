@@ -82,8 +82,6 @@ struct StencilFlags
 	static constexpr type func_shift  = 12;
 
 	static constexpr type rw_mask    = 0xFF;
-	static constexpr type read_mask  = rw_mask;
-	static constexpr type write_mask = rw_mask;
 
 	static constexpr type read_shift = 16;
 	static constexpr type write_shift = 24;
