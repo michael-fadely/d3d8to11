@@ -5,7 +5,7 @@
 
 #include "stdafx.h"
 
-#include <d3d11_1.h>
+#include <d3d11_1.h> // TODO: switch to newer header (11.3, 11.4)
 #include <DirectXMath.h>
 #include <cassert>
 #include <fstream>
@@ -565,9 +565,9 @@ void Direct3DDevice8::create_native()
 	OutputDebugStringA("done\n");
 #endif
 
-	blend_flags  = 0;
-	raster_flags = 0;
-	depth_flags  = 0;
+	blend_flags        = 0;
+	raster_flags       = 0;
+	depthstencil_flags = {};
 
 	// TODO: properly set default for D3DRS_ZENABLE; see below
 	// The default value for this render state is D3DZB_TRUE if a depth stencil was created along with the swap chain by setting
@@ -648,7 +648,7 @@ void Direct3DDevice8::create_native()
 
 	blend_flags.mark();
 	raster_flags.mark();
-	depth_flags.mark();
+	depthstencil_flags.mark();
 	FVF.mark();
 
 	per_scene.mark();
@@ -669,6 +669,32 @@ ShaderFlags::type ShaderFlags::sanitize(type flags)
 	}
 
 	return flags;
+}
+
+bool DepthStencilFlags::dirty() const
+{
+	return flags.dirty() || depth_flags.dirty() || stencil_flags.dirty();
+}
+
+void DepthStencilFlags::clear()
+{
+	flags.clear();
+	depth_flags.clear();
+	stencil_flags.clear();
+}
+
+void DepthStencilFlags::mark()
+{
+	flags.mark();
+	depth_flags.mark();
+	stencil_flags.mark();
+}
+
+bool DepthStencilFlags::operator==(const DepthStencilFlags& rhs) const
+{
+	return flags.data()         == rhs.flags.data() &&
+	       depth_flags.data()   == rhs.depth_flags.data() &&
+	       stencil_flags.data() == rhs.stencil_flags.data();
 }
 
 SamplerSettings::SamplerSettings()
@@ -2024,6 +2050,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	auto& ref = render_state_values[State];
 	ref = Value;
 
+	auto set_stencil_flags = [&](auto shift)
+	{
+		auto flags = depthstencil_flags.stencil_flags.data();
+		flags &= ~(StencilFlags::op_mask << shift);
+		flags |= (Value & StencilFlags::op_mask) << shift;
+		depthstencil_flags.stencil_flags = flags;
+	};
+
+	auto set_stencil_rw = [&](auto shift)
+	{
+		auto flags = depthstencil_flags.stencil_flags.data();
+		flags &= ~(StencilFlags::rw_mask << shift);
+		flags |= (Value & StencilFlags::rw_mask) << shift;
+		depthstencil_flags.stencil_flags = flags;
+	};
+
 	switch (State)
 	{
 		default:
@@ -2152,11 +2194,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		{
 			if (Value)
 			{
-				depth_flags = depth_flags.data() | DepthFlags::test_enabled;
+				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::depth_test_enabled;
 			}
 			else
 			{
-				depth_flags = depth_flags.data() & ~DepthFlags::test_enabled;
+				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_test_enabled;
 			}
 
 			ref.clear();
@@ -2170,8 +2212,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				return D3DERR_INVALIDCALL;
 			}
 
-			depth_flags = (depth_flags.data() & ~DepthFlags::comparison_mask) | Value;
-
+			depthstencil_flags.depth_flags = (depthstencil_flags.depth_flags.data() & ~DepthFlags::comparison_mask) | Value;
 			ref.clear();
 			break;
 		}
@@ -2179,14 +2220,55 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_ZWRITEENABLE:
 			if (Value)
 			{
-				depth_flags = depth_flags.data() | DepthFlags::write_enabled;
+				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::depth_write_enabled;
 			}
 			else
 			{
-				depth_flags = depth_flags.data() & ~DepthFlags::write_enabled;
+				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_write_enabled;
 			}
 
 			ref.clear();
+			break;
+
+		case D3DRS_STENCILENABLE:
+			if (Value)
+			{
+				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::stencil_enabled;
+			}
+			else
+			{
+				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::stencil_enabled;
+			}
+
+			ref.clear();
+			break;
+
+		case D3DRS_STENCILFAIL:
+			set_stencil_flags(StencilFlags::fail_shift);
+			break;
+
+		case D3DRS_STENCILZFAIL:
+			set_stencil_flags(StencilFlags::zfail_shift);
+			break;
+
+		case D3DRS_STENCILPASS:
+			set_stencil_flags(StencilFlags::pass_shift);
+			break;
+
+		case D3DRS_STENCILFUNC:
+			set_stencil_flags(StencilFlags::func_shift);
+			break;
+
+		case D3DRS_STENCILREF:
+			// value already stored; accessed in draw call
+			break;
+
+		case D3DRS_STENCILMASK:
+			set_stencil_rw(StencilFlags::read_shift);
+			break;
+
+		case D3DRS_STENCILWRITEMASK:
+			set_stencil_rw(StencilFlags::write_shift);
 			break;
 
 		case D3DRS_AMBIENT:
@@ -3868,42 +3950,66 @@ void Direct3DDevice8::update_blend()
 
 void Direct3DDevice8::update_depth()
 {
-	if (!depth_flags.dirty())
+	auto& stencilref = render_state_values[D3DRS_STENCILREF];
+
+	if (!depthstencil_flags.dirty() && !stencilref.dirty())
 	{
 		return;
 	}
 
-	depth_flags.clear();
-	const auto it = depth_states.find(depth_flags);
+	depthstencil_flags.clear();
+	stencilref.clear();
+
+	const auto it = depth_states.find(depthstencil_flags);
 
 	if (it != depth_states.end())
 	{
-		context->OMSetDepthStencilState(it->second.Get(), 0);
+		context->OMSetDepthStencilState(it->second.Get(), stencilref.data());
 		return;
 	}
 
 	D3D11_DEPTH_STENCIL_DESC depth_desc {};
 
-	std::stringstream shit;
-	shit << "new depth state: " << std::hex << std::setw(4) << std::setfill('0') << depth_flags.data() << "\n";
-	OutputDebugStringA(shit.str().c_str());
+	const auto& flags = depthstencil_flags.flags.data();
 
-	depth_desc.DepthEnable    = !!(depth_flags & DepthFlags::test_enabled);
-	depth_desc.DepthWriteMask = (depth_flags & DepthFlags::write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth_desc.DepthEnable    = !!(flags & DepthStencilFlags::depth_test_enabled);
+	depth_desc.DepthWriteMask = (flags & DepthStencilFlags::depth_write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth_desc.StencilEnable  = !!(flags & DepthStencilFlags::stencil_enabled);
 
+	const auto& depth_flags = depthstencil_flags.depth_flags.data();
 	depth_desc.DepthFunc = static_cast<D3D11_COMPARISON_FUNC>(depth_flags & DepthFlags::comparison_mask);
-	depth_desc.FrontFace = {
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_COMPARISON_ALWAYS
-	};
-	depth_desc.BackFace = {
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_COMPARISON_ALWAYS
-	};
+
+	if (depth_desc.StencilEnable)
+	{
+		const auto& stencil_flags = depthstencil_flags.stencil_flags.data();
+		D3D11_DEPTH_STENCILOP_DESC stencil_desc {};
+
+		stencil_desc.StencilFailOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::fail_shift) & StencilFlags::op_mask);
+		stencil_desc.StencilDepthFailOp = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::zfail_shift) & StencilFlags::op_mask);
+		stencil_desc.StencilPassOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::pass_shift) & StencilFlags::op_mask);
+		stencil_desc.StencilFunc        = static_cast<D3D11_COMPARISON_FUNC>((stencil_flags >> StencilFlags::func_shift) & StencilFlags::op_mask);
+
+		depth_desc.FrontFace = stencil_desc;
+		depth_desc.BackFace  = stencil_desc;
+
+		depth_desc.StencilReadMask  = ((stencil_flags >> StencilFlags::read_mask) & StencilFlags::rw_mask);
+		depth_desc.StencilWriteMask = ((stencil_flags >> StencilFlags::write_mask) & StencilFlags::rw_mask);
+	}
+	else
+	{
+		depth_desc.FrontFace = {
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS
+		};
+		depth_desc.BackFace = {
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS
+		};
+	}
 
 	ComPtr<ID3D11DepthStencilState> depth_state;
 	if (FAILED(device->CreateDepthStencilState(&depth_desc, &depth_state)))
@@ -3911,8 +4017,8 @@ void Direct3DDevice8::update_depth()
 		throw std::runtime_error("Failed to create depth stencil!");
 	}
 
-	context->OMSetDepthStencilState(depth_state.Get(), 0);
-	depth_states[depth_flags] = std::move(depth_state);
+	context->OMSetDepthStencilState(depth_state.Get(), stencilref.data());
+	depth_states[depthstencil_flags] = std::move(depth_state);
 }
 
 void Direct3DDevice8::update_rasterizers()
@@ -3975,7 +4081,7 @@ void Direct3DDevice8::free_shaders()
 		value.mark();
 	}
 
-	depth_flags.mark();
+	depthstencil_flags.mark();
 	blend_flags.mark();
 
 	for (auto& pair : sampler_setting_values)

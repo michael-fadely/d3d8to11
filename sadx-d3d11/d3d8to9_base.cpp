@@ -244,6 +244,11 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceFormat(UINT Adapter, D3DDEVTYPE 
 		}
 	}
 
+	if (RType == D3DRTYPE_SURFACE && CheckFormat == D3DFMT_D32)
+	{
+		return D3DERR_NOTAVAILABLE;
+	}
+
 	// TODO
 	return D3D_OK;
 	//return ProxyInterface->CheckDeviceFormat(Adapter, DeviceType, AdapterFormat, Usage, RType, CheckFormat);
