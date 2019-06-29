@@ -314,10 +314,18 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
-	if (FAILED(hr))
+	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		throw std::runtime_error(str);
+
+		OutputDebugStringA("\n" __FUNCTION__ "\n");
+		OutputDebugStringA(str.c_str());
+		OutputDebugStringA("\n");
+
+		if (FAILED(hr))
+		{
+			throw std::runtime_error(str);
+		}
 	}
 
 	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
@@ -358,10 +366,18 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags)
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
-	if (FAILED(hr))
+	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		throw std::runtime_error(str);
+
+		OutputDebugStringA("\n" __FUNCTION__ "\n");
+		OutputDebugStringA(str.c_str());
+		OutputDebugStringA("\n");
+
+		if (FAILED(hr))
+		{
+			throw std::runtime_error(str);
+		}
 	}
 
 	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
@@ -3935,7 +3951,7 @@ void Direct3DDevice8::update_blend()
 		rt.DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
 		rt.BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
 		rt.RenderTargetWriteMask = static_cast<D3D11_COLOR_WRITE_ENABLE>((flags >> BLEND_COLORMASK_SHIFT) & 0xF);
-		rt.SrcBlendAlpha         = D3D11_BLEND_ONE;
+		rt.SrcBlendAlpha         = D3D11_BLEND_ZERO;
 		rt.DestBlendAlpha        = D3D11_BLEND_ZERO;
 		rt.BlendOpAlpha          = D3D11_BLEND_OP_ADD;
 	}
