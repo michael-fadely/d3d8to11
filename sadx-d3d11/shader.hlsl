@@ -548,7 +548,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	perform_lighting(result.ambient, result.diffuse, result.specular, result.w_position, result.w_normal,
 	                 diffuse, specular);
 
-	result.diffuse.rgb  = saturate(result.emissive + diffuse.rgb);
+	result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
 	result.specular.rgb = specular.rgb;
 #endif
 
@@ -694,7 +694,7 @@ bool compare(uint mode, float a, float b)
 
 float4 get_arg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, float4 in_diffuse, float4 in_specular)
 {
-	float4 result;
+	float4 result = (float4)0;
 
 	switch (textureArg & TA_SELECTMASK)
 	{
@@ -902,6 +902,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	float4 samples[TEXTURE_STAGE_COUNT];
 
+	[unroll]
 	for (uint s = 0; s < TEXTURE_STAGE_COUNT; s++)
 	{
 		if (texture_stages[s].bound)
@@ -936,7 +937,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 					return float4(1, 0, 0, 1);
 			}
 
-			samples[s] = textures[s].Sample(samplers[s], texcoord);
+			samples[s] = textures[s].Sample(samplers[s], texcoord.xy);
 		}
 		else
 		{
@@ -947,6 +948,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	bool color_done = false;
 	bool alpha_done = false;
 
+	[unroll(TEXTURE_STAGE_COUNT / 2)]
 	for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
 		TextureStage stage = texture_stages[i];
