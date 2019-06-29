@@ -43,7 +43,8 @@ struct ShaderFlags
 		fvf_lastbeta = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
 		fvf_texfmt   = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
 		fvf_mask     = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
-		mask         = rs_lighting | rs_specular | rs_alpha | rs_fog | fvf_mask,
+		rs_mask      = rs_lighting | rs_specular | rs_alpha | rs_fog,
+		mask         = rs_mask | fvf_mask,
 		count
 	};
 
@@ -53,8 +54,8 @@ struct ShaderFlags
 #ifdef PER_PIXEL
 	// TODO
 #else
-	static constexpr type vs_mask = mask;
-	static constexpr type ps_mask = (mask & ~fvf_mask) | light_sanitize_flags;
+	static constexpr type vs_mask = rs_lighting | rs_specular | fvf_mask;
+	static constexpr type ps_mask = rs_mask | light_sanitize_flags;
 #endif
 
 	static type sanitize(type flags);

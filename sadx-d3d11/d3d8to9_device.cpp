@@ -1473,7 +1473,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 
 	context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
 	return D3D_OK;
-
 #else
 	if (pSourceSurface == nullptr || pDestinationSurface == nullptr || pSourceSurface == pDestinationSurface)
 	{
@@ -3838,10 +3837,15 @@ void Direct3DDevice8::update_sampler()
 		sampler_desc.AddressU       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_u.data());
 		sampler_desc.AddressV       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_v.data());
 		sampler_desc.AddressW       = static_cast<D3D11_TEXTURE_ADDRESS_MODE>(setting.address_w.data());
-		sampler_desc.MinLOD         = -std::numeric_limits<float>::max();
-		sampler_desc.MaxLOD         = std::numeric_limits<float>::max();
+		sampler_desc.MinLOD         = -D3D11_FLOAT32_MAX; // TODO: pull from render state values
+		sampler_desc.MaxLOD         = D3D11_FLOAT32_MAX;  // TODO: pull from render state values
+		sampler_desc.MipLODBias     = 0.0f;               // TODO: pull from render state values
 		sampler_desc.MaxAnisotropy  = setting.max_anisotropy;
 		sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		sampler_desc.BorderColor[0] = 1.0f;
+		sampler_desc.BorderColor[1] = 1.0f;
+		sampler_desc.BorderColor[2] = 1.0f;
+		sampler_desc.BorderColor[3] = 1.0f;
 
 		ComPtr<ID3D11SamplerState> sampler_state;
 		HRESULT hr = device->CreateSamplerState(&sampler_desc, &sampler_state);
@@ -3989,11 +3993,11 @@ void Direct3DDevice8::update_depth()
 		stencil_desc.StencilPassOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::pass_shift) & StencilFlags::op_mask);
 		stencil_desc.StencilFunc        = static_cast<D3D11_COMPARISON_FUNC>((stencil_flags >> StencilFlags::func_shift) & StencilFlags::op_mask);
 
-		depth_desc.StencilReadMask  = ((stencil_flags >> StencilFlags::read_shift) & StencilFlags::rw_mask);
-		depth_desc.StencilWriteMask = ((stencil_flags >> StencilFlags::write_shift) & StencilFlags::rw_mask);
+		depth_desc.StencilReadMask  = (stencil_flags >> StencilFlags::read_shift) & StencilFlags::rw_mask;
+		depth_desc.StencilWriteMask = (stencil_flags >> StencilFlags::write_shift) & StencilFlags::rw_mask;
 
 		depth_desc.FrontFace = stencil_desc;
-		depth_desc.BackFace = stencil_desc;
+		depth_desc.BackFace  = stencil_desc;
 	}
 	else
 	{
@@ -4003,6 +4007,7 @@ void Direct3DDevice8::update_depth()
 			D3D11_STENCIL_OP_KEEP,
 			D3D11_COMPARISON_ALWAYS
 		};
+
 		depth_desc.BackFace = {
 			D3D11_STENCIL_OP_KEEP,
 			D3D11_STENCIL_OP_KEEP,
