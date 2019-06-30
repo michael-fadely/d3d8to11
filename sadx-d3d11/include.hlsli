@@ -92,7 +92,6 @@
 #define TSS_TCI_CAMERASPACEPOSITION                  0x00020000
 #define TSS_TCI_CAMERASPACEREFLECTIONVECTOR          0x00030000
 
-/*
 // Magic number to consider a null-entry.
 static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 
@@ -127,7 +126,6 @@ Texture2D                 BackBuffer    : register(t3);
 Texture2D                 DepthBuffer   : register(t4);
 
 #endif
-*/
 
 // from D3DX_DXGIFormatConvert.inl
 

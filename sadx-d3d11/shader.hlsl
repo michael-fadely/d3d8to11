@@ -156,6 +156,7 @@ cbuffer PerSceneBuffer : register(b0)
 	matrix projection_matrix;
 	float2 screen_dimensions;
 	float3 view_position;
+	uint   buffer_len;
 };
 
 cbuffer PerModelBuffer : register(b1)
@@ -173,6 +174,8 @@ cbuffer PerModelBuffer : register(b1)
 
 cbuffer PerPixelBuffer : register(b2)
 {
+	uint   src_blend;
+	uint   dst_blend;
 	uint   fog_mode;
 	float  fog_start;
 	float  fog_end;
@@ -881,7 +884,7 @@ float4 fix_coord_components(uint count, float4 coords)
 	return result;
 }
 
-#ifndef RS_ALPHA
+#if !defined(RS_OIT) && !defined(RS_ALPHA)
 [earlydepthstencil]
 #endif
 float4 ps_main(VS_OUTPUT input) : SV_TARGET
@@ -1007,10 +1010,6 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result.rgb = saturate(result.rgb + specular.rgb);
 #endif
 
-//#if RS_LIGHTING == 1
-//	result.rgb = saturate(result.rgb + input.emissive.rgb);
-//#endif
-
 #ifdef RS_ALPHA
 	if (alpha_reject == true)
 	{
@@ -1018,6 +1017,52 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		uint threshold = floor(alpha_reject_threshold * 255);
 		clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 	}
+
+	#if !defined(FVF_RHW)
+	if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
+	    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
+	{
+		if (result.a > 254.0f / 255.0f)
+		{
+			return result;
+		}
+	}
+	#endif
+
+	#ifdef RS_OIT
+		#ifndef DISABLE_PER_PIXEL_LIMIT
+			uint frag_count;
+			InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
+
+			if (frag_count >= MAX_FRAGMENTS)
+			{
+				return float4(0, 0, 1, 1);
+				clip(-1);
+			}
+		#endif
+
+		uint new_index = FragListNodes.IncrementCounter();
+
+		// if per-pixel fragment limiting is enabled, this check is unnecessary
+		if (new_index >= buffer_len)
+		{
+			return float4(0, 1, 0, 1);
+			clip(-1);
+		}
+
+		uint old_index;
+		InterlockedExchange(FragListHead[input.position.xy], new_index, old_index);
+
+		OitNode n;
+
+		n.depth = input.depth.x / input.depth.y;
+		n.color = float4_to_unorm(result);
+		n.flags = (src_blend << 8) | dst_blend;
+		n.next  = old_index;
+
+		FragListNodes[new_index] = n;
+		clip(-1);
+	#endif
 #endif
 
 #ifdef RS_FOG

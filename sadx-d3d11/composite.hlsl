@@ -10,11 +10,11 @@ struct VertexOutput
 	float4 position : SV_POSITION;
 };
 
-VertexOutput vs_main(uint vertexId : SV_VertexID)
+VertexOutput vs_main(uint vertex_id : SV_VertexID)
 {
 	VertexOutput output;
 
-	float2 texcoord = float2((vertexId << 1) & 2, vertexId & 2);
+	float2 texcoord = float2((vertex_id << 1) & 2, vertex_id & 2);
 	output.position = float4(texcoord * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
 	return output;
 }
@@ -60,6 +60,8 @@ float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 des
 
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
+	return float4(1, 0, 0, 1);
+
 	int2 pos = int2(input.position.xy);
 
 	float4 backBufferColor = BackBuffer[pos];

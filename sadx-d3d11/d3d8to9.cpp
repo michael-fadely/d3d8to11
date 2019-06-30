@@ -766,6 +766,8 @@ DXGI_FORMAT typeless_to_unorm(DXGI_FORMAT format, bool srgb)
 			break;
 		case DXGI_FORMAT_B4G4R4A4_UNORM:
 			break;
+		case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		default:
 			return DXGI_FORMAT_UNKNOWN;
 	}

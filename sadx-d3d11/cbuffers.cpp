@@ -3,13 +3,13 @@
 
 void PerSceneBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << this->view_matrix << this->projection_matrix << this->screen_dimensions << this->view_position;
+	cbuf << this->view_matrix << this->projection_matrix << this->screen_dimensions << this->view_position << this->buffer_len;
 }
 
 bool PerSceneBuffer::dirty() const
 {
 	return view_matrix.dirty() || projection_matrix.dirty() ||
-	       screen_dimensions.dirty() || view_position.dirty();
+	       screen_dimensions.dirty() || view_position.dirty() || buffer_len.dirty();
 }
 
 void PerSceneBuffer::clear()
@@ -18,6 +18,7 @@ void PerSceneBuffer::clear()
 	projection_matrix.clear();
 	screen_dimensions.clear();
 	view_position.clear();
+	buffer_len.clear();
 }
 
 void PerSceneBuffer::mark()
@@ -26,6 +27,7 @@ void PerSceneBuffer::mark()
 	projection_matrix.mark();
 	screen_dimensions.mark();
 	view_position.mark();
+	buffer_len.mark();
 }
 
 bool MaterialSources::dirty() const
@@ -120,13 +122,16 @@ void PerModelBuffer::mark()
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << fog_mode << fog_start << fog_end << fog_density << fog_color
+	cbuf << src_blend << dst_blend
+		<< fog_mode << fog_start << fog_end << fog_density << fog_color
 		<< alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
 }
 
 bool PerPixelBuffer::dirty() const
 {
-	return fog_mode.dirty() ||
+	return src_blend.dirty() ||
+	       dst_blend.dirty() ||
+	       fog_mode.dirty() ||
 	       fog_start.dirty() ||
 	       fog_end.dirty() ||
 	       fog_density.dirty() ||
@@ -139,6 +144,8 @@ bool PerPixelBuffer::dirty() const
 
 void PerPixelBuffer::clear()
 {
+	src_blend.clear();
+	dst_blend.clear();
 	fog_mode.clear();
 	fog_start.clear();
 	fog_end.clear();
@@ -152,6 +159,8 @@ void PerPixelBuffer::clear()
 
 void PerPixelBuffer::mark()
 {
+	src_blend.mark();
+	dst_blend.mark();
 	fog_mode.mark();
 	fog_start.mark();
 	fog_end.mark();

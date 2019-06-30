@@ -32,6 +32,7 @@ public:
 	void create_native();
 	ComPtr<ID3D11RenderTargetView> render_target;
 	ComPtr<ID3D11DepthStencilView> depth_stencil;
+	ComPtr<ID3D11ShaderResourceView> depth_srv;
 	Direct3DTexture8* parent;
 
 	Direct3DDevice8* const device8;

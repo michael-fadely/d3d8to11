@@ -14,6 +14,7 @@ public:
 	dirty_t<matrix, dirty_mode::on_assignment> projection_matrix;
 	dirty_t<float2> screen_dimensions;
 	dirty_t<float3> view_position;
+	dirty_t<uint> buffer_len;
 
 	void write(CBufferBase& cbuf) const override;
 
@@ -56,6 +57,8 @@ public:
 class PerPixelBuffer : public ICBuffer, dirty_impl
 {
 public:
+	dirty_t<uint>   src_blend;
+	dirty_t<uint>   dst_blend;
 	dirty_t<uint>   fog_mode;
 	dirty_t<float>  fog_start;
 	dirty_t<float>  fog_end;

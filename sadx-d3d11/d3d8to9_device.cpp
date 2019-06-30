@@ -17,6 +17,7 @@
 #include "Material.h"
 #include "ShaderIncluder.h"
 #include "safe_release.h"
+#include "globals.h"
 
 using namespace Microsoft::WRL;
 
@@ -251,6 +252,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		shader_preproc_defs.push_back({ "RS_ALPHA", "1" });
 	}
 
+	if (flags & ShaderFlags::rs_oit)
+	{
+		shader_preproc_defs.push_back({ "RS_OIT", "1" });
+	}
+
 	if (flags & ShaderFlags::rs_fog)
 	{
 		shader_preproc_defs.push_back({ "RS_FOG", "1" });
@@ -414,12 +420,52 @@ void Direct3DDevice8::create_render_target()
 
 	back_buffer->GetSurfaceLevel(0, &current_render_target);
 
+	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
+
 	pBackBuffer->Release();
 
 	ComPtr<Direct3DSurface8> ds_surface;
 	depth_stencil->GetSurfaceLevel(0, &ds_surface);
 
-	context->OMSetRenderTargets(1, current_render_target->render_target.GetAddressOf(), ds_surface->depth_stencil.Get());
+	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
+	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_texture);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite target texture");
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC view_desc {};
+
+	view_desc.Format             = tex_desc.Format;
+	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+	view_desc.Texture2D.MipSlice = 0;
+
+	hr = device->CreateRenderTargetView(composite_texture.Get(), &view_desc, &composite_view);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite target view");
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+
+	srv_desc.Format                    = tex_desc.Format;
+	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Texture2D.MostDetailedMip = 0;
+	srv_desc.Texture2D.MipLevels       = 1;
+
+	hr = device->CreateShaderResourceView(composite_texture.Get(), &srv_desc, &composite_srv);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite resource view");
+	}
+
+	// set the composite render target as the back buffer
+	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
 }
 
 void Direct3DDevice8::create_native()
@@ -672,6 +718,9 @@ void Direct3DDevice8::create_native()
 	per_pixel.mark();
 	per_texture.mark();
 
+	oit_load_shaders();
+	oit_init();
+
 	update();
 }
 
@@ -682,6 +731,11 @@ ShaderFlags::type ShaderFlags::sanitize(type flags)
 	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
 	{
 		flags &= ~rs_lighting;
+	}
+
+	if (flags & rs_oit && !(flags & rs_alpha))
+	{
+		flags &= ~rs_oit;
 	}
 
 	return flags;
@@ -783,6 +837,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	: present_params(parameters),
 	  d3d(d3d)
 {
+	fragments_str = std::to_string(globals::max_fragments);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)
@@ -1036,6 +1091,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 		back_buffer = nullptr;
 		current_depth_stencil = nullptr;
 		current_render_target = nullptr;
+		render_target = nullptr;
 
 		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight,
 		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
@@ -1050,15 +1106,99 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 		vp.Height = present_params.BackBufferHeight;
 
 		SetViewport(&vp);
+
+		oit_init();
 	}
 
 	return D3D_OK;
+}
+
+void Direct3DDevice8::oit_composite()
+{
+	if (!oit_actually_enabled)
+	{
+		return;
+	}
+
+	DWORD CULLMODE, ZENABLE;
+	GetRenderState(D3DRS_CULLMODE, &CULLMODE);
+	GetRenderState(D3DRS_ZENABLE, &ZENABLE);
+
+	SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	SetRenderState(D3DRS_ZENABLE, FALSE);
+
+	static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+	auto blend_ = blend_flags.data();
+	blend_flags = BLEND_DEFAULT;
+	update();
+
+	// Unbinds UAV read/write buffers and binds their read-only
+	// shader resource views.
+	oit_read();
+
+	ID3D11VertexShader* vs;
+	ID3D11PixelShader* ps;
+
+	context->VSGetShader(&vs, nullptr, nullptr);
+	context->PSGetShader(&ps, nullptr, nullptr);
+
+	// Switches to the composite to begin the sorting process.
+	context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
+	context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
+
+	// Unbind the last vertex & index buffers
+	context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// ...then draw 3 points. The composite shader uses SV_VertexID
+	// to generate a full screen triangle, so we don't need a buffer!
+	context->Draw(3, 0);
+
+	context->VSSetShader(vs, nullptr, 0);
+	context->PSSetShader(ps, nullptr, 0);
+
+	safe_release(&vs);
+	safe_release(&ps);
+
+	blend_flags = blend_;
+	SetRenderState(D3DRS_CULLMODE, CULLMODE);
+	SetRenderState(D3DRS_ZENABLE, ZENABLE);
+	update();
+
+	for (auto& stream : stream_sources)
+	{
+		SetStreamSource(stream.first, stream.second.buffer, stream.second.stride);
+	}
+
+	auto temp = std::move(index_buffer);
+	SetIndices(temp.Get(), current_base_vertex_index);
+}
+
+void Direct3DDevice8::oit_start()
+{
+	if (!oit_enabled && oit_actually_enabled != oit_enabled)
+	{
+		oit_actually_enabled = oit_enabled;
+		oit_write();
+	}
+
+	oit_actually_enabled = oit_enabled;
+
+	if (oit_actually_enabled)
+	{
+		// Restore R/W access to the UAV buffers from the shader.
+		oit_write();
+	}
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
 {
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
+
+	oit_composite();
+	oit_start();
 
 	auto interval = present_params.FullScreen_PresentationInterval;
 
@@ -1078,12 +1218,23 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 	}
 
+
+	if ((GetAsyncKeyState(VK_MENU) & (1 << 16)) && (GetAsyncKeyState('O') & 1))
+	{
+		if (oit_actually_enabled == oit_enabled)
+		{
+			oit_enabled = !oit_enabled;
+			OutputDebugStringA(oit_enabled ? "OIT enabled\n" : "OIT disabled\n");
+		}
+	}
+
 	if ((GetAsyncKeyState(VK_CONTROL) & (1 << 16)) && (GetAsyncKeyState('R') & (1 << 16)))
 	{
 		if (!this->freeing_shaders)
 		{
 			OutputDebugStringA("clearing cached shaders...\n");
 			free_shaders();
+			oit_load_shaders();
 			update();
 			this->freeing_shaders = true;
 		}
@@ -1714,6 +1865,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 		{
 			context->ClearRenderTargetView(current_render_target->render_target.Get(), color);
 		}
+
+		if (composite_view)
+		{
+			context->ClearRenderTargetView(composite_view.Get(), color);
+		}
+
+		if (render_target)
+		{
+			context->ClearRenderTargetView(render_target.Get(), color);
+		}
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))
@@ -2311,10 +2472,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_SRCBLEND:
+			per_pixel.src_blend = Value;
 			blend_flags = (blend_flags.data() & ~0x0F) | Value;
 			break;
 
 		case D3DRS_DESTBLEND:
+			per_pixel.dst_blend = Value;
 			blend_flags = (blend_flags.data() & ~0xF0) | (Value << 4);
 			break;
 
@@ -2740,16 +2903,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_TEXCOORDINDEX:
 			per_texture.stages[Stage].tex_coord_index = Value;
 			break;
-
-		case D3DTSS_BORDERCOLOR:
-		{
-			std::stringstream ss;
-			ss << "Border color: " << std::setfill('0') << std::setw(8)
-				<< std::hex << Value << std::endl;
-			OutputDebugStringA(ss.str().c_str());
-			break;
-		}
-
 		case D3DTSS_BUMPENVLSCALE:
 			per_texture.stages[Stage].bump_env_lscale = *reinterpret_cast<float*>(&Value);
 			break;
@@ -2900,6 +3053,30 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 	return true;
 }
 
+void Direct3DDevice8::oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE)
+{
+	GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
+	GetRenderState(D3DRS_ZENABLE, &ZENABLE);
+
+	if (shader_flags & ShaderFlags::rs_alpha && (oit_actually_enabled && oit_enabled))
+	{
+		// force zwrite on to enable writing 100% opaque
+		// pixels to the real backbuffer and depth buffer.
+		SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+		SetRenderState(D3DRS_ZENABLE, TRUE); // this does nothing right now, but good practice!
+
+		update_depth();
+	}
+}
+
+void Direct3DDevice8::oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE)
+{
+	SetRenderState(D3DRS_ZWRITEENABLE, ZWRITEENABLE);
+	SetRenderState(D3DRS_ZENABLE, ZENABLE);
+
+	update_depth();
+}
+
 // the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
@@ -2945,7 +3122,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		return D3DERR_INVALIDCALL;
 	}
 
+	DWORD ZWRITEENABLE, ZENABLE;
+	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
+
 	context->Draw(count, StartVertex);
+
+	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
 	return D3D_OK;
 }
 
@@ -2975,7 +3157,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	auto count = PrimitiveCount;
 	primitive_vertex_count(PrimitiveType, count);
 
+	DWORD ZWRITEENABLE, ZENABLE;
+	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
+
 	context->DrawIndexed(count, StartIndex, current_base_vertex_index);
+
+	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
 	return D3D_OK;
 }
 
@@ -3898,6 +4085,11 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 
 void Direct3DDevice8::update_shaders()
 {
+	if (oit_actually_enabled)
+	{
+		shader_flags |= ShaderFlags::rs_oit;
+	}
+
 	shader_flags = ShaderFlags::sanitize(shader_flags);
 
 	if (last_shader_flags == shader_flags)
@@ -3951,7 +4143,7 @@ void Direct3DDevice8::update_blend()
 		rt.DestBlend             = static_cast<D3D11_BLEND>((flags >> 4) & 0xF);
 		rt.BlendOp               = static_cast<D3D11_BLEND_OP>((flags >> 8) & 0xF);
 		rt.RenderTargetWriteMask = static_cast<D3D11_COLOR_WRITE_ENABLE>((flags >> BLEND_COLORMASK_SHIFT) & 0xF);
-		rt.SrcBlendAlpha         = D3D11_BLEND_ZERO;
+		rt.SrcBlendAlpha         = D3D11_BLEND_ONE;
 		rt.DestBlendAlpha        = D3D11_BLEND_ZERO;
 		rt.BlendOpAlpha          = D3D11_BLEND_OP_ADD;
 	}
@@ -4114,6 +4306,281 @@ void Direct3DDevice8::free_shaders()
 	per_pixel.mark();
 	per_scene.mark();
 	per_texture.mark();
+
+	composite_vs = {};
+	composite_ps = {};
+}
+
+void Direct3DDevice8::oit_load_shaders()
+{
+	D3D_SHADER_MACRO preproc[] = {
+		{ "MAX_FRAGMENTS", fragments_str.c_str() },
+		{}
+	};
+
+	int result;
+
+	do
+	{
+		try
+		{
+			ComPtr<ID3DBlob> errors;
+			ComPtr<ID3DBlob> blob;
+
+			ShaderIncluder includer(this);
+
+			constexpr auto path = "composite.hlsl";
+			const auto& src = get_shader_source(path);
+
+			HRESULT hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+
+			if (FAILED(hr))
+			{
+				std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+				throw std::runtime_error(str);
+			}
+
+			hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs.shader);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("composite vertex shader creation failed");
+			}
+
+			hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+
+			if (FAILED(hr))
+			{
+				std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
+				throw std::runtime_error(str);
+			}
+
+			hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps.shader);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("composite pixel shader creation failed");
+			}
+			break;
+		}
+		catch (std::exception& ex)
+		{
+			print_info_queue();
+			free_shaders();
+			result = MessageBoxA(nullptr, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+		}
+	} while (result == IDRETRY);
+}
+
+void Direct3DDevice8::oit_release()
+{
+	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
+
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
+	                                                   1, null.size(), &null[0], nullptr);
+
+	FragListHead     = nullptr;
+	FragListHeadSRV  = nullptr;
+	FragListHeadUAV  = nullptr;
+	FragListCount    = nullptr;
+	FragListCountSRV = nullptr;
+	FragListCountUAV = nullptr;
+	FragListNodes    = nullptr;
+	FragListNodesSRV = nullptr;
+	FragListNodesUAV = nullptr;
+}
+
+void Direct3DDevice8::oit_write()
+{
+	// Unbinds the shader resource views for our fragment list and list head.
+	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
+	std::array<ID3D11ShaderResourceView*, 5> srvs = {};
+	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
+
+	std::array<ID3D11UnorderedAccessView*, 3> uavs = {
+		FragListHeadUAV.Get(),
+		FragListCountUAV.Get(),
+		FragListNodesUAV.Get()
+	};
+
+	// This is used to set the hidden counter of FragListNodes to 0.
+	// It only works on FragListNodes, but the number of elements here
+	// must match the number of UAVs given.
+	static const uint zero[3] = { 0, 0, 0 };
+
+	// Binds our fragment list & list head UAVs for read/write operations.
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target.GetAddressOf(),
+	                                                   current_depth_stencil->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
+
+	// Resets the list head indices to FRAGMENT_LIST_NULL.
+	// 4 elements are required as this can be used to clear a texture
+	// with 4 color channels, even though our list head only has one.
+	static const UINT clear_head[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+	context->ClearUnorderedAccessViewUint(FragListHeadUAV.Get(), &clear_head[0]);
+
+	static const UINT clear_count[] = { 0, 0, 0, 0 };
+	context->ClearUnorderedAccessViewUint(FragListCountUAV.Get(), &clear_count[0]);
+}
+
+void Direct3DDevice8::oit_read() const
+{
+	ID3D11UnorderedAccessView* uavs[3] = {};
+
+	// Unbinds our UAVs.
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
+
+	std::array<ID3D11ShaderResourceView*, 5> srvs = {
+		FragListHeadSRV.Get(),
+		FragListCountSRV.Get(),
+		FragListNodesSRV.Get(),
+		composite_srv.Get(),
+		current_depth_stencil->depth_srv.Get()
+	};
+
+	// Binds the shader resource views of our UAV buffers as read-only.
+	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
+}
+
+void Direct3DDevice8::oit_init()
+{
+	oit_release();
+
+	FragListHead_Init();
+	FragListCount_Init();
+	FragListNodes_Init();
+
+	oit_write();
+}
+
+void Direct3DDevice8::FragListHead_Init()
+{
+	D3D11_TEXTURE2D_DESC desc2D = {};
+
+	desc2D.ArraySize          = 1;
+	desc2D.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc2D.Usage              = D3D11_USAGE_DEFAULT;
+	desc2D.Format             = DXGI_FORMAT_R32_UINT;
+	desc2D.Width              = static_cast<UINT>(viewport.Width);
+	desc2D.Height             = static_cast<UINT>(viewport.Height);
+	desc2D.MipLevels          = 1;
+	desc2D.SampleDesc.Count   = 1;
+	desc2D.SampleDesc.Quality = 0;
+
+	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &FragListHead)))
+	{
+		throw;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descRV;
+
+	descRV.Format                    = desc2D.Format;
+	descRV.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	descRV.Texture2D.MipLevels       = 1;
+	descRV.Texture2D.MostDetailedMip = 0;
+
+	if (FAILED(device->CreateShaderResourceView(FragListHead.Get(), &descRV, &FragListHeadSRV)))
+	{
+		throw;
+	}
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+
+	descUAV.Format              = desc2D.Format;
+	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
+	descUAV.Buffer.FirstElement = 0;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	descUAV.Buffer.Flags        = 0;
+
+	if (FAILED(device->CreateUnorderedAccessView(FragListHead.Get(), &descUAV, &FragListHeadUAV)))
+	{
+		throw;
+	}
+}
+
+void Direct3DDevice8::FragListCount_Init()
+{
+	D3D11_TEXTURE2D_DESC desc2D = {};
+
+	desc2D.ArraySize          = 1;
+	desc2D.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc2D.Usage              = D3D11_USAGE_DEFAULT;
+	desc2D.Format             = DXGI_FORMAT_R32_UINT;
+	desc2D.Width              = static_cast<UINT>(viewport.Width);
+	desc2D.Height             = static_cast<UINT>(viewport.Height);
+	desc2D.MipLevels          = 1;
+	desc2D.SampleDesc.Count   = 1;
+	desc2D.SampleDesc.Quality = 0;
+
+	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &FragListCount)))
+	{
+		throw;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descRV;
+
+	descRV.Format                    = desc2D.Format;
+	descRV.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	descRV.Texture2D.MipLevels       = 1;
+	descRV.Texture2D.MostDetailedMip = 0;
+
+	if (FAILED(device->CreateShaderResourceView(FragListCount.Get(), &descRV, &FragListCountSRV)))
+	{
+		throw;
+	}
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+
+	descUAV.Format              = desc2D.Format;
+	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
+	descUAV.Buffer.FirstElement = 0;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	descUAV.Buffer.Flags        = 0;
+
+	if (FAILED(device->CreateUnorderedAccessView(FragListCount.Get(), &descUAV, &FragListCountUAV)))
+	{
+		throw;
+	}
+}
+
+void Direct3DDevice8::FragListNodes_Init()
+{
+	D3D11_BUFFER_DESC descBuf = {};
+
+	per_scene.buffer_len = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+
+	descBuf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	descBuf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	descBuf.StructureByteStride = sizeof(OitNode);
+
+	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &FragListNodes)))
+	{
+		throw;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC descRV = {};
+
+	descRV.Format             = DXGI_FORMAT_UNKNOWN;
+	descRV.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
+	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+
+	if (FAILED(device->CreateShaderResourceView(FragListNodes.Get(), &descRV, &FragListNodesSRV)))
+	{
+		throw;
+	}
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+
+	descUAV.Format              = DXGI_FORMAT_UNKNOWN;
+	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
+	descUAV.Buffer.FirstElement = 0;
+	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	descUAV.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
+
+	if (FAILED(device->CreateUnorderedAccessView(FragListNodes.Get(), &descUAV, &FragListNodesUAV)))
+	{
+		throw;
+	}
 }
 
 void Direct3DDevice8::up_get(size_t target_size)

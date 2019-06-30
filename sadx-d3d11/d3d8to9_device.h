@@ -33,17 +33,18 @@ struct ShaderFlags
 	enum T : type
 	{
 		none,
-		rs_lighting  = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_specular  = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_alpha     = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_fog       = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_lighting  = 0b00001000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_specular  = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_alpha     = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_fog       = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_oit       = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
 		fvf_position = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110,
 		fvf_fields   = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'11110000,
 		fvf_texcount = 0b00000000'00000000'00000000'00000000'00000000'00000000'00001111'00000000,
 		fvf_lastbeta = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
 		fvf_texfmt   = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
 		fvf_mask     = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
-		rs_mask      = rs_lighting | rs_specular | rs_alpha | rs_fog,
+		rs_mask      = rs_lighting | rs_specular | rs_alpha | rs_fog | rs_oit,
 		mask         = rs_mask | fvf_mask,
 		count
 	};
@@ -193,6 +194,14 @@ struct StreamPair
 	}
 };
 
+struct OitNode
+{
+	float depth; // fragment depth
+	uint  color; // 32-bit packed fragment color
+	uint  flags; // source blend, destination blend
+	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
+};
+
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
 class Direct3DDevice8 : public Unknown
@@ -200,6 +209,7 @@ class Direct3DDevice8 : public Unknown
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string texcount_str;
+	std::string fragments_str;
 	bool freeing_shaders = false;
 
 public:
@@ -225,6 +235,8 @@ public:
 	virtual BOOL STDMETHODCALLTYPE ShowCursor(BOOL bShow);
 	virtual HRESULT STDMETHODCALLTYPE CreateAdditionalSwapChain(D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DSwapChain8** ppSwapChain);
 	virtual HRESULT STDMETHODCALLTYPE Reset(D3DPRESENT_PARAMETERS8* pPresentationParameters);
+	void oit_composite();
+	void oit_start();
 	virtual HRESULT STDMETHODCALLTYPE Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion);
 	virtual HRESULT STDMETHODCALLTYPE GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer);
 	virtual HRESULT STDMETHODCALLTYPE GetRasterStatus(D3DRASTER_STATUS* pRasterStatus);
@@ -319,6 +331,8 @@ public:
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE primitive_type) const;
 	static bool primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count);
+	void oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE);
+	void oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE);
 	bool update_input_layout();
 	void commit_per_pixel();
 	void commit_per_model();
@@ -332,6 +346,8 @@ public:
 	void update_rasterizers();
 	bool update();
 	void free_shaders();
+	void oit_load_shaders();
+	void oit_release();
 	void update_wv_inv_t();
 
 	ShaderFlags::type shader_flags      = ShaderFlags::none;
@@ -347,8 +363,32 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
+	bool oit_enabled = true;
+
 protected:
+	bool oit_actually_enabled = true;
 	Direct3D8* const d3d;
+
+	VertexShader composite_vs;
+	PixelShader composite_ps;
+
+	ComPtr<ID3D11RenderTargetView> render_target;
+
+	ComPtr<ID3D11Texture2D> composite_texture;
+	ComPtr<ID3D11RenderTargetView> composite_view;
+	ComPtr<ID3D11ShaderResourceView> composite_srv;
+
+	ComPtr<ID3D11Texture2D>           FragListHead;
+	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListHeadUAV;
+
+	ComPtr<ID3D11Texture2D>           FragListCount;
+	ComPtr<ID3D11ShaderResourceView>  FragListCountSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListCountUAV;
+
+	ComPtr<ID3D11Buffer>              FragListNodes;
+	ComPtr<ID3D11ShaderResourceView>  FragListNodesSRV;
+	ComPtr<ID3D11UnorderedAccessView> FragListNodesUAV;
 
 	std::unordered_map<DWORD, Direct3DTexture8*> textures;
 	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
@@ -366,6 +406,12 @@ protected:
 
 	ComPtr<Direct3DIndexBuffer8> index_buffer = nullptr;
 
+	void oit_write();
+	void oit_read() const;
+	void oit_init();
+	void FragListHead_Init();
+	void FragListCount_Init();
+	void FragListNodes_Init();
 	void up_get(size_t target_size);
 
 	ComPtr<Direct3DVertexBuffer8> up_buffer;

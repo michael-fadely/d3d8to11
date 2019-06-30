@@ -164,7 +164,7 @@ void Direct3DSurface8::create_native()
 	{
 		if (parent->is_render_target)
 		{
-			auto hr = device->CreateRenderTargetView(parent->texture.Get(), &rt_desc, &render_target);
+			auto hr = device->CreateRenderTargetView(parent->texture.Get(), /*&rt_desc*/ nullptr, &render_target);
 
 			if (FAILED(hr))
 			{
@@ -179,6 +179,29 @@ void Direct3DSurface8::create_native()
 			if (FAILED(hr))
 			{
 				throw std::runtime_error("CreateDepthStencilView failed");
+			}
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+
+			// create a shader resource view with a readable pixel format
+			auto srv_format = typeless_to_float(depth_vdesc.Format);
+
+			// if float didn't work, it's probably int we want
+			if (srv_format == DXGI_FORMAT_UNKNOWN)
+			{
+				srv_format = typeless_to_unorm(depth_vdesc.Format);
+			}
+
+			srv_desc.Format                    = srv_format;
+			srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MostDetailedMip = 0;
+			srv_desc.Texture2D.MipLevels       = 1;
+
+			hr = device->CreateShaderResourceView(parent->texture.Get(), &srv_desc, &depth_srv);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("failed to create depth srv");
 			}
 		}
 	}
