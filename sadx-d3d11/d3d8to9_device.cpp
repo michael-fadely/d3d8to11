@@ -3269,6 +3269,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
+	if (!update())
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
 	if (skip_draw())
 	{
 		//OutputDebugStringA("WARNING: SKIPPING DRAW CALL\n");
@@ -4188,7 +4193,7 @@ std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags
 
 		if (ps_tasks.size() >= std::thread::hardware_concurrency())
 		{
-			//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
+			OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
 			return std::nullopt;
 		}
 
