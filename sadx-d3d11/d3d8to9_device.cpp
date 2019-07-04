@@ -18,6 +18,7 @@
 #include "ShaderIncluder.h"
 #include "safe_release.h"
 #include "globals.h"
+#include <optional>
 
 using namespace Microsoft::WRL;
 
@@ -268,6 +269,8 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string& path)
 {
+	std::lock_guard<std::recursive_mutex> lock(shader_sources_mutex);
+
 	const auto it = shader_sources.find(path);
 
 	if (it != shader_sources.end())
@@ -294,20 +297,35 @@ static constexpr auto SHADER_COMPILER_FLAGS =
 #endif
 ;
 
-VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
+VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_boy,
+                                     std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 
-	const auto it = vertex_shaders.find(flags);
-
-	if (it != vertex_shaders.end())
 	{
-		return it->second;
+		std::lock_guard<std::recursive_mutex> lock(mutex);
+
+		const auto it = shaders.find(flags);
+
+		if (it != shaders.end())
+		{
+			return it->second;
+		}
 	}
 
-	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vertex_shaders.size() + 1);
+	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vs_map.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
+
+	if (speedy_speed_boy)
+	{
+		auto macro = preproc.end() - 1;
+
+		macro->Name = "SPEEDY_SPEED_BOY";
+		macro->Definition = "1";
+
+		preproc.push_back({});
+	}
 
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -342,24 +360,41 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags)
 	}
 
 	auto result = VertexShader(shader, blob);
-	vertex_shaders[flags] = result;
+
+	std::lock_guard<std::recursive_mutex> lock(mutex);
+	shaders[flags] = result;
 	return result;
 }
 
-PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags)
+PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_boy,
+                                    std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-	const auto it = pixel_shaders.find(flags);
-
-	if (it != pixel_shaders.end())
 	{
-		return it->second;
+		std::lock_guard<std::recursive_mutex> lock(mutex);
+
+		const auto it = shaders.find(flags);
+
+		if (it != shaders.end())
+		{
+			return it->second;
+		}
 	}
 
-	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, pixel_shaders.size() + 1);
+	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
+
+	if (speedy_speed_boy)
+	{
+		auto macro = preproc.end() - 1;
+
+		macro->Name = "SPEEDY_SPEED_BOY";
+		macro->Definition = "1";
+
+		preproc.push_back({});
+	}
 
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -394,7 +429,9 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags)
 	}
 
 	auto result = PixelShader(shader, blob);
-	pixel_shaders[flags] = result;
+
+	std::lock_guard<std::recursive_mutex> lock(mutex);
+	shaders[flags] = result;
 	return result;
 }
 
@@ -1218,8 +1255,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 	}
 
+	auto vk_menu = GetAsyncKeyState(VK_MENU);
+	auto vk_o    = GetAsyncKeyState('O');
 
-	if ((GetAsyncKeyState(VK_MENU) & (1 << 16)) && (GetAsyncKeyState('O') & 1))
+	if (vk_menu & (1 << 16) && vk_o & 1)
 	{
 		if (oit_actually_enabled == oit_enabled)
 		{
@@ -3115,6 +3154,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		return D3DERR_INVALIDCALL;
 	}
 
+	if (skip_draw())
+	{
+		//OutputDebugStringA("WARNING: SKIPPING DRAW CALL\n");
+		return D3D_OK;
+	}
+
 	uint32_t count = PrimitiveCount;
 
 	if (!primitive_vertex_count(PrimitiveType, count))
@@ -3152,6 +3197,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;
+	}
+
+	if (skip_draw())
+	{
+		//OutputDebugStringA("WARNING: SKIPPING DRAW CALL\n");
+		return D3D_OK;
 	}
 
 	auto count = PrimitiveCount;
@@ -3214,6 +3265,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 	if (!primitive_vertex_count(PrimitiveType, count))
 	{
 		return D3DERR_INVALIDCALL;
+	}
+
+	if (skip_draw())
+	{
+		//OutputDebugStringA("WARNING: SKIPPING DRAW CALL\n");
+		return D3D_OK;
 	}
 
 	const auto size = count * VertexStreamZeroStride;
@@ -3921,7 +3978,7 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	auto vs = get_vs(shader_flags);
+	auto vs = get_vs(shader_flags, true, vertex_speed_shaders, vs_speed_mutex);
 
 	ComPtr<ID3D11InputLayout> layout;
 
@@ -4063,6 +4120,55 @@ void Direct3DDevice8::update_sampler()
 	}
 }
 
+std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags)
+{
+	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
+
+	std::lock_guard<decltype(ps_tasks_mutex)> task_lock(ps_tasks_mutex);
+
+	auto it = ps_tasks.find(flags);
+
+	if (it != ps_tasks.end())
+	{
+		auto status = it->second.wait_for(std::chrono::milliseconds(0));
+
+		if (status == std::future_status::ready)
+		{
+			auto result = it->second.get();
+			ps_tasks.erase(it);
+			return result;
+		}
+
+		return std::nullopt;
+	}
+
+	{
+		std::lock_guard<std::recursive_mutex> lock(ps_mutex);
+
+		const auto ps_it = pixel_shaders.find(flags);
+
+		if (ps_it != pixel_shaders.end())
+		{
+			return ps_it->second;
+		}
+	}
+
+	if (ps_tasks.size() >= std::thread::hardware_concurrency())
+	{
+		//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
+		return std::nullopt;
+	}
+
+	auto task = std::async(std::launch::async, [&]() -> auto
+	{
+		return get_ps(flags, false, pixel_shaders, ps_mutex);
+	});
+
+	ps_tasks[flags] = std::move(task);
+
+	return std::nullopt;
+}
+
 void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps)
 {
 	int result;
@@ -4071,8 +4177,19 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 	{
 		try
 		{
-			vs = get_vs(flags);
-			ps = get_ps(flags);
+			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
+
+			auto ps_async = get_ps_async(flags);
+
+			if (ps_async.has_value())
+			{
+				ps = *ps_async;
+			}
+			/*else
+			{
+				ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
+			}*/
+
 			break;
 		}
 		catch (std::exception& ex)
@@ -4101,6 +4218,9 @@ void Direct3DDevice8::update_shaders()
 	PixelShader ps;
 
 	compile_shaders(shader_flags, vs, ps);
+
+	current_vs = vs;
+	current_ps = ps;
 
 	if ((shader_flags & ShaderFlags::vs_mask) != (last_shader_flags & ShaderFlags::vs_mask))
 	{
@@ -4280,13 +4400,38 @@ bool Direct3DDevice8::update()
 	return update_input_layout();
 }
 
+bool Direct3DDevice8::skip_draw() const
+{
+	return !current_ps.has_value() || !current_vs.has_value();
+}
+
+#define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
+
 void Direct3DDevice8::free_shaders()
 {
 	last_shader_flags = ShaderFlags::mask;
 
+	LOCK(ps_tasks_mutex);
+	ps_tasks.clear();
+
+	LOCK(vs_tasks_mutex);
+	vs_tasks.clear();
+
+	LOCK(shader_sources_mutex);
+	LOCK(vs_mutex);
+	LOCK(vs_speed_mutex);
+	LOCK(ps_mutex);
+	LOCK(ps_speed_mutex);
+
+	current_vs = {};
+	current_ps = {};
+
 	shader_sources.clear();
 	vertex_shaders.clear();
 	pixel_shaders.clear();
+	vertex_speed_shaders.clear();
+	pixel_speed_shaders.clear();
+
 	fvf_layouts.clear();
 
 	for (auto& value : render_state_values)
@@ -4345,6 +4490,19 @@ void Direct3DDevice8::oit_load_shaders()
 			if (FAILED(hr))
 			{
 				throw std::runtime_error("composite vertex shader creation failed");
+			}
+
+			D3D11_INPUT_ELEMENT_DESC desc {};
+
+			desc.SemanticName = "POSITION";
+			desc.Format       = DXGI_FORMAT_R32G32B32_FLOAT;
+
+			hr = device->CreateInputLayout(&desc, 1,
+			                               blob->GetBufferPointer(), blob->GetBufferSize(), &composite_layout);
+
+			if (FAILED(hr))
+			{
+				throw std::runtime_error("composite layout creation failed");
 			}
 
 			hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
@@ -4444,6 +4602,20 @@ void Direct3DDevice8::oit_read() const
 void Direct3DDevice8::oit_init()
 {
 	oit_release();
+
+	if (composite_vbuffer == nullptr)
+	{
+		D3D11_BUFFER_DESC desc {};
+
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.ByteWidth = (3 * 4 * sizeof(float)); // three components per vertex, four vertices
+
+		if (FAILED(device->CreateBuffer(&desc, nullptr, &composite_vbuffer)))
+		{
+			throw std::runtime_error("composite vertex buffer creation failed");
+		}
+	}
 
 	FragListHead_Init();
 	FragListCount_Init();

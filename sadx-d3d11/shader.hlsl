@@ -1,6 +1,12 @@
 #define NODE_WRITE
 #include "include.hlsli"
 
+#ifdef SPEEDY_SPEED_BOY
+	#define TSS_UNROLL [loop]
+#else
+	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT)]
+#endif
+
 #ifndef LIGHT_COUNT
 	#define LIGHT_COUNT 8
 #endif
@@ -825,6 +831,7 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 		}
 
 		case TOP_PREMODULATE: // TODO: NOT SUPPORTED
+			return float4(1, 0, 0, 1);
 			break;
 
 		case TOP_MODULATEALPHA_ADDCOLOR:
@@ -841,10 +848,13 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 			break;
 
 		case TOP_BUMPENVMAP: // TODO: NOT SUPPORTED
+			return float4(1, 0, 0, 1);
 			break;
 		case TOP_BUMPENVMAPLUMINANCE: // TODO: NOT SUPPORTED
+			return float4(1, 0, 0, 1);
 			break;
 		case TOP_DOTPRODUCT3: // TODO: NOT SUPPORTED
+			return float4(1, 0, 0, 1);
 			break;
 
 		case TOP_MULTIPLYADD:
@@ -900,7 +910,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #if TEXTURE_STAGE_COUNT > 0
-	float4 current = (float4)0;
+	float4 current = diffuse;
 	float4 tempreg = (float4)0;
 
 	float4 samples[TEXTURE_STAGE_COUNT];
@@ -951,8 +961,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	bool color_done = false;
 	bool alpha_done = false;
 
-	[unroll(TEXTURE_STAGE_COUNT / 2)]
-	for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	TSS_UNROLL for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
 		TextureStage stage = texture_stages[i];
 

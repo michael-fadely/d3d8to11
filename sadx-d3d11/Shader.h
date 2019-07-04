@@ -49,7 +49,14 @@ struct Shader
 		return shader == other.shader &&
 		       blob == other.blob;
 	}
+
+	[[nodiscard]] bool has_value() const
+	{
+		return shader != nullptr;
+	}
 };
 
 using VertexShader = Shader<ID3D11VertexShader>;
 using PixelShader  = Shader<ID3D11PixelShader>;
+using HullShader   = Shader<ID3D11HullShader>;
+using DomainShader = Shader<ID3D11DomainShader>;

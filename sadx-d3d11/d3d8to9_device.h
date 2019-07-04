@@ -13,6 +13,8 @@
 #include "Shader.h"
 #include "cbuffers.h"
 #include "hash_combine.h"
+#include <future>
+#include <optional>
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -206,6 +208,7 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
 class Direct3DDevice8 : public Unknown
 {
+	std::recursive_mutex shader_sources_mutex;
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 	std::string texcount_str;
@@ -324,8 +327,8 @@ public:
 
 	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags);
 	const std::vector<uint8_t>& get_shader_source(const std::string& path);
-	VertexShader get_vs(ShaderFlags::type flags);
-	PixelShader get_ps(ShaderFlags::type flags);
+	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
+	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
 	void create_depth_stencil();
 	void create_render_target();
 	void create_native();
@@ -339,12 +342,14 @@ public:
 	void commit_per_scene();
 	void commit_per_texture();
 	void update_sampler();
+	std::optional<PixelShader> get_ps_async(ShaderFlags::type flags);
 	void compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps);
 	void update_shaders();
 	void update_blend();
 	void update_depth();
 	void update_rasterizers();
 	bool update();
+	bool skip_draw() const;
 	void free_shaders();
 	void oit_load_shaders();
 	void oit_release();
@@ -353,8 +358,20 @@ public:
 	ShaderFlags::type shader_flags      = ShaderFlags::none;
 	ShaderFlags::type last_shader_flags = ShaderFlags::mask;
 
+	VertexShader current_vs;
+	PixelShader current_ps;
+
+	std::recursive_mutex ps_mutex, ps_speed_mutex, vs_mutex, vs_speed_mutex;
+
 	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
+
+	std::recursive_mutex vs_tasks_mutex, ps_tasks_mutex;
+	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> vs_tasks;
+	std::unordered_map<ShaderFlags::type, std::future<PixelShader>> ps_tasks;
+
+	std::unordered_map<ShaderFlags::type, VertexShader> vertex_speed_shaders;
+	std::unordered_map<ShaderFlags::type, PixelShader>  pixel_speed_shaders;
 
 	D3DPRESENT_PARAMETERS8 present_params {};
 	ComPtr<IDXGISwapChain> swap_chain;
@@ -363,10 +380,10 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
-	bool oit_enabled = true;
+	bool oit_enabled = false;
 
 protected:
-	bool oit_actually_enabled = true;
+	bool oit_actually_enabled = false;
 	Direct3D8* const d3d;
 
 	VertexShader composite_vs;
@@ -377,6 +394,8 @@ protected:
 	ComPtr<ID3D11Texture2D> composite_texture;
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
+	ComPtr<ID3D11Buffer> composite_vbuffer;
+	ComPtr<ID3D11InputLayout> composite_layout;
 
 	ComPtr<ID3D11Texture2D>           FragListHead;
 	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
