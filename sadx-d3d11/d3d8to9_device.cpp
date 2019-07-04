@@ -20,6 +20,8 @@
 #include "globals.h"
 #include <optional>
 
+#define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
+
 using namespace Microsoft::WRL;
 
 static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
@@ -4124,47 +4126,79 @@ std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-	std::lock_guard<decltype(ps_tasks_mutex)> task_lock(ps_tasks_mutex);
-
-	auto it = ps_tasks.find(flags);
-
-	if (it != ps_tasks.end())
 	{
-		auto status = it->second.wait_for(std::chrono::milliseconds(0));
+		LOCK(ps_tasks_mutex);
 
-		if (status == std::future_status::ready)
+		auto task_it = ps_tasks.find(flags);
+
+		if (task_it != ps_tasks.end())
 		{
-			auto result = it->second.get();
-			ps_tasks.erase(it);
-			return result;
+			auto status = task_it->second.wait_for(std::chrono::milliseconds(0));
+
+			if (status == std::future_status::ready)
+			{
+				auto result = task_it->second.get();
+				ps_tasks.erase(task_it);
+				return result;
+			}
+
+			return std::nullopt;
 		}
 
-		return std::nullopt;
+		// clean
+		for (auto it = ps_tasks.begin(); it != ps_tasks.end();)
+		{
+			auto status = it->second.wait_for(std::chrono::milliseconds(0));
+
+			if (status == std::future_status::ready)
+			{
+				if (it->first != flags)
+				{
+					it = ps_tasks.erase(it);
+				}
+				else
+				{
+					auto result = it->second.get();
+					ps_tasks.erase(it);
+					return result;
+				}
+			}
+			else
+			{
+				++it;
+			}
+		}
 	}
 
 	{
-		std::lock_guard<std::recursive_mutex> lock(ps_mutex);
+		LOCK(ps_mutex);
 
 		const auto ps_it = pixel_shaders.find(flags);
 
 		if (ps_it != pixel_shaders.end())
 		{
+			LOCK(ps_tasks_mutex);
+			ps_tasks.erase(ps_it->first);
 			return ps_it->second;
 		}
 	}
 
-	if (ps_tasks.size() >= std::thread::hardware_concurrency())
 	{
-		//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
-		return std::nullopt;
+		LOCK(ps_tasks_mutex);
+
+		if (ps_tasks.size() >= std::thread::hardware_concurrency())
+		{
+			//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
+			return std::nullopt;
+		}
+
+		auto task = std::async(std::launch::async, [this, flags]() -> auto
+		{
+			return get_ps(flags, false, pixel_shaders, ps_mutex);
+		});
+
+		ps_tasks[flags] = std::move(task);
 	}
-
-	auto task = std::async(std::launch::async, [&]() -> auto
-	{
-		return get_ps(flags, false, pixel_shaders, ps_mutex);
-	});
-
-	ps_tasks[flags] = std::move(task);
 
 	return std::nullopt;
 }
@@ -4183,7 +4217,7 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 
 			if (ps_async.has_value())
 			{
-				ps = *ps_async;
+				ps = ps_async.value();
 			}
 			/*else
 			{
@@ -4219,9 +4253,6 @@ void Direct3DDevice8::update_shaders()
 
 	compile_shaders(shader_flags, vs, ps);
 
-	current_vs = vs;
-	current_ps = ps;
-
 	if ((shader_flags & ShaderFlags::vs_mask) != (last_shader_flags & ShaderFlags::vs_mask))
 	{
 		context->VSSetShader(vs.shader.Get(), nullptr, 0);
@@ -4233,6 +4264,14 @@ void Direct3DDevice8::update_shaders()
 	}
 
 	last_shader_flags = shader_flags;
+
+	if (!ps.has_value())
+	{
+		last_shader_flags &= ShaderFlags::ps_mask;
+	}
+
+	current_vs = vs;
+	current_ps = ps;
 }
 
 void Direct3DDevice8::update_blend()
@@ -4397,6 +4436,12 @@ bool Direct3DDevice8::update()
 	commit_per_texture();
 	commit_per_model();
 	commit_per_pixel();
+
+	if (skip_draw())
+	{
+		return true;
+	}
+
 	return update_input_layout();
 }
 
@@ -4404,8 +4449,6 @@ bool Direct3DDevice8::skip_draw() const
 {
 	return !current_ps.has_value() || !current_vs.has_value();
 }
-
-#define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
 void Direct3DDevice8::free_shaders()
 {

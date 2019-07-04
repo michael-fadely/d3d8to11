@@ -4,7 +4,7 @@
 #ifdef SPEEDY_SPEED_BOY
 	#define TSS_UNROLL [loop]
 #else
-	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT)]
+	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT / 4)]
 #endif
 
 #ifndef LIGHT_COUNT
