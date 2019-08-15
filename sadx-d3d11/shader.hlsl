@@ -25,7 +25,7 @@
 
 #define RADIAL_FOG
 
-#if 1
+#if 0
 	#define PIXEL_LIGHTING
 #else
 	#define VERTEX_LIGHTING

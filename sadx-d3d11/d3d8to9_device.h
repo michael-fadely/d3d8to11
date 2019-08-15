@@ -389,13 +389,11 @@ protected:
 	VertexShader composite_vs;
 	PixelShader composite_ps;
 
-	ComPtr<ID3D11RenderTargetView> render_target;
+	ComPtr<ID3D11RenderTargetView> back_buffer_view;
 
 	ComPtr<ID3D11Texture2D> composite_texture;
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
-	ComPtr<ID3D11Buffer> composite_vbuffer;
-	ComPtr<ID3D11InputLayout> composite_layout;
 
 	ComPtr<ID3D11Texture2D>           FragListHead;
 	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;

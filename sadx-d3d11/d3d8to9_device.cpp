@@ -446,6 +446,8 @@ void Direct3DDevice8::create_depth_stencil()
 	depth_stencil->GetSurfaceLevel(0, &current_depth_stencil);
 }
 
+#pragma comment( lib, "dxguid.lib")
+
 void Direct3DDevice8::create_render_target()
 {
 	ID3D11Texture2D* pBackBuffer = nullptr;
@@ -459,7 +461,7 @@ void Direct3DDevice8::create_render_target()
 
 	back_buffer->GetSurfaceLevel(0, &current_render_target);
 
-	device->CreateRenderTargetView(pBackBuffer, nullptr, &render_target);
+	device->CreateRenderTargetView(pBackBuffer, nullptr, &back_buffer_view);
 
 	pBackBuffer->Release();
 
@@ -489,6 +491,9 @@ void Direct3DDevice8::create_render_target()
 		throw std::runtime_error("Failed to create composite target view");
 	}
 
+	std::string composite_view_name = "composite_view";
+	composite_view->SetPrivateData(WKPDID_D3DDebugObjectName, composite_view_name.size(), composite_view_name.data());
+
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
 	srv_desc.Format                    = tex_desc.Format;
@@ -502,6 +507,9 @@ void Direct3DDevice8::create_render_target()
 	{
 		throw std::runtime_error("Failed to create composite resource view");
 	}
+
+	std::string composite_srv_name = "composite_srv";
+	composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, composite_srv_name.size(), composite_srv_name.data());
 
 	// set the composite render target as the back buffer
 	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
@@ -1127,10 +1135,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 		context->OMSetRenderTargets(0, nullptr, nullptr);
 
-		back_buffer = nullptr;
+		back_buffer           = nullptr;
 		current_depth_stencil = nullptr;
 		current_render_target = nullptr;
-		render_target = nullptr;
+		back_buffer_view      = nullptr;
 
 		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight,
 		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
@@ -1146,6 +1154,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 		SetViewport(&vp);
 
+		oit_release();
 		oit_init();
 	}
 
@@ -1912,9 +1921,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 			context->ClearRenderTargetView(composite_view.Get(), color);
 		}
 
-		if (render_target)
+		if (back_buffer_view)
 		{
-			context->ClearRenderTargetView(render_target.Get(), color);
+			context->ClearRenderTargetView(back_buffer_view.Get(), color);
 		}
 	}
 
@@ -4218,6 +4227,7 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 		{
 			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
 
+		#if 1
 			auto ps_async = get_ps_async(flags);
 
 			if (ps_async.has_value())
@@ -4228,6 +4238,9 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 			{
 				ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
 			}*/
+		#else
+			ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
+		#endif
 
 			break;
 		}
@@ -4540,19 +4553,6 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			D3D11_INPUT_ELEMENT_DESC desc {};
-
-			desc.SemanticName = "POSITION";
-			desc.Format       = DXGI_FORMAT_R32G32B32_FLOAT;
-
-			hr = device->CreateInputLayout(&desc, 1,
-			                               blob->GetBufferPointer(), blob->GetBufferSize(), &composite_layout);
-
-			if (FAILED(hr))
-			{
-				throw std::runtime_error("composite layout creation failed");
-			}
-
 			hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
@@ -4582,7 +4582,7 @@ void Direct3DDevice8::oit_release()
 {
 	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr,
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, back_buffer_view.GetAddressOf(), nullptr,
 	                                                   1, null.size(), &null[0], nullptr);
 
 	FragListHead     = nullptr;
@@ -4615,7 +4615,7 @@ void Direct3DDevice8::oit_write()
 	static const uint zero[3] = { 0, 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target.GetAddressOf(),
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : back_buffer_view.GetAddressOf(),
 	                                                   current_depth_stencil->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
@@ -4633,7 +4633,7 @@ void Direct3DDevice8::oit_read() const
 	ID3D11UnorderedAccessView* uavs[3] = {};
 
 	// Unbinds our UAVs.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, back_buffer_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
 
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {
 		FragListHeadSRV.Get(),
@@ -4649,22 +4649,6 @@ void Direct3DDevice8::oit_read() const
 
 void Direct3DDevice8::oit_init()
 {
-	oit_release();
-
-	if (composite_vbuffer == nullptr)
-	{
-		D3D11_BUFFER_DESC desc {};
-
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		desc.ByteWidth = (3 * 4 * sizeof(float)); // three components per vertex, four vertices
-
-		if (FAILED(device->CreateBuffer(&desc, nullptr, &composite_vbuffer)))
-		{
-			throw std::runtime_error("composite vertex buffer creation failed");
-		}
-	}
-
 	FragListHead_Init();
 	FragListCount_Init();
 	FragListNodes_Init();

@@ -5,26 +5,16 @@
 	which it composites the stored alpha fragments.
 */
 
-cbuffer PerSceneBuffer : register(b0)
-{
-	matrix view_matrix;
-	matrix projection_matrix;
-	float2 screen_dimensions;
-	float3 view_position;
-	uint   buffer_len;
-};
-
 struct VertexOutput
 {
 	float4 position : SV_POSITION;
 };
 
-VertexOutput vs_main(in float3 pos : POSITION)
+VertexOutput vs_main(uint vertexId : SV_VertexID)
 {
 	VertexOutput output;
-
-	output.position = float4(pos.xy * screen_dimensions.xy, 0, 1);
-
+	float2 texcoord = float2((vertexId << 1) & 2, vertexId & 2);
+	output.position = float4(texcoord * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
 	return output;
 }
 
