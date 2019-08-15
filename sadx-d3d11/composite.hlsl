@@ -59,8 +59,6 @@ float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 des
 
 float4 ps_main(VertexOutput input) : SV_TARGET
 {
-	return float4(1, 0, 0, 1);
-
 	int2 pos = int2(input.position.xy);
 
 	float4 backBufferColor = BackBuffer[pos];

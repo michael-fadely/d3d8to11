@@ -1,6 +1,6 @@
 // Maximum number of fragments to be sorted per pixel
 #ifndef MAX_FRAGMENTS
-#define MAX_FRAGMENTS 16
+#define MAX_FRAGMENTS 32
 #endif
 
 #ifndef TEXTURE_STAGE_COUNT

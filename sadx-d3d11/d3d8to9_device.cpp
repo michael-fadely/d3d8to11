@@ -161,6 +161,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 	};
 
 	shader_preproc_defs.clear();
+	shader_preproc_defs.push_back({ "MAX_FRAGMENTS", fragments_str.c_str() });
 
 	flags = ShaderFlags::sanitize(flags);
 
@@ -1175,7 +1176,7 @@ void Direct3DDevice8::oit_composite()
 	SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 	SetRenderState(D3DRS_ZENABLE, FALSE);
 
-	static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8);
+	static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8) | (0xF << BLEND_COLORMASK_SHIFT);
 	auto blend_ = blend_flags.data();
 	blend_flags = BLEND_DEFAULT;
 	update();
@@ -4227,7 +4228,7 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 		{
 			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
 
-		#if 1
+		#if 0
 			auto ps_async = get_ps_async(flags);
 
 			if (ps_async.has_value())
