@@ -1045,8 +1045,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 			if (frag_count >= MAX_FRAGMENTS)
 			{
-				return float4(0, 0, 1, 1);
-				//clip(-1);
+				clip(-1);
 			}
 		#endif
 
@@ -1055,8 +1054,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		// if per-pixel fragment limiting is enabled, this check is unnecessary
 		if (new_index >= buffer_len)
 		{
-			return float4(0, 1, 0, 1);
-			//clip(-1);
+			clip(-1);
 		}
 
 		uint old_index;

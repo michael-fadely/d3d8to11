@@ -1246,15 +1246,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
-	oit_composite();
-	oit_start();
-
 	auto interval = present_params.FullScreen_PresentationInterval;
 
 	if (interval == D3DPRESENT_INTERVAL_IMMEDIATE)
 	{
 		interval = 0;
 	}
+	
+	oit_composite();
 
 	try
 	{
@@ -1266,6 +1265,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	catch (std::exception&)
 	{
 	}
+
+	oit_start();
 
 	auto vk_menu = GetAsyncKeyState(VK_MENU);
 	auto vk_o    = GetAsyncKeyState('O');
