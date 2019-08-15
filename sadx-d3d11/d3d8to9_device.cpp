@@ -4204,7 +4204,7 @@ std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags
 
 		if (ps_tasks.size() >= std::thread::hardware_concurrency())
 		{
-			OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
+			//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
 			return std::nullopt;
 		}
 
@@ -4229,7 +4229,7 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 		{
 			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
 
-		#if 0
+		#if 1
 			auto ps_async = get_ps_async(flags);
 
 			if (ps_async.has_value())

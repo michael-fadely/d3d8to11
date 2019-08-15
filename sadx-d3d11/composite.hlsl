@@ -97,13 +97,13 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	}
 
 #ifndef DISABLE_SORT
-	// Performs an insertion sort to sort the fragments by depth.
 	for (uint k = 1; k < count; k++)
 	{
 		uint j = k;
 		OitNode t = fragments[k];
 
-		while (fragments[j - 1].depth <= t.depth)
+		// TODO: include draw call number and use to sort when depths are equal
+		while (fragments[j - 1].depth < t.depth)
 		{
 			fragments[j] = fragments[j - 1];
 			j--;

@@ -180,6 +180,7 @@ cbuffer PerModelBuffer : register(b1)
 
 cbuffer PerPixelBuffer : register(b2)
 {
+	// TODO: draw call
 	uint   src_blend;
 	uint   dst_blend;
 	uint   fog_mode;
@@ -1019,6 +1020,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result.rgb = saturate(result.rgb + specular.rgb);
 #endif
 
+#ifdef RS_FOG
+	float factor = calc_fog(input.fog);
+	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
+#endif
+
 #ifdef RS_ALPHA
 	if (alpha_reject == true)
 	{
@@ -1027,18 +1033,18 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 	}
 
-	#if !defined(FVF_RHW)
-	if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
-	    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
-	{
-		if (result.a > 254.0f / 255.0f)
-		{
-			return result;
-		}
-	}
-	#endif
-
 	#ifdef RS_OIT
+		//#if !defined(FVF_RHW)
+			if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
+			    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
+			{
+				if (result.a > 254.0f / 255.0f)
+				{
+					return result;
+				}
+			}
+		//#endif
+
 		#ifndef DISABLE_PER_PIXEL_LIMIT
 			uint frag_count;
 			InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
@@ -1070,11 +1076,6 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		FragListNodes[new_index] = n;
 		clip(-1);
 	#endif
-#endif
-
-#ifdef RS_FOG
-	float factor = calc_fog(input.fog);
-	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
 #endif
 
 	return result;
