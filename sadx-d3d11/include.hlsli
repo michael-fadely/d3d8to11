@@ -98,6 +98,7 @@ static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 // Fragment list node.
 struct OitNode
 {
+	uint  draw_call;
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
 	uint  flags; // source blend, destination blend, blend operation

@@ -1264,6 +1264,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	
 	oit_composite();
 
+	per_model.draw_call = 0;
+
 	try
 	{
 		if (FAILED(swap_chain->Present(interval, 0)))
@@ -3122,6 +3124,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		return D3DERR_INVALIDCALL;
 	}
 
+	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;
@@ -3167,6 +3170,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 		return D3DERR_INVALIDCALL;
 	}
 
+	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;
@@ -3240,6 +3244,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
+	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;

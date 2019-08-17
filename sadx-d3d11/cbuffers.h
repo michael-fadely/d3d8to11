@@ -39,6 +39,8 @@ public:
 class PerModelBuffer : public ICBuffer, dirty_impl
 {
 public:
+	dirty_t<uint> draw_call;
+
 	dirty_t<matrix, dirty_mode::on_assignment> world_matrix;
 	dirty_t<matrix, dirty_mode::on_assignment> wv_matrix_inv_t;
 	std::array<dirty_t<Light>, LIGHT_COUNT>    lights;

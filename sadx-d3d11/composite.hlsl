@@ -100,10 +100,10 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	for (uint k = 1; k < count; k++)
 	{
 		uint j = k;
-		OitNode t = fragments[k];
+		OitNode b = fragments[k];
+		OitNode a = fragments[j - 1];
 
-		// TODO: include draw call number and use to sort when depths are equal
-		while (fragments[j - 1].depth < t.depth)
+		while (a.depth < b.depth || (a.depth == b.depth && a.draw_call > b.draw_call))
 		{
 			fragments[j] = fragments[j - 1];
 			j--;
@@ -112,11 +112,13 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 			{
 				break;
 			}
+
+			a = fragments[j - 1];
 		}
 
 		if (j != k)
 		{
-			fragments[j] = t;
+			fragments[j] = b;
 		}
 	}
 #endif

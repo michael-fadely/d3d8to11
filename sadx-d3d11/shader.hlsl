@@ -167,6 +167,7 @@ cbuffer PerSceneBuffer : register(b0)
 
 cbuffer PerModelBuffer : register(b1)
 {
+	uint draw_call;
 	matrix world_matrix;
 	matrix wv_matrix_inv_t;
 
@@ -1025,14 +1026,20 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
 #endif
 
+	bool standard_blending = (src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
+	                         (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO);
+
 #ifdef RS_ALPHA
 	#ifdef RS_OIT
 		// if we're using OIT and the alpha is 0,
 		// don't bother sorting it, but also don't
 		// subject it to alpha rejection.
-		if (floor(result.a * 255) < 1)
+		if (standard_blending)
 		{
-			clip(-1);
+			if (floor(result.a * 255) < 1)
+			{
+				clip(-1);
+			}
 		}
 	#else
 		if (alpha_reject == true)
@@ -1048,8 +1055,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	#if !defined(FVF_RHW)
 		// if the pixel is effectively opaque with actual blending,
 		// write it directly to the backbuffer as opaque
-		if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
-		    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
+		if (standard_blending)
 		{
 			if (result.a > 254.0f / 255.0f)
 			{
@@ -1081,10 +1087,11 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	OitNode n;
 
-	n.depth = input.depth.x / input.depth.y;
-	n.color = float4_to_unorm(result);
-	n.flags = (src_blend << 8) | dst_blend;
-	n.next  = old_index;
+	n.draw_call = draw_call;
+	n.depth     = input.depth.x / input.depth.y;
+	n.color     = float4_to_unorm(result);
+	n.flags     = (src_blend << 8) | dst_blend;
+	n.next      = old_index;
 
 	FragListNodes[new_index] = n;
 	clip(-1);

@@ -198,6 +198,7 @@ struct StreamPair
 
 struct OitNode
 {
+	uint  draw_call;
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
 	uint  flags; // source blend, destination blend

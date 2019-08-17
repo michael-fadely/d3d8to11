@@ -65,7 +65,7 @@ inline CBufferBase& operator<<(CBufferBase& buffer, const MaterialSources& data)
 
 void PerModelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << world_matrix << wv_matrix_inv_t
+	cbuf << draw_call << world_matrix << wv_matrix_inv_t
 		<< material_sources << ambient << color_vertex;
 
 	for (const auto& light : lights)
@@ -86,7 +86,7 @@ bool PerModelBuffer::dirty() const
 		}
 	}
 
-	return world_matrix.dirty() || wv_matrix_inv_t.dirty() ||
+	return draw_call.dirty() || world_matrix.dirty() || wv_matrix_inv_t.dirty() ||
 	       material.dirty() || material_sources.dirty() || ambient.dirty() || color_vertex.dirty();
 }
 
@@ -97,6 +97,7 @@ void PerModelBuffer::clear()
 		light.clear();
 	}
 
+	draw_call.clear();
 	world_matrix.clear();
 	wv_matrix_inv_t.clear();
 	material.clear();
@@ -112,6 +113,7 @@ void PerModelBuffer::mark()
 		light.mark();
 	}
 
+	draw_call.mark();
 	world_matrix.mark();
 	wv_matrix_inv_t.mark();
 	material.mark();
