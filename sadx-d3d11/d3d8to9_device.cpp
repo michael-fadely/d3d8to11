@@ -20,6 +20,9 @@
 #include "globals.h"
 #include <optional>
 
+#define SHADER_ASYNC_COMPILE
+//#define SHADER_FAST_FALLBACK
+
 #define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
 using namespace Microsoft::WRL;
@@ -1306,12 +1309,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (!current_render_target)
+	if (iBackBuffer) // TODO: actual backbuffer, actual swapchain
 	{
-		back_buffer->GetSurfaceLevel(0, &current_render_target);
+		return D3DERR_INVALIDCALL; // HACK
 	}
 
-	*ppBackBuffer = current_render_target.Get();
+	ComPtr<Direct3DSurface8> surface;
+	back_buffer->GetSurfaceLevel(0, &surface);
+
+	*ppBackBuffer = surface.Get();
 	(*ppBackBuffer)->AddRef();
 
 	return D3D_OK;
@@ -1651,15 +1657,37 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 #endif
 }
 
-HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSurface, const RECT* pSourceRectsArray, UINT cRects, Direct3DSurface8* pDestinationSurface, const POINT* pDestPointsArray)
+HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSurface, const RECT* pSourceRectsArray, UINT cRects,
+                                                     Direct3DSurface8* pDestinationSurface, const POINT* pDestPointsArray)
 {
-#if 1
+	print_info_queue();
+
 	if (!pSourceSurface || !pDestinationSurface)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (pSourceRectsArray || cRects || pDestPointsArray) // TODO
+	// HACK: all so I can avoid writing the code to copy subregions; they're so rarely used anyway
+	// fixes this call in Phantasy Star Online: Blue Burst
+	if (pSourceRectsArray && cRects == 1)
+	{
+		if (pSourceRectsArray->top || pSourceRectsArray->left)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		if (pSourceSurface->desc8.Width  != static_cast<uint>(pSourceRectsArray->right) ||
+		    pSourceSurface->desc8.Height != static_cast<uint>(pSourceRectsArray->bottom))
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		if (pDestPointsArray && (pDestPointsArray->x != 0 || pDestPointsArray->y != 0))
+		{
+			return D3DERR_INVALIDCALL;
+		}
+	}
+	else if (pSourceRectsArray || cRects || pDestPointsArray) // TODO
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -1691,90 +1719,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 	}
 
 	context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
+	print_info_queue();
 	return D3D_OK;
-#else
-	if (pSourceSurface == nullptr || pDestinationSurface == nullptr || pSourceSurface == pDestinationSurface)
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
-	D3DSURFACE_DESC SourceDesc, DestinationDesc;
-	pSourceSurface->GetProxyInterface()->GetDesc(&SourceDesc);
-	pDestinationSurface->GetProxyInterface()->GetDesc(&DestinationDesc);
-
-	if (SourceDesc.Format != DestinationDesc.Format)
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
-	HRESULT hr = D3DERR_INVALIDCALL;
-
-	if (cRects == 0)
-	{
-		cRects = 1;
-	}
-
-	for (UINT i = 0; i < cRects; i++)
-	{
-		RECT SourceRect, DestinationRect;
-
-		if (pSourceRectsArray != nullptr)
-		{
-			SourceRect = pSourceRectsArray[i];
-		}
-		else
-		{
-			SourceRect.left = 0;
-			SourceRect.right = SourceDesc.Width;
-			SourceRect.top = 0;
-			SourceRect.bottom = SourceDesc.Height;
-		}
-
-		if (pDestPointsArray != nullptr)
-		{
-			DestinationRect.left = pDestPointsArray[i].x;
-			DestinationRect.right = DestinationRect.left + (SourceRect.right - SourceRect.left);
-			DestinationRect.top = pDestPointsArray[i].y;
-			DestinationRect.bottom = DestinationRect.top + (SourceRect.bottom - SourceRect.top);
-		}
-		else
-		{
-			DestinationRect = SourceRect;
-		}
-
-		if (SourceDesc.Pool == D3DPOOL_MANAGED || DestinationDesc.Pool != D3DPOOL_DEFAULT)
-		{
-			if (D3DXLoadSurfaceFromSurface != nullptr)
-			{
-				hr = D3DXLoadSurfaceFromSurface(pDestinationSurface->GetProxyInterface(), nullptr, &DestinationRect, pSourceSurface->GetProxyInterface(), nullptr, &SourceRect, D3DX_FILTER_NONE, 0);
-			}
-			else
-			{
-				hr = D3DERR_INVALIDCALL;
-			}
-		}
-		else if (SourceDesc.Pool == D3DPOOL_DEFAULT)
-		{
-			hr = ProxyInterface->StretchRect(pSourceSurface->GetProxyInterface(), &SourceRect, pDestinationSurface->GetProxyInterface(), &DestinationRect, D3DTEXF_NONE);
-		}
-		else if (SourceDesc.Pool == D3DPOOL_SYSTEMMEM)
-		{
-			const POINT pt = { DestinationRect.left, DestinationRect.top };
-
-			hr = ProxyInterface->UpdateSurface(pSourceSurface->GetProxyInterface(), &SourceRect, pDestinationSurface->GetProxyInterface(), &pt);
-		}
-
-		if (FAILED(hr))
-		{
-		#ifndef D3D8TO9NOLOG
-			LOG << "Failed to translate 'IDirect3DDevice8::CopyRects' call from '[" << SourceDesc.Width << "x" << SourceDesc.Height << ", " << SourceDesc.Format << ", " << SourceDesc.MultiSampleType << ", " << SourceDesc.Usage << ", " << SourceDesc.Pool << "]' to '[" << DestinationDesc.Width << "x" << DestinationDesc.Height << ", " << DestinationDesc.Format << ", " << DestinationDesc.MultiSampleType << ", " << DestinationDesc.Usage << ", " << DestinationDesc.Pool << "]'!" << std::endl;
-		#endif
-			break;
-		}
-	}
-
-	return hr;
-#endif
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::UpdateTexture(Direct3DBaseTexture8* pSourceTexture, Direct3DBaseTexture8* pDestinationTexture)
@@ -1829,34 +1775,36 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetFrontBuffer(Direct3DSurface8* pDes
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRenderTarget, Direct3DSurface8* pNewZStencil)
 {
-	ID3D11RenderTargetView* render_target = nullptr;
-	ID3D11DepthStencilView* depth_stencil = nullptr;
+	print_info_queue();
 
-	if (pRenderTarget == nullptr)
-	{
-		render_target = current_render_target->render_target.Get();
-	}
-	else
-	{
-		render_target = pRenderTarget->render_target.Get();
+	ID3D11RenderTargetView* render_target_ = nullptr;
+	ID3D11DepthStencilView* depth_stencil_ = nullptr;
 
-		if (!render_target)
+	if (pRenderTarget != nullptr)
+	{
+		render_target_ = pRenderTarget->render_target.Get();
+
+		if (!render_target_)
 		{
 			return D3DERR_INVALIDCALL;
 		}
 
 		current_render_target = pRenderTarget;
+
+		D3DVIEWPORT8 viewport_ {};
+		GetViewport(&viewport_);
+
+		viewport_.Width  = pRenderTarget->desc8.Width;
+		viewport_.Height = pRenderTarget->desc8.Height;
+
+		SetViewport(&viewport_);
 	}
 
-	if (pNewZStencil == nullptr)
+	if (pNewZStencil != nullptr)
 	{
-		depth_stencil = current_depth_stencil->depth_stencil.Get();
-	}
-	else
-	{
-		depth_stencil = pNewZStencil->depth_stencil.Get();
+		depth_stencil_ = pNewZStencil->depth_stencil.Get();
 
-		if (!depth_stencil)
+		if (!depth_stencil_)
 		{
 			return D3DERR_INVALIDCALL;
 		}
@@ -1864,7 +1812,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRe
 		current_depth_stencil = pNewZStencil;
 	}
 
-	context->OMSetRenderTargets(1, &render_target, depth_stencil);
+	context->OMSetRenderTargets(1, &render_target_, depth_stencil_);
+	print_info_queue();
 	return D3D_OK;
 }
 
@@ -2731,7 +2680,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 	if (pTexture == nullptr)
 	{
 		per_texture.stages[Stage].bound = false;
-		context->PSSetShaderResources(Stage, 0, nullptr);
+
+		ID3D11ShaderResourceView* bullshit[1] = {};
+		context->PSSetShaderResources(Stage, 1, &bullshit[0]);
 
 		if (it != textures.end())
 		{
@@ -3740,6 +3691,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePatch(UINT Handle)
 
 void Direct3DDevice8::print_info_queue() const
 {
+#ifndef DEBUG
 	if (!info_queue)
 	{
 		return;
@@ -3778,6 +3730,7 @@ void Direct3DDevice8::print_info_queue() const
 	} while (true);
 
 	info_queue->ClearStoredMessages();
+#endif
 }
 
 bool Direct3DDevice8::update_input_layout()
@@ -4221,9 +4174,6 @@ std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags
 
 void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps)
 {
-	//#define SHADER_ASYNC_COMPILE
-	//#define SHADER_FAST_FALLBACK
-
 	int result;
 
 	do
