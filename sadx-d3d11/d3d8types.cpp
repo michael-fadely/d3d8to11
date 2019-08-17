@@ -6,6 +6,12 @@
 #include "stdafx.h"
 #include "d3d8types.hpp"
 
+inline uint blocks_size_in_bytes(uint w, uint h, uint block_size)
+{
+	return std::max(1u, ((w + 3) / 4) * block_size) *
+	       std::max(1u, ((h + 3) / 4)/* * block_size*/);
+}
+
 UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
 {
 	switch (static_cast<DWORD>(Format))
@@ -53,13 +59,13 @@ UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
 			return Width * 4 * Height * Depth;
 		case D3DFMT_DXT1:
 			assert(Depth <= 1);
-			return ((Width + 3) >> 2) * ((Height + 3) >> 2) * 8;
+			return blocks_size_in_bytes(Width, Height, 8);
 		case D3DFMT_DXT2:
 		case D3DFMT_DXT3:
 		case D3DFMT_DXT4:
 		case D3DFMT_DXT5:
 			assert(Depth <= 1);
-			return ((Width + 3) >> 2) * ((Height + 3) >> 2) * 16;
+			return blocks_size_in_bytes(Width, Height, 16);
 	}
 }
 
