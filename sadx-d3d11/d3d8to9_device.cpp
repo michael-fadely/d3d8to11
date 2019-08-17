@@ -4221,6 +4221,9 @@ std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags
 
 void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps)
 {
+	//#define SHADER_ASYNC_COMPILE
+	//#define SHADER_FAST_FALLBACK
+
 	int result;
 
 	do
@@ -4229,17 +4232,19 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 		{
 			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
 
-		#if 1
+		#ifdef SHADER_ASYNC_COMPILE
 			auto ps_async = get_ps_async(flags);
 
 			if (ps_async.has_value())
 			{
 				ps = ps_async.value();
 			}
-			/*else
+			#ifdef SHADER_FAST_FALLBACK
+			else
 			{
 				ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
-			}*/
+			}
+			#endif
 		#else
 			ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
 		#endif
