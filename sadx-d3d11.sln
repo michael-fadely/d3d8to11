@@ -1,7 +1,6 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.29001.49
+VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sadx-d3d11", "sadx-d3d11\sadx-d3d11.vcxproj", "{33FCEE21-B5A3-4C42-AC19-5CF9238F089F}"
 EndProject
@@ -43,7 +42,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {8F4433DB-A8E1-40EA-A524-ED0BB2B46E0F}
+		SolutionGuid = {CFB3C228-4C26-4746-8E0C-71C310403E8C}
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
