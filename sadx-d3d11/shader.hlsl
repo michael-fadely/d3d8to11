@@ -335,8 +335,8 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 		}
 
 		// exceptions to the naming style for the sake of the formula
-		float4 Ld       = lights[i].diffuse;
-		float3 Ldir     = normalize(-lights[i].direction);
+		float4 Ld   = lights[i].diffuse;
+		float3 Ldir = normalize(-lights[i].direction);
 
 	#ifdef FVF_NORMAL
 		float3 N = world_normal;
@@ -1026,15 +1026,28 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
+
+#ifdef RS_OIT
+	// if we're using OIT and the alpha is 0,
+	// don't bother sorting it, but also don't
+	// subject it to alpha rejection.
+	if (floor(result.a * 255) < 1)
+	{
+		clip(-1);
+	}
+#else
 	if (alpha_reject == true)
 	{
 		uint alpha = floor(result.a * 255);
 		uint threshold = floor(alpha_reject_threshold * 255);
 		clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 	}
+#endif
 
 	#ifdef RS_OIT
 		//#if !defined(FVF_RHW)
+			// if the pixel is effectively opaque with actual blending,
+			// write it directly to the backbuffer as opaque
 			if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
 			    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
 			{
