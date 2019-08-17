@@ -380,7 +380,7 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
-	bool oit_enabled = false;
+	bool oit_enabled = true;
 
 protected:
 	bool oit_actually_enabled = false;
@@ -437,6 +437,7 @@ protected:
 	dirty_t<DWORD> FVF;
 	ComPtr<Direct3DTexture8> depth_stencil;
 	ComPtr<Direct3DTexture8> back_buffer;
+	ComPtr<Direct3DTexture8> composite_wrapper;
 
 	DepthStencilFlags depthstencil_flags {};
 	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> depth_states;

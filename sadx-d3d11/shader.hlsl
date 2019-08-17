@@ -1026,69 +1026,68 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 #endif
 
 #ifdef RS_ALPHA
-
-#ifdef RS_OIT
-	// if we're using OIT and the alpha is 0,
-	// don't bother sorting it, but also don't
-	// subject it to alpha rejection.
-	if (floor(result.a * 255) < 1)
-	{
-		clip(-1);
-	}
-#else
-	if (alpha_reject == true)
-	{
-		uint alpha = floor(result.a * 255);
-		uint threshold = floor(alpha_reject_threshold * 255);
-		clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
-	}
-#endif
-
 	#ifdef RS_OIT
-		//#if !defined(FVF_RHW)
-			// if the pixel is effectively opaque with actual blending,
-			// write it directly to the backbuffer as opaque
-			if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
-			    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
-			{
-				if (result.a > 254.0f / 255.0f)
-				{
-					return result;
-				}
-			}
-		//#endif
-
-		#ifndef DISABLE_PER_PIXEL_LIMIT
-			uint frag_count;
-			InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
-
-			if (frag_count >= MAX_FRAGMENTS)
-			{
-				clip(-1);
-			}
-		#endif
-
-		uint new_index = FragListNodes.IncrementCounter();
-
-		// if per-pixel fragment limiting is enabled, this check is unnecessary
-		if (new_index >= buffer_len)
+		// if we're using OIT and the alpha is 0,
+		// don't bother sorting it, but also don't
+		// subject it to alpha rejection.
+		if (floor(result.a * 255) < 1)
 		{
 			clip(-1);
 		}
-
-		uint old_index;
-		InterlockedExchange(FragListHead[input.position.xy], new_index, old_index);
-
-		OitNode n;
-
-		n.depth = input.depth.x / input.depth.y;
-		n.color = float4_to_unorm(result);
-		n.flags = (src_blend << 8) | dst_blend;
-		n.next  = old_index;
-
-		FragListNodes[new_index] = n;
-		clip(-1);
+	#else
+		if (alpha_reject == true)
+		{
+			uint alpha = floor(result.a * 255);
+			uint threshold = floor(alpha_reject_threshold * 255);
+			clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
+		}
 	#endif
+#endif
+
+#if defined(RS_OIT) && defined(RS_ALPHA)
+	#if !defined(FVF_RHW)
+		// if the pixel is effectively opaque with actual blending,
+		// write it directly to the backbuffer as opaque
+		if ((src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
+		    (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO))
+		{
+			if (result.a > 254.0f / 255.0f)
+			{
+				return result;
+			}
+		}
+	#endif
+
+	#ifndef DISABLE_PER_PIXEL_LIMIT
+		uint frag_count;
+		InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
+
+		if (frag_count >= MAX_FRAGMENTS)
+		{
+			clip(-1);
+		}
+	#endif
+
+	uint new_index = FragListNodes.IncrementCounter();
+
+	// if per-pixel fragment limiting is enabled, this check is unnecessary
+	if (new_index >= buffer_len)
+	{
+		clip(-1);
+	}
+
+	uint old_index;
+	InterlockedExchange(FragListHead[input.position.xy], new_index, old_index);
+
+	OitNode n;
+
+	n.depth = input.depth.x / input.depth.y;
+	n.color = float4_to_unorm(result);
+	n.flags = (src_blend << 8) | dst_blend;
+	n.next  = old_index;
+
+	FragListNodes[new_index] = n;
+	clip(-1);
 #endif
 
 	return result;

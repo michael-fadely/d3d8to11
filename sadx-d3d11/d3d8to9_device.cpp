@@ -20,6 +20,8 @@
 #include "globals.h"
 #include <optional>
 
+// TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
+
 #define SHADER_ASYNC_COMPILE
 //#define SHADER_FAST_FALLBACK
 
@@ -463,7 +465,7 @@ void Direct3DDevice8::create_render_target()
 	back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	back_buffer->create_native(pBackBuffer);
 
-	back_buffer->GetSurfaceLevel(0, &current_render_target);
+	//back_buffer->GetSurfaceLevel(0, &current_render_target);
 
 	device->CreateRenderTargetView(pBackBuffer, nullptr, &back_buffer_view);
 
@@ -517,6 +519,10 @@ void Direct3DDevice8::create_render_target()
 
 	// set the composite render target as the back buffer
 	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
+
+	composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	composite_wrapper->create_native(composite_texture.Get());
+	composite_wrapper->GetSurfaceLevel(0, &current_render_target);
 }
 
 void Direct3DDevice8::create_native()
@@ -1304,6 +1310,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer)
 {
+	return D3DERR_INVALIDCALL; // HACK: fixes output in PSOBB
 	if (ppBackBuffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
@@ -1314,8 +1321,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL; // HACK
 	}
 
+	auto& bb = oit_actually_enabled ? composite_wrapper : back_buffer;
+
 	ComPtr<Direct3DSurface8> surface;
-	back_buffer->GetSurfaceLevel(0, &surface);
+	bb->GetSurfaceLevel(0, &surface);
 
 	*ppBackBuffer = surface.Get();
 	(*ppBackBuffer)->AddRef();

@@ -134,5 +134,5 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		final = blend_colors(srcBlend, destBlend, color, final);
 	}
 
-	return final;
+	return float4(final.rgb, 1);
 }
