@@ -15,6 +15,7 @@
 #include "hash_combine.h"
 #include <future>
 #include <optional>
+#include "int_multiple.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -227,7 +228,20 @@ public:
 	Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters);
 	~Direct3DDevice8() = default;
 
-	HRESULT make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const;
+	HRESULT make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const
+	{
+		D3D11_BUFFER_DESC desc {};
+
+		const auto cbuffer_size = interface_.cbuffer_size();
+
+		desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+		desc.Usage               = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
+		desc.StructureByteStride = cbuffer_size;
+
+		return device->CreateBuffer(&desc, nullptr, &cbuffer);
+	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;

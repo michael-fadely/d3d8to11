@@ -872,21 +872,6 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	fragments_str = std::to_string(globals::max_fragments);
 }
 
-HRESULT Direct3DDevice8::make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const
-{
-	D3D11_BUFFER_DESC desc {};
-
-	const auto cbuffer_size = interface_.cbuffer_size();
-
-	desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-	desc.Usage               = D3D11_USAGE_DYNAMIC;
-	desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
-	desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-	desc.StructureByteStride = cbuffer_size;
-
-	return device->CreateBuffer(&desc, nullptr, &cbuffer);
-}
-
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)
 {
 	if (ppvObj == nullptr)
