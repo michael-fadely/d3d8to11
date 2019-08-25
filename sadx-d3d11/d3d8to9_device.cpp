@@ -590,51 +590,26 @@ void Direct3DDevice8::create_native()
 	vp.Height = present_params.BackBufferHeight;
 	vp.MaxZ   = 1.0f;
 	SetViewport(&vp);
-
-	D3D11_BUFFER_DESC cbuf_desc {};
-
-	auto cbuffer_size = per_scene.cbuffer_size();
-
-	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-	cbuf_desc.Usage               = D3D11_USAGE_DYNAMIC;
-	cbuf_desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
-	cbuf_desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-	cbuf_desc.StructureByteStride = cbuffer_size;
-
-	HRESULT hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_scene_cbuf);
+	
+	HRESULT hr = make_cbuffer(per_scene, per_scene_cbuf);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	cbuffer_size = per_model.cbuffer_size();
-
-	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-	cbuf_desc.StructureByteStride = cbuffer_size;
-
-	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_model_cbuf);
+	hr = make_cbuffer(per_model, per_model_cbuf);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-model CreateBuffer failed");
 	}
 
-	cbuffer_size = per_pixel.cbuffer_size();
-
-	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-	cbuf_desc.StructureByteStride = cbuffer_size;
-
-	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_pixel_cbuf);
+	hr = make_cbuffer(per_pixel, per_pixel_cbuf);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-pixel CreateBuffer failed");
 	}
 
-	cbuffer_size = per_texture.cbuffer_size();
-
-	cbuf_desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-	cbuf_desc.StructureByteStride = cbuffer_size;
-
-	hr = device->CreateBuffer(&cbuf_desc, nullptr, &per_texture_cbuf);
+	hr = make_cbuffer(per_texture, per_texture_cbuf);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-texture CreateBuffer failed");
@@ -895,6 +870,21 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& p
 	  d3d(d3d)
 {
 	fragments_str = std::to_string(globals::max_fragments);
+}
+
+HRESULT Direct3DDevice8::make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const
+{
+	D3D11_BUFFER_DESC desc {};
+
+	const auto cbuffer_size = interface_.cbuffer_size();
+
+	desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+	desc.Usage               = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+	desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
+	desc.StructureByteStride = cbuffer_size;
+
+	return device->CreateBuffer(&desc, nullptr, &cbuffer);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)
