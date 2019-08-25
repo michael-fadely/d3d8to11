@@ -217,6 +217,10 @@ class Direct3DDevice8 : public Unknown
 	bool freeing_shaders = false;
 
 public:
+	using callback_func = std::function<void(const std::string&)>;
+	std::unordered_map<std::string, std::deque<callback_func>> draw_prologues;
+	std::unordered_map<std::string, std::deque<callback_func>> draw_epilogues;
+
 	Direct3DDevice8(const Direct3DDevice8&)            = delete;
 	Direct3DDevice8& operator=(const Direct3DDevice8&) = delete;
 
@@ -296,6 +300,10 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetPaletteEntries(UINT PaletteNumber, PALETTEENTRY* pEntries);
 	virtual HRESULT STDMETHODCALLTYPE SetCurrentTexturePalette(UINT PaletteNumber);
 	virtual HRESULT STDMETHODCALLTYPE GetCurrentTexturePalette(UINT* pPaletteNumber);
+
+	void run_draw_prologues(const std::string& callback);
+	void run_draw_epilogues(const std::string& callback);
+
 	virtual HRESULT STDMETHODCALLTYPE DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount);
 	virtual HRESULT STDMETHODCALLTYPE DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount);
 	virtual HRESULT STDMETHODCALLTYPE DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride);
@@ -454,7 +462,6 @@ protected:
 	PerModelBuffer per_model {};
 	PerPixelBuffer per_pixel {};
 	TextureStages per_texture {};
-
 
 	INT current_base_vertex_index = 0;
 	//const BOOL ZBufferDiscarding = FALSE;

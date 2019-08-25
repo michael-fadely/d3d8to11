@@ -3020,6 +3020,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 #endif
 }
 
+void Direct3DDevice8::run_draw_prologues(const std::string& callback)
+{
+	for (auto& fn : draw_prologues[callback])
+	{
+		fn(callback);
+	}
+}
+
+void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
+{
+	for (auto& fn : draw_epilogues[callback])
+	{
+		fn(callback);
+	}
+}
+
 bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE primitive_type) const
 {
 	const auto topology = to_d3d11(primitive_type);
@@ -3146,7 +3162,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 	DWORD ZWRITEENABLE, ZENABLE;
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
+	run_draw_prologues(__FUNCTION__);
 	context->Draw(count, StartVertex);
+	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
 	return D3D_OK;
@@ -3188,7 +3206,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	DWORD ZWRITEENABLE, ZENABLE;
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
+	run_draw_prologues(__FUNCTION__);
 	context->DrawIndexed(count, StartIndex, current_base_vertex_index);
+	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
 	return D3D_OK;
@@ -3274,7 +3294,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 	SetStreamSource(0, up_buffer.Get(), VertexStreamZeroStride);
 
+	run_draw_prologues(__FUNCTION__);
 	const auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
+	run_draw_epilogues(__FUNCTION__);
 
 	SetStreamSource(0, nullptr, 0);
 	up_buffers.push_back(up_buffer);
