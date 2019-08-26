@@ -896,13 +896,10 @@ float4 fix_coord_components(uint count, float4 coords)
 	return result;
 }
 
-#if !defined(RS_OIT) && !defined(RS_ALPHA)
-[earlydepthstencil]
-#endif
-float4 ps_main(VS_OUTPUT input) : SV_TARGET
+void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specular)
 {
-	float4 diffuse = input.diffuse;
-	float4 specular = input.specular;
+	diffuse = input.diffuse;
+	specular = input.specular;
 
 #if defined(PIXEL_LIGHTING) && RS_LIGHTING == 1
 	perform_lighting(input.ambient, input.diffuse, input.specular, input.w_position, normalize(input.w_normal),
@@ -910,7 +907,10 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 
 	diffuse = saturate(diffuse + input.emissive);
 #endif
+}
 
+float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 specular)
+{
 #if TEXTURE_STAGE_COUNT > 0
 	float4 current = diffuse;
 	float4 tempreg = (float4)0;
@@ -1021,14 +1021,27 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	result.rgb = saturate(result.rgb + specular.rgb);
 #endif
 
+	return result;
+}
+
+float4 apply_fog(float4 result, float fog)
+{
 #ifdef RS_FOG
-	float factor = calc_fog(input.fog);
+	float factor = calc_fog(fog);
 	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
 #endif
 
-	bool standard_blending = (src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
-	                         (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO);
+	return result;
+}
 
+bool is_standard_blending()
+{
+	return (src_blend == BLEND_SRCALPHA || src_blend == BLEND_ONE) &&
+	       (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO);
+}
+
+void do_alpha_reject(float4 result, bool standard_blending)
+{
 #ifdef RS_ALPHA
 	#ifdef RS_OIT
 		// if we're using OIT and the alpha is 0,
@@ -1050,7 +1063,10 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		}
 	#endif
 #endif
+}
 
+void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
+{
 #if defined(RS_OIT) && defined(RS_ALPHA)
 	#if !defined(FVF_RHW)
 		// if the pixel is effectively opaque with actual blending,
@@ -1059,7 +1075,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 		{
 			if (result.a > 254.0f / 255.0f)
 			{
-				return result;
+				return;
 			}
 		}
 	#endif
@@ -1096,6 +1112,27 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	FragListNodes[new_index] = n;
 	clip(-1);
 #endif
+}
+
+#if !defined(RS_OIT) && !defined(RS_ALPHA)
+[earlydepthstencil]
+#endif
+float4 ps_main(VS_OUTPUT input) : SV_TARGET
+{
+	float4 diffuse;
+	float4 specular;
+
+	get_input_colors(input, diffuse, specular);
+
+	float4 result;
+
+	result = handle_texture_stages(input, diffuse, specular);
+	result = apply_fog(result, input.fog);
+
+	bool standard_blending = is_standard_blending();
+
+	do_alpha_reject(result, standard_blending);
+	do_oit(result, input, standard_blending);
 
 	return result;
 }
