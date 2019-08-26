@@ -95,6 +95,7 @@
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)d3d8to11.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
@@ -124,6 +125,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)d3d8to11.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
@@ -153,6 +155,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>xcopy /C /Y /D "$(ProjectDir)include.hlsli" "$(OutDir)"
+xcopy /C /Y /D "$(ProjectDir)d3d8to11.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)shader.hlsl" "$(OutDir)"
 xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </PreBuildEvent>
@@ -237,6 +240,11 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ProjectReference Include="..\DirectXTK\DirectXTK_Desktop_2019.vcxproj">
       <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="d3d8to11.hlsl">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

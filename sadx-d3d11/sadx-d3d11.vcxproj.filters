@@ -184,4 +184,9 @@
       <Filter>Resource Files</Filter>
     </Xml>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="d3d8to11.hlsl">
+      <Filter>Source Files\shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>
