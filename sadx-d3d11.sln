@@ -6,7 +6,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sadx-d3d11", "sadx-d3d11\sa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTK_Desktop_2019", "DirectXTK\DirectXTK_Desktop_2019.vcxproj", "{E0B52AE7-E160-4D32-BF3F-910B785E5A8E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcbuffer", "libcbuffer\libcbuffer.vcxproj", "{322C4A08-4B89-4DDF-95C1-E73949432507}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libd3d8to11", "libd3d8to11\libcbuffer.vcxproj", "{322C4A08-4B89-4DDF-95C1-E73949432507}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

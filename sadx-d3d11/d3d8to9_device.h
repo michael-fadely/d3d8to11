@@ -8,7 +8,7 @@
 #include <wrl/client.h>
 
 #include "Unknown.h"
-#include "dirty_t.h"
+#include <dirty_t.h>
 #include "simple_math.h"
 #include "Shader.h"
 #include "cbuffers.h"
@@ -351,7 +351,6 @@ public:
 	void print_info_queue() const;
 
 	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags);
-	const std::vector<uint8_t>& get_shader_source(const std::string& path);
 	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
 	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
 	void create_depth_stencil();

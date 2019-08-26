@@ -275,28 +275,6 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 	return shader_preproc_defs;
 }
 
-const std::vector<uint8_t>& Direct3DDevice8::get_shader_source(const std::string& path)
-{
-	std::lock_guard<std::recursive_mutex> lock(shader_sources_mutex);
-
-	const auto it = shader_sources.find(path);
-
-	if (it != shader_sources.end())
-	{
-		return it->second;
-	}
-
-	std::ifstream file(path, std::ios::binary | std::ios::ate);
-	const auto size = static_cast<size_t>(file.tellg());
-	file.seekg(0, std::ios::beg);
-	std::vector<uint8_t> buffer(size);
-	file.read(reinterpret_cast<char*>(buffer.data()), size);
-	file.close();
-
-	shader_sources[path] = std::move(buffer);
-	return shader_sources[path];
-}
-
 static constexpr auto SHADER_COMPILER_FLAGS =
 	D3DCOMPILE_PREFER_FLOW_CONTROL |
 	D3DCOMPILE_DEBUG
@@ -339,10 +317,10 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
 
-	ShaderIncluder includer(this);
+	ShaderIncluder includer;
 
 	constexpr auto path = "shader.hlsl";
-	const auto& src = get_shader_source(path);
+	const auto& src = includer.get_shader_source(path);
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
@@ -408,10 +386,10 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_b
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
 
-	ShaderIncluder includer(this);
+	ShaderIncluder includer;
 
 	constexpr auto path = "shader.hlsl";
-	const auto& src = get_shader_source(path);
+	const auto& src = includer.get_shader_source(path);
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
@@ -4501,10 +4479,10 @@ void Direct3DDevice8::oit_load_shaders()
 			ComPtr<ID3DBlob> errors;
 			ComPtr<ID3DBlob> blob;
 
-			ShaderIncluder includer(this);
+			ShaderIncluder includer;
 
 			constexpr auto path = "composite.hlsl";
-			const auto& src = get_shader_source(path);
+			const auto& src = includer.get_shader_source(path);
 
 			HRESULT hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 

@@ -87,9 +87,6 @@
     <ClInclude Include="hash_combine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShaderIncluder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="d3d8types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -144,9 +141,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cbuffers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShaderIncluder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="simple_math.cpp">

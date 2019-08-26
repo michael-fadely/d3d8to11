@@ -51,7 +51,7 @@
 #include "d3d8to9_vertex_buffer.h"
 #include "d3d8types.hpp"
 #include "defs.h"
-#include "dirty_t.h"
+#include <dirty_t.h>
 #include "hash_combine.h"
 #include "int_multiple.h"
 #include "Light.h"
