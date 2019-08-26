@@ -1,6 +1,11 @@
 #pragma once
 
+#include <d3d11.h>
+
+#include <SimpleMath.h>
 #include <gsl/span>
+#include <cstdint>
+#include "dirty_t.h"
 
 constexpr auto VECTOR_SIZE = sizeof(float) * 4;
 

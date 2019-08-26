@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 enum class dirty_mode
 {
 	/**
@@ -25,27 +27,11 @@ public:
 	virtual void mark() = 0;
 };
 
-template <typename T, dirty_mode set_mode, typename enable = void>
-class last_t;
-
-template <typename T, dirty_mode set_mode>
-class last_t<T, set_mode, std::enable_if_t<set_mode == dirty_mode::continuous>>
-{
-protected:
-	T _last {};
-};
-
-template <typename T, dirty_mode set_mode>
-class last_t<T, set_mode, std::enable_if_t<set_mode != dirty_mode::continuous>>
-{
-protected:
-	// nothing
-};
-
 template <typename T, dirty_mode set_mode = dirty_mode::continuous>
-class dirty_t : public last_t<T, set_mode>
+class dirty_t
 {
 protected:
+	T    _last {};
 	T    _data {};
 	bool _dirty = false;
 

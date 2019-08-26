@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "CBufferWriter.h"
 
 CBufferWriter::CBufferWriter(uint8_t* ptr_)

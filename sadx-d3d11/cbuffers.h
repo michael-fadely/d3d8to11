@@ -1,8 +1,8 @@
 #pragma once
 
 #include "simple_math.h"
-#include "dirty_t.h"
-#include "CBufferWriter.h"
+#include <dirty_t.h>
+#include <CBufferWriter.h>
 #include "Light.h"
 #include "Material.h"
 #include "defs.h"

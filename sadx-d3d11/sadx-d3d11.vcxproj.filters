@@ -66,9 +66,6 @@
     <ClInclude Include="int_multiple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CBufferWriter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="simple_math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -139,9 +136,6 @@
     </ClCompile>
     <ClCompile Include="Unknown.cpp">
       <Filter>d3d8wrapper</Filter>
-    </ClCompile>
-    <ClCompile Include="CBufferWriter.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Light.cpp">
       <Filter>Source Files</Filter>
