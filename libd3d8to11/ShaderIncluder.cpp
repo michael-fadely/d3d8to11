@@ -20,7 +20,7 @@ HRESULT ShaderIncluder::Close(LPCVOID pData)
 	return S_OK;
 }
 
-std::vector<uint8_t> ShaderIncluder::get_shader_source(const std::string& path)
+std::vector<uint8_t>& ShaderIncluder::get_shader_source(const std::string& path)
 {
 	std::lock_guard<std::recursive_mutex> lock(shader_sources_mutex);
 

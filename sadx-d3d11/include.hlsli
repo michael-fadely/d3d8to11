@@ -1,3 +1,8 @@
+#ifndef INCLUDE_HLSLI
+#define INCLUDE_HLSLI
+
+// what the fuck
+
 // Maximum number of fragments to be sorted per pixel
 #ifndef MAX_FRAGMENTS
 #define MAX_FRAGMENTS 32
@@ -154,3 +159,5 @@ uint float4_to_unorm(precise float4 unpackedInput)
 		(float_to_uint(saturate(unpackedInput.w), 255) << 24));
 	return packedOutput;
 }
+
+#endif

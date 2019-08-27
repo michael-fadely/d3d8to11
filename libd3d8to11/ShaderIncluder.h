@@ -16,5 +16,5 @@ protected:
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 
 public:
-	std::vector<uint8_t> get_shader_source(const std::string& path);
+	std::vector<uint8_t>& get_shader_source(const std::string& path);
 };

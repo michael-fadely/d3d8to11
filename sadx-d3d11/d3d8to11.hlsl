@@ -1,3 +1,6 @@
+#ifndef D3D8TO11_HLSL
+#define D3D8TO11_HLSL
+
 #include "include.hlsli"
 
 #ifdef SPEEDY_SPEED_BOY
@@ -1112,3 +1115,5 @@ VS_OUTPUT fixed_func_vs(VS_INPUT input)
 
 	return result;
 }
+
+#endif
