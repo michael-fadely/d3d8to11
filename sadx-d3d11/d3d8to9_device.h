@@ -218,30 +218,11 @@ class Direct3DDevice8 : public Unknown
 	bool freeing_shaders = false;
 
 public:
-	using callback_func = std::function<void(const std::string&)>;
-	std::unordered_map<std::string, std::deque<callback_func>> draw_prologues;
-	std::unordered_map<std::string, std::deque<callback_func>> draw_epilogues;
-
 	Direct3DDevice8(const Direct3DDevice8&)            = delete;
 	Direct3DDevice8& operator=(const Direct3DDevice8&) = delete;
 
 	Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters);
 	~Direct3DDevice8() = default;
-
-	HRESULT make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const
-	{
-		D3D11_BUFFER_DESC desc {};
-
-		const auto cbuffer_size = interface_.cbuffer_size();
-
-		desc.ByteWidth           = int_multiple(cbuffer_size, 16);
-		desc.Usage               = D3D11_USAGE_DYNAMIC;
-		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
-		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-		desc.StructureByteStride = cbuffer_size;
-
-		return device->CreateBuffer(&desc, nullptr, &cbuffer);
-	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;
@@ -378,6 +359,26 @@ public:
 	void oit_load_shaders();
 	void oit_release();
 	void update_wv_inv_t();
+
+	HRESULT make_cbuffer(ICBuffer& interface_, ComPtr<ID3D11Buffer>& cbuffer) const
+	{
+		D3D11_BUFFER_DESC desc {};
+
+		const auto cbuffer_size = interface_.cbuffer_size();
+
+		desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+		desc.Usage               = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
+		desc.StructureByteStride = cbuffer_size;
+
+		return device->CreateBuffer(&desc, nullptr, &cbuffer);
+	}
+
+	using ShaderCallback = std::function<void(std::vector<D3D_SHADER_MACRO>&, ShaderFlags::type)>;
+
+	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_prologues;
+	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_epilogues;
 
 	ShaderFlags::type shader_flags      = ShaderFlags::none;
 	ShaderFlags::type last_shader_flags = ShaderFlags::mask;

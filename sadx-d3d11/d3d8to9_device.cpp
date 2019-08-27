@@ -271,7 +271,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		shader_preproc_defs.push_back({ "RS_FOG", "1" });
 	}
 
-	shader_preproc_defs.push_back({});
+	//shader_preproc_defs.push_back({});
 	return shader_preproc_defs;
 }
 
@@ -305,13 +305,10 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 
 	if (speedy_speed_boy)
 	{
-		auto macro = preproc.end() - 1;
-
-		macro->Name = "SPEEDY_SPEED_BOY";
-		macro->Definition = "1";
-
-		preproc.push_back({});
+		preproc.push_back({ "SPEEDY_SPEED_BOY", "1" });
 	}
+	
+	preproc.push_back({});
 
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -374,13 +371,10 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_b
 
 	if (speedy_speed_boy)
 	{
-		auto macro = preproc.end() - 1;
-
-		macro->Name = "SPEEDY_SPEED_BOY";
-		macro->Definition = "1";
-
-		preproc.push_back({});
+		preproc.push_back({ "SPEEDY_SPEED_BOY", "1" });
 	}
+	
+	preproc.push_back({});
 
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -2977,7 +2971,7 @@ void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
 	for (auto& fn : draw_prologues[callback])
 	{
-		fn(callback);
+		fn(shader_preproc_defs, shader_flags);
 	}
 }
 
@@ -2985,7 +2979,7 @@ void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
 	for (auto& fn : draw_epilogues[callback])
 	{
-		fn(callback);
+		fn(shader_preproc_defs, shader_flags);
 	}
 }
 
