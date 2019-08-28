@@ -22,7 +22,7 @@
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
-//#define SHADER_ASYNC_COMPILE
+#define SHADER_ASYNC_COMPILE
 //#define SHADER_FAST_FALLBACK
 
 #define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
@@ -132,9 +132,7 @@ inline uint32_t fvf_sanitize(uint32_t value)
 	return value;
 }
 
-static std::vector<D3D_SHADER_MACRO> shader_preproc_defs;
-
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags)
+const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags_)
 {
 	static std::array<const char*, 8> texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
@@ -165,10 +163,21 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		"float1",
 	};
 
-	shader_preproc_defs.clear();
-	shader_preproc_defs.push_back({ "MAX_FRAGMENTS", fragments_str.c_str() });
+	const auto flags = ShaderFlags::sanitize(flags_);
 
-	flags = ShaderFlags::sanitize(flags);
+	std::lock_guard shader_preproc_lock(shader_preproc_mutex);
+
+	auto it = shader_preproc_definitions.find(flags);
+
+	if (it != shader_preproc_definitions.end())
+	{
+		return it->second;
+	}
+
+	std::vector<D3D_SHADER_MACRO> definitions
+	{
+		{ "MAX_FRAGMENTS", fragments_str.c_str() }
+	};
 
 	auto format = flags >> 16u;
 	auto tex_count = static_cast<size_t>(((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT) & 0xF);
@@ -180,19 +189,19 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		switch (f)
 		{
 			case D3DFVF_TEXTUREFORMAT2:
-				shader_preproc_defs.push_back({ texcoord_size_strings[i], "2" });
+				definitions.push_back({ texcoord_size_strings[i], "2" });
 				break;
 
 			case D3DFVF_TEXTUREFORMAT1:
-				shader_preproc_defs.push_back({ texcoord_size_strings[i], "1" });
+				definitions.push_back({ texcoord_size_strings[i], "1" });
 				break;
 
 			case D3DFVF_TEXTUREFORMAT3:
-				shader_preproc_defs.push_back({ texcoord_size_strings[i], "3" });
+				definitions.push_back({ texcoord_size_strings[i], "3" });
 				break;
 
 			case D3DFVF_TEXTUREFORMAT4:
-				shader_preproc_defs.push_back({ texcoord_size_strings[i], "4" });
+				definitions.push_back({ texcoord_size_strings[i], "4" });
 				break;
 
 			default:
@@ -205,7 +214,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 			case D3DFVF_TEXTUREFORMAT1:
 			case D3DFVF_TEXTUREFORMAT3:
 			case D3DFVF_TEXTUREFORMAT4:
-				shader_preproc_defs.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
+				definitions.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
 				break;
 
 			default:
@@ -217,62 +226,64 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
-		shader_preproc_defs.push_back({ "FVF_RHW", "1" });
+		definitions.push_back({ "FVF_RHW", "1" });
 	}
 
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZ)
 	{
-		shader_preproc_defs.push_back({ "FVF_XYZ", "1" });
+		definitions.push_back({ "FVF_XYZ", "1" });
 	}
 
 	if (flags & D3DFVF_NORMAL)
 	{
-		shader_preproc_defs.push_back({ "FVF_NORMAL", "1" });
+		definitions.push_back({ "FVF_NORMAL", "1" });
 	}
 
 	if (flags & D3DFVF_DIFFUSE)
 	{
-		shader_preproc_defs.push_back({ "FVF_DIFFUSE", "1" });
+		definitions.push_back({ "FVF_DIFFUSE", "1" });
 	}
 
 	if (flags & D3DFVF_SPECULAR)
 	{
-		shader_preproc_defs.push_back({ "FVF_SPECULAR", "1" });
+		definitions.push_back({ "FVF_SPECULAR", "1" });
 	}
 
 	if (flags & D3DFVF_TEXCOUNT_MASK)
 	{
 		texcount_str = std::to_string((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
-		shader_preproc_defs.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
+		definitions.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
 	}
 
 	if ((flags & (ShaderFlags::rs_lighting | D3DFVF_NORMAL)) == (ShaderFlags::rs_lighting | D3DFVF_NORMAL))
 	{
-		shader_preproc_defs.push_back({ "RS_LIGHTING", "1" });
+		definitions.push_back({ "RS_LIGHTING", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_specular)
 	{
-		shader_preproc_defs.push_back({ "RS_SPECULAR", "1" });
+		definitions.push_back({ "RS_SPECULAR", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_alpha)
 	{
-		shader_preproc_defs.push_back({ "RS_ALPHA", "1" });
+		definitions.push_back({ "RS_ALPHA", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_oit)
 	{
-		shader_preproc_defs.push_back({ "RS_OIT", "1" });
+		definitions.push_back({ "RS_OIT", "1" });
 	}
 
 	if (flags & ShaderFlags::rs_fog)
 	{
-		shader_preproc_defs.push_back({ "RS_FOG", "1" });
+		definitions.push_back({ "RS_FOG", "1" });
 	}
 
 	//shader_preproc_defs.push_back({});
-	return shader_preproc_defs;
+
+	shader_preproc_definitions[flags] = std::move(definitions);
+	return shader_preproc_definitions[flags];
 }
 
 static constexpr auto SHADER_COMPILER_FLAGS =
@@ -2975,17 +2986,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 
 void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
+	const auto& preproc = shader_preprocess(shader_flags);
 	for (auto& fn : draw_prologues[callback])
 	{
-		fn(shader_preproc_defs, shader_flags);
+		fn(preproc, shader_flags);
 	}
 }
 
 void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
+	const auto& preproc = shader_preprocess(shader_flags);
 	for (auto& fn : draw_epilogues[callback])
 	{
-		fn(shader_preproc_defs, shader_flags);
+		fn(preproc, shader_flags);
 	}
 }
 
@@ -4198,7 +4211,7 @@ void Direct3DDevice8::update_shaders()
 
 	shader_flags = ShaderFlags::sanitize(shader_flags);
 
-	shader_preprocess(shader_flags); // TODO: fix with async compile
+	shader_preprocess(shader_flags);
 
 	if (last_shader_flags == shader_flags)
 	{

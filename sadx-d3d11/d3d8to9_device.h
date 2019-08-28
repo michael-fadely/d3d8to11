@@ -331,7 +331,10 @@ public:
 
 	void print_info_queue() const;
 
-	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags);
+	std::recursive_mutex shader_preproc_mutex;
+	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
+	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags_);
+	
 	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
 	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
 	void create_depth_stencil();
@@ -375,7 +378,7 @@ public:
 		return device->CreateBuffer(&desc, nullptr, &cbuffer);
 	}
 
-	using ShaderCallback = std::function<void(std::vector<D3D_SHADER_MACRO>&, ShaderFlags::type)>;
+	using ShaderCallback = std::function<void(const std::vector<D3D_SHADER_MACRO>&, ShaderFlags::type)>;
 
 	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_prologues;
 	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_epilogues;
