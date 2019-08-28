@@ -821,45 +821,8 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 #endif
 }
 
-VS_OUTPUT fixed_func_vs(in VS_INPUT input)
+void get_colors(in VS_INPUT input, inout VS_OUTPUT result)
 {
-	VS_OUTPUT result = (VS_OUTPUT)0;
-
-	float3 world_position = (float3)0;
-
-#ifdef FVF_RHW
-	float4 p = input.position;
-	float2 screen = screen_dimensions - 0.5;
-
-	p.xy = round(p.xy);
-	p.x = ((p.x / screen.x) * 2) - 1;
-	p.y = -(((p.y / screen.y) * 2) - 1);
-
-	result.position = p;
-#else
-	input.position.w = 1;
-	result.position = mul(world_matrix, input.position);
-
-	result.w_position = result.position.xyz;
-
-	result.position = mul(view_matrix, result.position);
-
-	#ifdef RADIAL_FOG
-		result.fog = length(view_position - result.w_position);
-	#else
-		result.fog = result.position.z;
-	#endif
-
-	result.position = mul(projection_matrix, result.position);
-#endif
-
-	result.depth = result.position.zw;
-
-#ifdef FVF_NORMAL
-	result.normal   = input.normal;
-	result.w_normal = normalize(mul((float3x3)world_matrix, input.normal));
-#endif
-
 	if (color_vertex == true)
 	{
 	#ifndef RS_LIGHTING
@@ -989,18 +952,46 @@ VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 		result.diffuse = white_not_lit(material.diffuse);
 		result.specular = black_not_lit(material.specular);
 	}
+}
 
-#if defined(VERTEX_LIGHTING) && RS_LIGHTING == 1
-	float4 diffuse;
-	float4 specular;
+void transform(in VS_INPUT input, inout VS_OUTPUT result)
+{
+#ifdef FVF_RHW
+	float4 p = input.position;
+	float2 screen = screen_dimensions - 0.5;
 
-	perform_lighting(result.ambient, result.diffuse, result.specular, result.w_position, result.w_normal,
-	                 diffuse, specular);
+	p.xy = round(p.xy);
+	p.x = ((p.x / screen.x) * 2) - 1;
+	p.y = -(((p.y / screen.y) * 2) - 1);
 
-	result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
-	result.specular.rgb = specular.rgb;
+	result.position = p;
+#else
+	input.position.w = 1;
+	result.position = mul(world_matrix, input.position);
+
+	result.w_position = result.position.xyz;
+
+	result.position = mul(view_matrix, result.position);
+
+	#ifdef RADIAL_FOG
+		result.fog = length(view_position - result.w_position);
+	#else
+		result.fog = result.position.z;
+	#endif
+
+	result.position = mul(projection_matrix, result.position);
 #endif
 
+	result.depth = result.position.zw;
+
+#ifdef FVF_NORMAL
+	result.normal   = input.normal;
+	result.w_normal = normalize(mul((float3x3)world_matrix, input.normal));
+#endif
+}
+
+void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
+{
 #if FVF_TEXCOUNT > 0
 	result.uvmeta[0].component_count = FVF_TEXCOORD0_SIZE;
 
@@ -1112,6 +1103,26 @@ VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 		result.uv[7].xyzw = input.tex7.xyzw;
 	#endif
 #endif
+}
+
+VS_OUTPUT fixed_func_vs(in VS_INPUT input)
+{
+	VS_OUTPUT result = (VS_OUTPUT)0;
+	transform(input, result);
+	get_colors(input, result);
+
+#if defined(VERTEX_LIGHTING) && RS_LIGHTING == 1
+	float4 diffuse;
+	float4 specular;
+
+	perform_lighting(result.ambient, result.diffuse, result.specular, result.w_position, result.w_normal,
+	                 diffuse, specular);
+
+	result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
+	result.specular.rgb = specular.rgb;
+#endif
+
+	output_texcoord(input, result);
 
 	return result;
 }
