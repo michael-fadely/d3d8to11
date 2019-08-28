@@ -821,7 +821,7 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 #endif
 }
 
-VS_OUTPUT fixed_func_vs(VS_INPUT input)
+VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 {
 	VS_OUTPUT result = (VS_OUTPUT)0;
 

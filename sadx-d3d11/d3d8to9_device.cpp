@@ -22,7 +22,7 @@
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
-#define SHADER_ASYNC_COMPILE
+//#define SHADER_ASYNC_COMPILE
 //#define SHADER_FAST_FALLBACK
 
 #define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
@@ -715,6 +715,8 @@ void Direct3DDevice8::create_native()
 	blend_flags.mark();
 	raster_flags.mark();
 	depthstencil_flags.mark();
+
+	FVF = 0;
 	FVF.mark();
 
 	per_scene.mark();
@@ -1113,6 +1115,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 		oit_release();
 		oit_init();
+
+		shader_flags &= ~ShaderFlags::fvf_mask;
+		FVF = 0;
+		FVF.clear();
 	}
 
 	return D3D_OK;
@@ -3718,22 +3724,10 @@ void Direct3DDevice8::print_info_queue() const
 
 bool Direct3DDevice8::update_input_layout()
 {
-	// HACK: shit's busted
-	/*if (!FVF.dirty())
-	{
-		return false;
-	}*/
-
-	if (!FVF.data())
-	{
-		return true;
-	}
-
+	auto key = fvf_sanitize(shader_flags & ShaderFlags::fvf_mask);
+	DWORD fvf = key;
 	FVF.clear();
 
-	auto key = shader_flags & ShaderFlags::vs_mask;
-
-	// HACK: deliberately over-allocating input layouts because of bugs
 	auto it = fvf_layouts.find(key);
 
 	if (it != fvf_layouts.end())
@@ -3742,10 +3736,13 @@ bool Direct3DDevice8::update_input_layout()
 		return true;
 	}
 
+	if (!FVF.data())
+	{
+		return true;
+	}
+
 	D3D11_INPUT_ELEMENT_DESC pos_element {};
 	pos_element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-
-	DWORD fvf = fvf_sanitize(key & ShaderFlags::fvf_mask);
 
 	switch (fvf & D3DFVF_POSITION_MASK)
 	{
@@ -4200,6 +4197,8 @@ void Direct3DDevice8::update_shaders()
 	}
 
 	shader_flags = ShaderFlags::sanitize(shader_flags);
+
+	shader_preprocess(shader_flags); // TODO: fix with async compile
 
 	if (last_shader_flags == shader_flags)
 	{
