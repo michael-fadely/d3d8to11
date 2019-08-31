@@ -9,6 +9,8 @@
 #include <DirectXMath.h>
 #include <cassert>
 #include <fstream>
+#include <optional>
+#include <sstream>
 
 #include "d3d8to9.hpp"
 #include "SimpleMath.h"
@@ -18,7 +20,6 @@
 #include "ShaderIncluder.h"
 #include "safe_release.h"
 #include "globals.h"
-#include <optional>
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
@@ -185,7 +186,9 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		"float1",
 	};
 
-	const auto flags = ShaderFlags::sanitize(flags_);
+	auto flags = ShaderFlags::sanitize(flags_);
+	flags &= ~ShaderFlags::stage_count;
+	flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count;
 
 	std::lock_guard shader_preproc_lock(shader_preproc_mutex);
 
@@ -254,6 +257,11 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 	{
 		digit_strings[stage_count] = std::to_string(stage_count);
 		digit_string = digit_strings.find(stage_count);
+
+		std::stringstream ss;
+		ss << "generating shader with texture stage count: " << stage_count;
+
+		OutputDebugStringA(ss.str().c_str());
 	}
 
 	definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string->second.c_str() });
@@ -1277,10 +1285,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	oit_start();
 
-	auto vk_menu = GetAsyncKeyState(VK_MENU);
-	auto vk_o    = GetAsyncKeyState('O');
+	const auto vk_shift   = GetAsyncKeyState(VK_SHIFT) & (1 << 16);
+	const auto vk_control = GetAsyncKeyState(VK_CONTROL) & (1 << 16);
+	const auto vk_o       = GetAsyncKeyState('O') & 1;
+	const auto vk_r       = GetAsyncKeyState('R') & 1;
 
-	if (vk_menu & (1 << 16) && vk_o & 1)
+	if (vk_control && vk_o)
 	{
 		if (oit_actually_enabled == oit_enabled)
 		{
@@ -1289,13 +1299,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		}
 	}
 
-	if ((GetAsyncKeyState(VK_CONTROL) & (1 << 16)) && (GetAsyncKeyState('R') & (1 << 16)))
+	if (vk_control && vk_r)
 	{
 		if (!this->freeing_shaders)
 		{
 			OutputDebugStringA("clearing cached shaders...\n");
 
-			if ((GetAsyncKeyState(VK_SHIFT) & (1 << 16)))
+			if (vk_shift)
 			{
 				oit_load_shaders();
 			}

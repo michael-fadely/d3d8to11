@@ -778,6 +778,16 @@ void do_alpha_reject(float4 result, bool standard_blending)
 void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 {
 #if defined(RS_OIT) && defined(RS_ALPHA)
+
+#ifdef DEMO_MODE
+	//const int center = screen_dimensions.x / 2;
+
+	//if (input.position.x < center)
+	//{
+	//	return;
+	//}
+#endif
+
 	#if !defined(FVF_RHW)
 		// if the pixel is effectively opaque with actual blending,
 		// write it directly to the backbuffer as opaque

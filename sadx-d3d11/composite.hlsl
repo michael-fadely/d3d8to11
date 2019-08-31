@@ -1,5 +1,15 @@
 #include "include.hlsli"
 
+// copy-pasted -- bad
+cbuffer PerSceneBuffer : register(b0)
+{
+	matrix view_matrix;
+	matrix projection_matrix;
+	float2 screen_dimensions;
+	float3 view_position;
+	uint   buffer_len;
+};
+
 /*
 	This shader draws a full screen triangle onto
 	which it composites the stored alpha fragments.
@@ -61,6 +71,16 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 {
 	int2 pos = int2(input.position.xy);
 
+#ifdef DEMO_MODE
+	const int center = screen_dimensions.x / 2;
+	const bool should_sort = pos.x >= center;
+
+	if (abs(center.x - pos.x) < 4)
+	{
+		return float4(1, 0, 0, 1);
+	}
+#endif
+
 	float4 backBufferColor = BackBuffer[pos];
 	uint index = FragListHead[pos];
 
@@ -96,7 +116,13 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 		OitNode node_j = FragListNodes[indices[j - 1]];
 
-		while (j > 0 && (node_j.depth < node_i.depth || (node_j.depth == node_i.depth && node_j.draw_call > node_i.draw_call)))
+		while (j > 0 &&
+		       #ifdef DEMO_MODE
+		       ((should_sort && node_j.depth < node_i.depth) || ((!should_sort || node_j.depth == node_i.depth) && node_j.draw_call > node_i.draw_call))
+		       #else
+		       (node_j.depth < node_i.depth || (node_j.depth == node_i.depth && node_j.draw_call > node_i.draw_call))
+		       #endif
+		)
 		{
 			uint temp = indices[j];
 			indices[j] = indices[--j];

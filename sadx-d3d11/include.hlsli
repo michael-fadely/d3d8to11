@@ -1,6 +1,8 @@
 #ifndef INCLUDE_HLSLI
 #define INCLUDE_HLSLI
 
+//#define DEMO_MODE
+
 // Maximum number of fragments to be sorted per pixel
 #ifndef MAX_FRAGMENTS
 #define MAX_FRAGMENTS 32
