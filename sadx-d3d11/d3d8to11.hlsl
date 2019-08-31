@@ -6,7 +6,7 @@
 #ifdef SPEEDY_SPEED_BOY
 	#define TSS_UNROLL [loop]
 #else
-	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT / 4)]
+	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT)]
 #endif
 
 #ifndef LIGHT_COUNT
@@ -201,11 +201,11 @@ cbuffer PerPixelBuffer : register(b2)
 
 cbuffer TextureStages : register(b3)
 {
-	TextureStage texture_stages[TEXTURE_STAGE_COUNT];
+	TextureStage texture_stages[TEXTURE_STAGE_MAX];
 }
 
-Texture2D<float4> textures[TEXTURE_STAGE_COUNT];
-SamplerState samplers[TEXTURE_STAGE_COUNT];
+Texture2D<float4> textures[TEXTURE_STAGE_MAX];
+SamplerState samplers[TEXTURE_STAGE_MAX];
 
 // From FixedFuncEMU.fx, originally calc_fog
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.

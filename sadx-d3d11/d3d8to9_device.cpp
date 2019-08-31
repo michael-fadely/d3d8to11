@@ -132,6 +132,28 @@ inline uint32_t fvf_sanitize(uint32_t value)
 	return value;
 }
 
+size_t Direct3DDevice8::count_texture_stages() const
+{
+	size_t n = 0;
+
+	for (const auto& stage : per_texture.stages)
+	{
+		if (stage.color_op.data() == D3DTOP_DISABLE && stage.alpha_op.data() == D3DTOP_DISABLE)
+		{
+			break;
+		}
+
+		++n;
+	}
+
+	return n;
+}
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+static std::unordered_map<size_t, std::string> digit_strings;
+
 const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags_)
 {
 	static std::array<const char*, 8> texcoord_size_strings = {
@@ -176,7 +198,8 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 
 	std::vector<D3D_SHADER_MACRO> definitions
 	{
-		{ "MAX_FRAGMENTS", fragments_str.c_str() }
+		{ "MAX_FRAGMENTS", fragments_str.c_str() },
+		{ "TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX) }
 	};
 
 	auto format = flags >> 16u;
@@ -223,6 +246,17 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 
 		format >>= 2;
 	}
+
+	const size_t stage_count = (flags >> ShaderFlags::stage_count_shift) & 0xF;
+	auto digit_string = digit_strings.find(stage_count);
+
+	if (digit_string == digit_strings.end())
+	{
+		digit_strings[stage_count] = std::to_string(stage_count);
+		digit_string = digit_strings.find(stage_count);
+	}
+
+	definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string->second.c_str() });
 
 	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
@@ -688,7 +722,7 @@ void Direct3DDevice8::create_native()
 
 	// set all the texture stage states to their defaults
 
-	for (size_t i = 0; i < TEXTURE_STAGE_COUNT; i++)
+	for (size_t i = 0; i < TEXTURE_STAGE_MAX; i++)
 	{
 		SetTextureStageState(i, D3DTSS_COLOROP, !i ? D3DTOP_MODULATE : D3DTOP_DISABLE);
 		SetTextureStageState(i, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -974,8 +1008,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 	pCaps->TextureOpCaps            = 0xFFFFFFFF;
 	pCaps->MaxActiveLights          = LIGHT_COUNT;
 
-	pCaps->MaxTextureBlendStages   = TEXTURE_STAGE_COUNT;
-	pCaps->MaxSimultaneousTextures = TEXTURE_STAGE_COUNT;
+	pCaps->MaxTextureBlendStages   = TEXTURE_STAGE_MAX;
+	pCaps->MaxSimultaneousTextures = TEXTURE_STAGE_MAX;
 
 	return D3D_OK;
 }
@@ -4217,6 +4251,9 @@ void Direct3DDevice8::update_shaders()
 	{
 		shader_flags |= ShaderFlags::rs_oit;
 	}
+
+	shader_flags &= ~ShaderFlags::stage_count;
+	shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count;
 
 	shader_flags = ShaderFlags::sanitize(shader_flags);
 

@@ -1,8 +1,6 @@
 #ifndef INCLUDE_HLSLI
 #define INCLUDE_HLSLI
 
-// what the fuck
-
 // Maximum number of fragments to be sorted per pixel
 #ifndef MAX_FRAGMENTS
 #define MAX_FRAGMENTS 32
@@ -10,6 +8,10 @@
 
 #ifndef TEXTURE_STAGE_COUNT
 #define TEXTURE_STAGE_COUNT 8
+#endif
+
+#ifndef TEXTURE_STAGE_MAX
+#define TEXTURE_STAGE_MAX 8
 #endif
 
 #define M_PI 3.14159265358979323846

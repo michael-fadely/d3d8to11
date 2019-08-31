@@ -108,7 +108,7 @@ struct TextureStage : dirty_impl
 class TextureStages : public ICBuffer, dirty_impl
 {
 public:
-	std::array<TextureStage, TEXTURE_STAGE_COUNT> stages {};
+	std::array<TextureStage, TEXTURE_STAGE_MAX> stages {};
 	void write(CBufferBase& cbuf) const override;
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;

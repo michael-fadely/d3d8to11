@@ -46,11 +46,14 @@ struct ShaderFlags
 		fvf_texcount = 0b00000000'00000000'00000000'00000000'00000000'00000000'00001111'00000000,
 		fvf_lastbeta = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
 		fvf_texfmt   = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
+		stage_count  = 0b00000000'00000000'00000000'00001111'00000000'00000000'00000000'00000000,
 		fvf_mask     = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
 		rs_mask      = rs_lighting | rs_specular | rs_alpha | rs_fog | rs_oit,
-		mask         = rs_mask | fvf_mask,
+		mask         = rs_mask | fvf_mask | stage_count,
 		count
 	};
+
+	static constexpr type stage_count_shift = 32;
 
 	static constexpr type light_sanitize_flags = rs_lighting | rs_specular |
 	                                             D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_NORMAL | D3DFVF_XYZRHW;
@@ -59,7 +62,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr type vs_mask = rs_lighting | rs_specular | fvf_mask;
-	static constexpr type ps_mask = rs_mask | light_sanitize_flags;
+	static constexpr type ps_mask = stage_count | rs_mask | light_sanitize_flags;
 #endif
 
 	static type sanitize(type flags);
@@ -333,6 +336,7 @@ public:
 
 	std::recursive_mutex shader_preproc_mutex;
 	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
+	size_t count_texture_stages() const;
 	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags_);
 	
 	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
