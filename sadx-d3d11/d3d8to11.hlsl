@@ -790,7 +790,7 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 		}
 	#endif
 
-	#ifndef DISABLE_PER_PIXEL_LIMIT
+	#if 0
 		uint frag_count;
 		InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
 
