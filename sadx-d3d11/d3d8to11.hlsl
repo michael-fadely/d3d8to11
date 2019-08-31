@@ -616,6 +616,46 @@ void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specula
 #endif
 }
 
+float4 sample_texture_stage(in VS_OUTPUT input, uint s)
+{
+	if (!texture_stages[s].bound)
+	{
+		return float4(1, 1, 1, 1);
+	}
+
+	uint coord_flags = texture_stages[s].tex_coord_index;
+
+	uint coord_index     = coord_flags & TSS_TCI_COORD_MASK;
+	uint coord_caps      = coord_flags & TSS_TCI_SELECT_MASK;
+	uint component_count = input.uvmeta[s].component_count;
+
+	float4 texcoord = input.uv[coord_index];
+
+	switch (coord_caps)
+	{
+		case TSS_TCI_PASSTHRU:
+			break;
+
+		case TSS_TCI_CAMERASPACENORMAL:
+			texcoord = float4(mul(input.normal, (float3x3)wv_matrix_inv_t), 1);
+			texcoord = mul(texture_stages[s].transform, fix_coord_components(component_count, texcoord));
+			break;
+
+		case TSS_TCI_CAMERASPACEPOSITION:
+			// TODO: TSS_TCI_CAMERASPACEPOSITION
+			break;
+
+		case TSS_TCI_CAMERASPACEREFLECTIONVECTOR:
+			// TODO: TSS_TCI_CAMERASPACEREFLECTIONVECTOR
+			break;
+
+		default:
+			return float4(1, 0, 0, 1);
+	}
+
+	return textures[s].Sample(samplers[s], texcoord.xy);
+}
+
 float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 specular)
 {
 #if TEXTURE_STAGE_COUNT > 0
@@ -627,44 +667,7 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 	[unroll]
 	for (uint s = 0; s < TEXTURE_STAGE_COUNT; s++)
 	{
-		if (texture_stages[s].bound)
-		{
-			uint coord_flags = texture_stages[s].tex_coord_index;
-
-			uint coord_index = coord_flags & TSS_TCI_COORD_MASK;
-			uint coord_caps = coord_flags & TSS_TCI_SELECT_MASK;
-			uint component_count = input.uvmeta[s].component_count;
-
-			float4 texcoord = input.uv[coord_index];
-
-			switch (coord_caps)
-			{
-				case TSS_TCI_PASSTHRU:
-					break;
-
-				case TSS_TCI_CAMERASPACENORMAL:
-					texcoord = float4(mul(input.normal, (float3x3)wv_matrix_inv_t), 1);
-					texcoord = mul(texture_stages[s].transform, fix_coord_components(component_count, texcoord));
-					break;
-
-				case TSS_TCI_CAMERASPACEPOSITION:
-					// TODO: TSS_TCI_CAMERASPACEPOSITION
-					break;
-
-				case TSS_TCI_CAMERASPACEREFLECTIONVECTOR:
-					// TODO: TSS_TCI_CAMERASPACEREFLECTIONVECTOR
-					break;
-
-				default:
-					return float4(1, 0, 0, 1);
-			}
-
-			samples[s] = textures[s].Sample(samplers[s], texcoord.xy);
-		}
-		else
-		{
-			samples[s] = float4(1, 1, 1, 1);
-		}
+		samples[s] = sample_texture_stage(input, s);
 	}
 
 	bool color_done = false;
