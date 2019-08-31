@@ -69,25 +69,43 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		return backBufferColor;
 	}
 
-	OitNode fragments[MAX_FRAGMENTS];
+	float opaque_depth = DepthBuffer[pos].r;
 
+	uint indices[MAX_FRAGMENTS];
 	uint count = 0;
-	float opaqueDepth = DepthBuffer[pos].r;
 
-	// Counts the number of stored fragments for this index
-	// until a null entry is found or we've reached the maximum
-	// allowed sortable fragments.
-	while (count < MAX_FRAGMENTS && index != FRAGMENT_LIST_NULL)
+	while (index != FRAGMENT_LIST_NULL && count < MAX_FRAGMENTS)
 	{
-		fragments[count] = FragListNodes[index];
-		index = FragListNodes[index].next;
+		const OitNode node_i = FragListNodes[index];
 
-		// exclude occluded fragment from array to be sorted
-		if (fragments[count].depth > opaqueDepth)
+		if (node_i.depth > opaque_depth)
 		{
+			index = node_i.next;
 			continue;
 		}
 
+		if (!count)
+		{
+			indices[0] = index;
+			++count;
+			index = node_i.next;
+			continue;
+		}
+
+		int j = count;
+
+		OitNode node_j = FragListNodes[indices[j - 1]];
+
+		while (j > 0 && (node_j.depth < node_i.depth || (node_j.depth == node_i.depth && node_j.draw_call > node_i.draw_call)))
+		{
+			uint temp = indices[j];
+			indices[j] = indices[--j];
+			indices[j] = temp;
+			node_j = FragListNodes[indices[j - 1]];
+		}
+
+		indices[j] = index;
+		index = node_i.next;
 		++count;
 	}
 
@@ -96,43 +114,17 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		return backBufferColor;
 	}
 
-#ifndef DISABLE_SORT
-	for (uint k = 1; k < count; k++)
-	{
-		uint j = k;
-		OitNode b = fragments[k];
-		OitNode a = fragments[j - 1];
-
-		while (a.depth < b.depth || (a.depth == b.depth && a.draw_call > b.draw_call))
-		{
-			fragments[j] = fragments[j - 1];
-			j--;
-
-			if (j <= 0)
-			{
-				break;
-			}
-
-			a = fragments[j - 1];
-		}
-
-		if (j != k)
-		{
-			fragments[j] = b;
-		}
-	}
-#endif
-
 	float4 final = backBufferColor;
 
-	for (uint l = 0; l < count; l++)
+	for (uint i = 0; i < count; i++)
 	{
-		uint blend = fragments[l].flags;
+		const OitNode fragment = FragListNodes[indices[i]];
+		uint blend = fragment.flags;
 
 		uint srcBlend = blend >> 8;
 		uint destBlend = blend & 0xFF;
 
-		float4 color = unorm_to_float4(fragments[l].color);
+		float4 color = unorm_to_float4(fragment.color);
 		final = blend_colors(srcBlend, destBlend, color, final);
 	}
 
