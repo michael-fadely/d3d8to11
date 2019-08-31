@@ -1260,8 +1260,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		if (!this->freeing_shaders)
 		{
 			OutputDebugStringA("clearing cached shaders...\n");
-			free_shaders();
-			oit_load_shaders();
+
+			if ((GetAsyncKeyState(VK_SHIFT) & (1 << 16)))
+			{
+				oit_load_shaders();
+			}
+			else
+			{
+				free_shaders();
+				oit_load_shaders();
+			}
+
 			update();
 			this->freeing_shaders = true;
 		}
