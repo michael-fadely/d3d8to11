@@ -60,11 +60,30 @@ float4 get_blend_factor(uint mode, float4 source, float4 destination)
 	}
 }
 
-float4 blend_colors(uint srcBlend, uint dstBlend, float4 sourceColor, float4 destinationColor)
+float4 blend_colors(uint blendOp, uint srcBlend, uint dstBlend, float4 sourceColor, float4 destinationColor)
 {
 	float4 src = get_blend_factor(srcBlend, sourceColor, destinationColor);
 	float4 dst = get_blend_factor(dstBlend, sourceColor, destinationColor);
-	return (sourceColor * src) + (destinationColor * dst);
+
+	float4 srcResult = sourceColor * src;
+	float4 dstResult = destinationColor * dst;
+
+	switch (blendOp)
+	{
+		default:
+			return float4(1, 0, 0, 1);
+
+		case BLENDOP_ADD:
+			return srcResult + dstResult;
+
+		case BLENDOP_REVSUBTRACT: // TODO: BLENDOP_REVSUBTRACT ???
+		case BLENDOP_SUBTRACT:
+			return srcResult - dstResult;
+		case BLENDOP_MIN:
+			return min(srcResult, dstResult);
+		case BLENDOP_MAX:
+			return max(srcResult, dstResult);
+	}
 }
 
 float4 ps_main(VertexOutput input) : SV_TARGET
@@ -114,13 +133,18 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 		int j = count;
 
+	//#define DISABLE_SORT
+	#ifndef DISABLE_SORT
 		OitNode node_j = FragListNodes[indices[j - 1]];
+
+		uint draw_call_i = (node_i.flags >> 16) & 0xFFFF;
+		uint draw_call_j = (node_j.flags >> 16) & 0xFFFF;
 
 		while (j > 0 &&
 		       #ifdef DEMO_MODE
-		       ((should_sort && node_j.depth < node_i.depth) || ((!should_sort || node_j.depth == node_i.depth) && node_j.draw_call > node_i.draw_call))
+		       ((should_sort && node_j.depth > node_i.depth) || ((!should_sort || node_j.depth == node_i.depth) && draw_call_j < draw_call_i))
 		       #else
-		       (node_j.depth < node_i.depth || (node_j.depth == node_i.depth && node_j.draw_call > node_i.draw_call))
+		       (node_j.depth > node_i.depth || (node_j.depth == node_i.depth && draw_call_j < draw_call_i))
 		       #endif
 		)
 		{
@@ -128,7 +152,9 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 			indices[j] = indices[--j];
 			indices[j] = temp;
 			node_j = FragListNodes[indices[j - 1]];
+			draw_call_j = (node_j.flags >> 16) & 0xFFFF;
 		}
+	#endif
 
 		indices[j] = index;
 		index = node_i.next;
@@ -142,16 +168,17 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	float4 final = backBufferColor;
 
-	for (uint i = 0; i < count; i++)
+	for (int i = count - 1; i >= 0; i--)
 	{
 		const OitNode fragment = FragListNodes[indices[i]];
 		uint blend = fragment.flags;
 
-		uint srcBlend = blend >> 8;
-		uint destBlend = blend & 0xFF;
+		uint blendOp   = (blend >> 8) & 0xF;
+		uint srcBlend  = (blend >> 4) & 0xF;
+		uint destBlend = blend & 0xF;
 
 		float4 color = unorm_to_float4(fragment.color);
-		final = blend_colors(srcBlend, destBlend, color, final);
+		final = blend_colors(blendOp, srcBlend, destBlend, color, final);
 	}
 
 	return float4(final.rgb, 1);

@@ -202,10 +202,9 @@ struct StreamPair
 
 struct OitNode
 {
-	uint  draw_call;
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
-	uint  flags; // source blend, destination blend
+	uint  flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
 	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
 
@@ -336,9 +335,11 @@ public:
 
 	std::recursive_mutex shader_preproc_mutex;
 	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
-	size_t count_texture_stages() const;
+	[[nodiscard]] size_t count_texture_stages() const;
 	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags_);
-	
+
+	void draw_call_increment();
+
 	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
 	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
 	void create_depth_stencil();

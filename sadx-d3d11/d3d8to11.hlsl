@@ -183,9 +183,9 @@ cbuffer PerModelBuffer : register(b1)
 
 cbuffer PerPixelBuffer : register(b2)
 {
-	// TODO: draw call
 	uint   src_blend;
 	uint   dst_blend;
+	uint   blend_op;
 	uint   fog_mode;
 	float  fog_start;
 	float  fog_end;
@@ -823,10 +823,9 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 
 	OitNode n;
 
-	n.draw_call = draw_call;
 	n.depth     = input.depth.x / input.depth.y;
 	n.color     = float4_to_unorm(result);
-	n.flags     = (src_blend << 8) | dst_blend;
+	n.flags     = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
 	n.next      = old_index;
 
 	FragListNodes[new_index] = n;

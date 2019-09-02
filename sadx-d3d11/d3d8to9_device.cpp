@@ -328,6 +328,11 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 	return shader_preproc_definitions[flags];
 }
 
+void Direct3DDevice8::draw_call_increment()
+{
+	per_model.draw_call = (per_model.draw_call.data() + 1) % 65536;
+}
+
 static constexpr auto SHADER_COMPILER_FLAGS =
 	D3DCOMPILE_PREFER_FLOW_CONTROL |
 	D3DCOMPILE_DEBUG
@@ -2528,6 +2533,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_BLENDOP:
 			ref.clear();
 			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
+			per_pixel.blend_op = Value;
 			break;
 	}
 
@@ -3159,7 +3165,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		return D3DERR_INVALIDCALL;
 	}
 
-	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
+	draw_call_increment();
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;
@@ -3207,7 +3213,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 		return D3DERR_INVALIDCALL;
 	}
 
-	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
+	draw_call_increment();
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;
@@ -3283,7 +3289,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
-	per_model.draw_call = per_model.draw_call + 1; // TODO: operator overloads :|
+	draw_call_increment();
 	if (!update())
 	{
 		return D3DERR_INVALIDCALL;

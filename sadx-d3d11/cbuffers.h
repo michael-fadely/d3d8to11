@@ -61,6 +61,7 @@ class PerPixelBuffer : public ICBuffer, dirty_impl
 public:
 	dirty_t<uint>   src_blend;
 	dirty_t<uint>   dst_blend;
+	dirty_t<uint>   blend_op;
 	dirty_t<uint>   fog_mode;
 	dirty_t<float>  fog_start;
 	dirty_t<float>  fog_end;

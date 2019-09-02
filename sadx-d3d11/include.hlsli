@@ -40,6 +40,13 @@
 #define BLEND_INVDESTCOLOR    10
 #define BLEND_SRCALPHASAT     11
 
+// D3DBLENDOP
+#define BLENDOP_ADD         1
+#define BLENDOP_SUBTRACT    2
+#define BLENDOP_REVSUBTRACT 3
+#define BLENDOP_MIN         4
+#define BLENDOP_MAX         5
+
 // D3DMCS enum (color source)
 #define CS_MATERIAL 0 // Color from material is used
 #define CS_COLOR1   1 // Diffuse vertex color is used
@@ -107,10 +114,9 @@ static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 // Fragment list node.
 struct OitNode
 {
-	uint  draw_call;
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
-	uint  flags; // source blend, destination blend, blend operation
+	uint  flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
 	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
 };
 

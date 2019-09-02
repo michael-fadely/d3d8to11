@@ -124,7 +124,7 @@ void PerModelBuffer::mark()
 
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << src_blend << dst_blend
+	cbuf << src_blend << dst_blend << blend_op
 		<< fog_mode << fog_start << fog_end << fog_density << fog_color
 		<< alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
 }
@@ -133,6 +133,7 @@ bool PerPixelBuffer::dirty() const
 {
 	return src_blend.dirty() ||
 	       dst_blend.dirty() ||
+	       blend_op.dirty() ||
 	       fog_mode.dirty() ||
 	       fog_start.dirty() ||
 	       fog_end.dirty() ||
@@ -148,6 +149,7 @@ void PerPixelBuffer::clear()
 {
 	src_blend.clear();
 	dst_blend.clear();
+	blend_op.clear();
 	fog_mode.clear();
 	fog_start.clear();
 	fog_end.clear();
@@ -163,6 +165,7 @@ void PerPixelBuffer::mark()
 {
 	src_blend.mark();
 	dst_blend.mark();
+	blend_op.mark();
 	fog_mode.mark();
 	fog_start.mark();
 	fog_end.mark();
