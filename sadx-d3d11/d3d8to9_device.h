@@ -343,7 +343,9 @@ public:
 	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
 	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
 	void create_depth_stencil();
-	void create_render_target();
+	void create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc);
+	void create_render_target(D3D11_TEXTURE2D_DESC& tex_desc);
+	void get_back_buffer();
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE primitive_type) const;
 	static bool primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count);
@@ -413,7 +415,7 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
-	bool oit_enabled = true;
+	bool oit_enabled = false;
 
 protected:
 	bool oit_actually_enabled = false;
@@ -422,8 +424,18 @@ protected:
 	VertexShader composite_vs;
 	PixelShader composite_ps;
 
+	ComPtr<Direct3DTexture8> back_buffer;
 	ComPtr<ID3D11RenderTargetView> back_buffer_view;
 
+	ComPtr<Direct3DTexture8>         render_target_wrapper;
+	ComPtr<ID3D11Texture2D>          render_target_texture;
+	ComPtr<ID3D11RenderTargetView>   render_target_view;
+	ComPtr<ID3D11ShaderResourceView> render_target_srv;
+
+	ComPtr<Direct3DSurface8> current_render_target;
+	ComPtr<Direct3DSurface8> current_depth_stencil;
+
+	ComPtr<Direct3DTexture8> composite_wrapper;
 	ComPtr<ID3D11Texture2D> composite_texture;
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
@@ -469,14 +481,9 @@ protected:
 
 	dirty_t<DWORD> FVF;
 	ComPtr<Direct3DTexture8> depth_stencil;
-	ComPtr<Direct3DTexture8> back_buffer;
-	ComPtr<Direct3DTexture8> composite_wrapper;
 
 	DepthStencilFlags depthstencil_flags {};
 	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> depth_states;
-
-	ComPtr<Direct3DSurface8> current_render_target;
-	ComPtr<Direct3DSurface8> current_depth_stencil;
 
 	ComPtr<ID3D11Buffer> per_scene_cbuf;
 	ComPtr<ID3D11Buffer> per_model_cbuf;

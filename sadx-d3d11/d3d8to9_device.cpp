@@ -484,26 +484,8 @@ void Direct3DDevice8::create_depth_stencil()
 
 #pragma comment( lib, "dxguid.lib")
 
-void Direct3DDevice8::create_render_target()
+void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 {
-	ID3D11Texture2D* pBackBuffer = nullptr;
-	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
-
-	D3D11_TEXTURE2D_DESC tex_desc {};
-	pBackBuffer->GetDesc(&tex_desc);
-
-	back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
-	back_buffer->create_native(pBackBuffer);
-
-	//back_buffer->GetSurfaceLevel(0, &current_render_target);
-
-	device->CreateRenderTargetView(pBackBuffer, nullptr, &back_buffer_view);
-
-	pBackBuffer->Release();
-
-	ComPtr<Direct3DSurface8> ds_surface;
-	depth_stencil->GetSurfaceLevel(0, &ds_surface);
-
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
 	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
@@ -547,12 +529,95 @@ void Direct3DDevice8::create_render_target()
 	std::string composite_srv_name = "composite_srv";
 	composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, composite_srv_name.size(), composite_srv_name.data());
 
-	// set the composite render target as the back buffer
-	context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
-
 	composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	composite_wrapper->create_native(composite_texture.Get());
-	composite_wrapper->GetSurfaceLevel(0, &current_render_target);
+}
+
+void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
+{
+	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
+	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &render_target_texture);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create render target texture");
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC view_desc {};
+
+	view_desc.Format             = tex_desc.Format;
+	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+	view_desc.Texture2D.MipSlice = 0;
+
+	hr = device->CreateRenderTargetView(render_target_texture.Get(), &view_desc, &render_target_view);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create render target view");
+	}
+
+	std::string view_name = "render_target_view";
+	render_target_view->SetPrivateData(WKPDID_D3DDebugObjectName, view_name.size(), view_name.data());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
+
+	srv_desc.Format                    = tex_desc.Format;
+	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Texture2D.MostDetailedMip = 0;
+	srv_desc.Texture2D.MipLevels       = 1;
+
+	hr = device->CreateShaderResourceView(render_target_texture.Get(), &srv_desc, &render_target_srv);
+
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("Failed to create composite resource view");
+	}
+
+	std::string render_target_srv_name = "render_target_srv";
+	render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, render_target_srv_name.size(), render_target_srv_name.data());
+
+	render_target_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	render_target_wrapper->create_native(render_target_texture.Get());
+}
+
+void Direct3DDevice8::get_back_buffer()
+{
+	ID3D11Texture2D* pBackBuffer = nullptr;
+	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
+
+	D3D11_TEXTURE2D_DESC tex_desc {};
+	pBackBuffer->GetDesc(&tex_desc);
+
+	back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	back_buffer->create_native(pBackBuffer);
+
+	//back_buffer->GetSurfaceLevel(0, &current_render_target);
+
+	device->CreateRenderTargetView(pBackBuffer, nullptr, &back_buffer_view);
+
+	pBackBuffer->Release();
+
+	ComPtr<Direct3DSurface8> ds_surface;
+	depth_stencil->GetSurfaceLevel(0, &ds_surface);
+
+	create_composite_texture(tex_desc);
+	create_render_target(tex_desc);
+
+	if (oit_enabled)
+	{
+		context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
+
+		// TODO: this doesn't make sense! If a program is expecting the render target with things in it, this has nothing until ::Present()!
+		composite_wrapper->GetSurfaceLevel(0, &current_render_target);
+	}
+	else
+	{
+		// set the composite render target as the back buffer
+		context->OMSetRenderTargets(1, render_target_view.GetAddressOf(), ds_surface->depth_stencil.Get());
+		render_target_wrapper->GetSurfaceLevel(0, &current_render_target);
+	}
 }
 
 void Direct3DDevice8::create_native()
@@ -613,7 +678,7 @@ void Direct3DDevice8::create_native()
 	swap_chain->SetFullscreenState(!present_params.Windowed, nullptr);
 
 	create_depth_stencil();
-	create_render_target();
+	get_back_buffer();
 
 	D3DVIEWPORT8 vp {};
 	vp.Width  = present_params.BackBufferWidth;
@@ -1161,7 +1226,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
 		create_depth_stencil();
-		create_render_target();
+		get_back_buffer();
 
 		D3DVIEWPORT8 vp {};
 		GetViewport(&vp);
@@ -1266,6 +1331,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
+	{
+		ComPtr<Direct3DSurface8> rt_0, bb_0;
+		render_target_wrapper->GetSurfaceLevel(0, &rt_0);
+		back_buffer->GetSurfaceLevel(0, &bb_0);
+
+		CopyRects(rt_0.Get(), nullptr, 0, bb_0.Get(), nullptr);
+	}
+
 	auto interval = present_params.FullScreen_PresentationInterval;
 
 	if (interval == D3DPRESENT_INTERVAL_IMMEDIATE)
@@ -1334,7 +1407,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer)
 {
-	//return D3DERR_INVALIDCALL; // HACK: fixes output in PSOBB
 	if (ppBackBuffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
@@ -1345,7 +1417,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL; // HACK
 	}
 
-	auto& bb = oit_actually_enabled ? composite_wrapper : back_buffer;
+	auto& bb = back_buffer;
 
 	ComPtr<Direct3DSurface8> surface;
 	bb->GetSurfaceLevel(0, &surface);
@@ -4596,7 +4668,7 @@ void Direct3DDevice8::oit_release()
 {
 	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, back_buffer_view.GetAddressOf(), nullptr,
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr,
 	                                                   1, null.size(), &null[0], nullptr);
 
 	FragListHead     = nullptr;
@@ -4629,7 +4701,7 @@ void Direct3DDevice8::oit_write()
 	static const uint zero[3] = { 0, 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : back_buffer_view.GetAddressOf(),
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target_view.GetAddressOf(),
 	                                                   current_depth_stencil->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to FRAGMENT_LIST_NULL.
@@ -4647,7 +4719,7 @@ void Direct3DDevice8::oit_read() const
 	ID3D11UnorderedAccessView* uavs[3] = {};
 
 	// Unbinds our UAVs.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, back_buffer_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
 
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {
 		FragListHeadSRV.Get(),
