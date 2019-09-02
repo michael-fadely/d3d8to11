@@ -1900,7 +1900,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 			context->ClearRenderTargetView(current_render_target->render_target.Get(), color);
 		}
 
-		if (composite_view)
+		/*if (composite_view)
 		{
 			context->ClearRenderTargetView(composite_view.Get(), color);
 		}
@@ -1908,7 +1908,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 		if (back_buffer_view)
 		{
 			context->ClearRenderTargetView(back_buffer_view.Get(), color);
-		}
+		}*/
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))

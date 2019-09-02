@@ -775,18 +775,9 @@ void do_alpha_reject(float4 result, bool standard_blending)
 #endif
 }
 
-void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
+void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 {
 #if defined(RS_OIT) && defined(RS_ALPHA)
-
-#ifdef DEMO_MODE
-	//const int center = screen_dimensions.x / 2;
-
-	//if (input.position.x < center)
-	//{
-	//	return;
-	//}
-#endif
 
 	#if !defined(FVF_RHW)
 		// if the pixel is effectively opaque with actual blending,
@@ -804,6 +795,9 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 		uint frag_count;
 		InterlockedAdd(FragListCount[input.position.xy], 1, frag_count);
 
+		float f = (float)frag_count / (float)MAX_FRAGMENTS;
+		result = float4(f, f, f, 1);
+
 		if (frag_count >= MAX_FRAGMENTS)
 		{
 			clip(-1);
@@ -812,7 +806,6 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 
 	uint new_index = FragListNodes.IncrementCounter();
 
-	// if per-pixel fragment limiting is enabled, this check is unnecessary
 	if (new_index >= buffer_len)
 	{
 		clip(-1);
@@ -823,10 +816,10 @@ void do_oit(float4 result, in VS_OUTPUT input, bool standard_blending)
 
 	OitNode n;
 
-	n.depth     = input.depth.x / input.depth.y;
-	n.color     = float4_to_unorm(result);
-	n.flags     = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
-	n.next      = old_index;
+	n.depth = input.depth.x / input.depth.y;
+	n.color = float4_to_unorm(result);
+	n.flags = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
+	n.next  = old_index;
 
 	FragListNodes[new_index] = n;
 	clip(-1);
