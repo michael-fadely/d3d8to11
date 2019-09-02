@@ -1334,7 +1334,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer)
 {
-	return D3DERR_INVALIDCALL; // HACK: fixes output in PSOBB
+	//return D3DERR_INVALIDCALL; // HACK: fixes output in PSOBB
 	if (ppBackBuffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;

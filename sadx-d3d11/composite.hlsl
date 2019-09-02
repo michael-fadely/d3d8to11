@@ -103,6 +103,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	float4 backBufferColor = BackBuffer[pos];
 	uint index = FragListHead[pos];
 
+	// TODO: LotR: RotK is bailing here!
 	if (index == FRAGMENT_LIST_NULL)
 	{
 		return backBufferColor;
