@@ -347,7 +347,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Level > desc.MipLevels)
+	if (Level >= desc.MipLevels)
 	{
 		return D3DERR_INVALIDCALL;
 	}
