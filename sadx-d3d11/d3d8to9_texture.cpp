@@ -340,6 +340,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 	return D3D_OK;
 }
 
+// TODO: in order to facilitate a d3d8/9 quirk where the entire texture including mipmaps is provided via pointer, re-write buffer management here
+// ^ used by Phantasy Star Online: Blue Burst
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	if (pRect)
