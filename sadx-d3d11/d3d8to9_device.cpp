@@ -1071,7 +1071,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 	pCaps->DestBlendCaps            = 0xFFFFFFFF;
 	pCaps->AlphaCmpCaps             = 0xFFFFFFFF;
 	pCaps->ShadeCaps                = 0xFFFFFFFF;
-	pCaps->TextureCaps              = D3DPTEXTURECAPS_MIPMAP | D3DPTEXTURECAPS_ALPHA;
+	pCaps->TextureCaps              = D3DPTEXTURECAPS_MIPMAP | D3DPTEXTURECAPS_ALPHA | D3DPTEXTURECAPS_NONPOW2CONDITIONAL | D3DPTEXTURECAPS_PROJECTED;
 	pCaps->TextureFilterCaps        = 0xFFFFFFFF;
 	pCaps->CubeTextureFilterCaps    = 0xFFFFFFFF;
 	pCaps->VolumeTextureFilterCaps  = 0xFFFFFFFF;
