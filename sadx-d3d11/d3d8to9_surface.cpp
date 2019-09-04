@@ -170,6 +170,8 @@ void Direct3DSurface8::create_native()
 			{
 				throw std::runtime_error("CreateRenderTargetView failed");
 			}
+
+			render_target->GetDesc(&rt_desc);
 		}
 
 		if (parent->is_depth_stencil)
