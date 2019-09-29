@@ -71,11 +71,13 @@ public:
 		size_ = 0;
 	}
 
+	// TODO: bounds check
 	T& operator[](size_t i)
 	{
 		return data_[i];
 	}
 
+	// TODO: bounds check
 	const T& operator[](size_t i) const
 	{
 		return data_[i];
