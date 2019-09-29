@@ -73,9 +73,10 @@ public:
 private:
 	dynarray<ComPtr<Direct3DSurface8>> surfaces;
 
+	gsl::span<uint8_t> get_buffer_level(UINT level);
 	bool convert(UINT level);
 	Direct3DDevice8* const device8;
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
-	std::unordered_map<UINT, std::vector<uint8_t>> texture_levels;
+	dynarray<uint8_t> texture_buffer;
 };
