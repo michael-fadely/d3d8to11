@@ -415,7 +415,7 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
-	bool oit_enabled = false;
+	bool oit_enabled = true;
 
 protected:
 	bool oit_actually_enabled = false;
