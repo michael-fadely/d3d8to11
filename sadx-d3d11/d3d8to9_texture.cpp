@@ -22,8 +22,6 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 
 		is_render_target = !!(desc.BindFlags & D3D11_BIND_RENDER_TARGET);
 		is_depth_stencil = !!(desc.BindFlags & D3D11_BIND_DEPTH_STENCIL);
-
-		texture_buffer.resize(calc_texture_size(width_, height_, 1, format_));
 	}
 	else
 	{
@@ -32,8 +30,6 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 
 		is_render_target = !!(usage_ & D3DUSAGE_RENDERTARGET);
 		is_depth_stencil = !!(usage_ & D3DUSAGE_DEPTHSTENCIL);
-
-		uint32_t texture_size_sum = 0;
 
 		if (!levels_)
 		{
@@ -44,30 +40,14 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 				auto width  = width_;
 				auto height = height_;
 
-				do
+				while (width != 1 && height != 1)
 				{
-					texture_size_sum += calc_texture_size(width, height, 1, format_);
 					++levels_;
 					width  = std::max(1u, width / 2);
 					height = std::max(1u, height / 2);
-				} while (width > 1 && height > 1);
+				}
 			}
 		}
-		else
-		{
-			auto width = width_;
-			auto height = height_;
-
-			do
-			{
-				texture_size_sum += calc_texture_size(width, height, 1, format_);
-
-				width = std::max(1u, width / 2);
-				height = std::max(1u, height / 2);
-			} while (width > 1 && height > 1);
-		}
-
-		texture_buffer.resize(texture_size_sum);
 
 		auto format = to_dxgi(format_);
 
@@ -150,8 +130,6 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 			throw std::runtime_error("CreateShaderResourceView failed");
 		}
 	}
-
-	memset(texture_buffer.data(), 0, texture_buffer.size());
 
 	surfaces.resize(levels_);
 
@@ -392,11 +370,23 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 
 	D3DLOCKED_RECT rect;
 	rect.Pitch = calc_texture_size(width, 1, 1, format_);
-	rect.pBits = get_buffer_level(Level).data();
+
+	auto it = texture_levels.find(Level);
+
+	if (it != texture_levels.end())
+	{
+		auto& v = it->second;
+		rect.pBits = v.data();
+	}
+	else
+	{
+		std::vector<uint8_t> v(calc_texture_size(width, height, 1, format_));
+		rect.pBits = v.data();
+		texture_levels[Level] = std::move(v);
+	}
 
 	locked_rects[Level] = rect;
 	*pLockedRect        = rect;
-
 	return D3D_OK;
 }
 
@@ -414,36 +404,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 
 	if (!convert(Level))
 	{
-		// fuck me this is gross!
-		// if the level is 0, we need to always copy the whole texture
-		// due to a d3d8/9 quirk where the entire texture memory is accessible
-		// from the pointer to the first mip level.
-
-		if (Level || levels_ == 1)
-		{
-			context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
-		}
-		else
-		{
-			auto width = width_;
-			auto height = height_;
-
-			auto ptr = reinterpret_cast<uint8_t*>(rect.pBits);
-
-			uint32_t buffer_offset = 0;
-
-			for (size_t i = 0; i < levels_; i++)
-			{
-				auto pitch = calc_texture_size(width, 1, 1, format_);
-
-				context->UpdateSubresource(texture.Get(), i, nullptr, &ptr[buffer_offset], pitch, 0);
-
-				buffer_offset += calc_texture_size(width, height, 1, format_);
-
-				width  = std::max(1u, width / 2);
-				height = std::max(1u, height / 2);
-			}
-		}
+		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 	}
 
 	locked_rects.erase(it);
@@ -459,27 +420,6 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 #endif
 }
 
-gsl::span<uint8_t> Direct3DTexture8::get_buffer_level(UINT level)
-{
-	uint buffer_offset = 0;
-
-	uint width = width_;
-	uint height = height_;
-
-	uint last_texture_size = calc_texture_size(width, height, 1, format_);
-
-	for (size_t i = 0; i < level; i++)
-	{
-		last_texture_size = calc_texture_size(width, height, 1, format_);
-		buffer_offset += last_texture_size;
-
-		width  = std::max(1u, width / 2);
-		height = std::max(1u, height / 2);
-	}
-
-	return gsl::span<uint8_t>(&texture_buffer[buffer_offset], last_texture_size);
-}
-
 bool Direct3DTexture8::convert(UINT level)
 {
 	if (IsWindows8OrGreater())
@@ -490,7 +430,7 @@ bool Direct3DTexture8::convert(UINT level)
 	D3DSURFACE_DESC8 level_desc {};
 	GetLevelDesc(level, &level_desc);
 
-	auto buffer = get_buffer_level(level);
+	std::vector<uint8_t>& buffer = texture_levels[level];
 	const DXGI_FORMAT format = to_dxgi(format_);
 
 	std::vector<uint32_t> rgba;
