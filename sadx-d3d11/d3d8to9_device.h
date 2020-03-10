@@ -3,6 +3,7 @@
 #include <array>
 #include <deque>
 #include <unordered_map>
+#include <fstream>
 
 #include <d3d11_1.h>
 #include <wrl/client.h>
@@ -16,6 +17,7 @@
 #include <future>
 #include <optional>
 #include "int_multiple.h"
+#include <unordered_set>
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -212,6 +214,10 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
 class Direct3DDevice8 : public Unknown
 {
+	std::fstream permutation_cache;
+	std::recursive_mutex permutation_mutex;
+	std::unordered_set<ShaderFlags::type> permutation_flags;
+
 	std::recursive_mutex shader_sources_mutex;
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;

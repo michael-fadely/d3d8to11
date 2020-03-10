@@ -11,6 +11,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <filesystem>
 
 #include "d3d8to9.hpp"
 #include "SimpleMath.h"
@@ -20,6 +21,8 @@
 #include "ShaderIncluder.h"
 #include "safe_release.h"
 #include "globals.h"
+
+static const std::string system_dir(".d3d8to11");
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
@@ -33,82 +36,82 @@ using namespace Microsoft::WRL;
 static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
 
 static std::unordered_map<uint32_t, std::string> rs_strings = {
-	{ D3DRS_ZENABLE, "D3DRS_ZENABLE" },
-	{ D3DRS_FILLMODE, "D3DRS_FILLMODE" },
-	{ D3DRS_SHADEMODE, "D3DRS_SHADEMODE" },
-	{ D3DRS_LINEPATTERN, "D3DRS_LINEPATTERN" },
-	{ D3DRS_ZWRITEENABLE, "D3DRS_ZWRITEENABLE" },
-	{ D3DRS_ALPHATESTENABLE, "D3DRS_ALPHATESTENABLE" },
-	{ D3DRS_LASTPIXEL, "D3DRS_LASTPIXEL" },
-	{ D3DRS_SRCBLEND, "D3DRS_SRCBLEND" },
-	{ D3DRS_DESTBLEND, "D3DRS_DESTBLEND" },
-	{ D3DRS_CULLMODE, "D3DRS_CULLMODE" },
-	{ D3DRS_ZFUNC, "D3DRS_ZFUNC" },
-	{ D3DRS_ALPHAREF, "D3DRS_ALPHAREF" },
-	{ D3DRS_ALPHAFUNC, "D3DRS_ALPHAFUNC" },
-	{ D3DRS_DITHERENABLE, "D3DRS_DITHERENABLE" },
-	{ D3DRS_ALPHABLENDENABLE, "D3DRS_ALPHABLENDENABLE" },
-	{ D3DRS_FOGENABLE, "D3DRS_FOGENABLE" },
-	{ D3DRS_SPECULARENABLE, "D3DRS_SPECULARENABLE" },
-	{ D3DRS_ZVISIBLE, "D3DRS_ZVISIBLE" },
-	{ D3DRS_FOGCOLOR, "D3DRS_FOGCOLOR" },
-	{ D3DRS_FOGTABLEMODE, "D3DRS_FOGTABLEMODE" },
-	{ D3DRS_FOGSTART, "D3DRS_FOGSTART" },
-	{ D3DRS_FOGEND, "D3DRS_FOGEND" },
-	{ D3DRS_FOGDENSITY, "D3DRS_FOGDENSITY" },
-	{ D3DRS_EDGEANTIALIAS, "D3DRS_EDGEANTIALIAS" },
-	{ D3DRS_ZBIAS, "D3DRS_ZBIAS" },
-	{ D3DRS_RANGEFOGENABLE, "D3DRS_RANGEFOGENABLE" },
-	{ D3DRS_STENCILENABLE, "D3DRS_STENCILENABLE" },
-	{ D3DRS_STENCILFAIL, "D3DRS_STENCILFAIL" },
-	{ D3DRS_STENCILZFAIL, "D3DRS_STENCILZFAIL" },
-	{ D3DRS_STENCILPASS, "D3DRS_STENCILPASS" },
-	{ D3DRS_STENCILFUNC, "D3DRS_STENCILFUNC" },
-	{ D3DRS_STENCILREF, "D3DRS_STENCILREF" },
-	{ D3DRS_STENCILMASK, "D3DRS_STENCILMASK" },
-	{ D3DRS_STENCILWRITEMASK, "D3DRS_STENCILWRITEMASK" },
-	{ D3DRS_TEXTUREFACTOR, "D3DRS_TEXTUREFACTOR" },
-	{ D3DRS_WRAP0, "D3DRS_WRAP0" },
-	{ D3DRS_WRAP1, "D3DRS_WRAP1" },
-	{ D3DRS_WRAP2, "D3DRS_WRAP2" },
-	{ D3DRS_WRAP3, "D3DRS_WRAP3" },
-	{ D3DRS_WRAP4, "D3DRS_WRAP4" },
-	{ D3DRS_WRAP5, "D3DRS_WRAP5" },
-	{ D3DRS_WRAP6, "D3DRS_WRAP6" },
-	{ D3DRS_WRAP7, "D3DRS_WRAP7" },
-	{ D3DRS_CLIPPING, "D3DRS_CLIPPING" },
-	{ D3DRS_LIGHTING, "D3DRS_LIGHTING" },
-	{ D3DRS_AMBIENT, "D3DRS_AMBIENT" },
-	{ D3DRS_FOGVERTEXMODE, "D3DRS_FOGVERTEXMODE" },
-	{ D3DRS_COLORVERTEX, "D3DRS_COLORVERTEX" },
-	{ D3DRS_LOCALVIEWER, "D3DRS_LOCALVIEWER" },
-	{ D3DRS_NORMALIZENORMALS, "D3DRS_NORMALIZENORMALS" },
-	{ D3DRS_DIFFUSEMATERIALSOURCE, "D3DRS_DIFFUSEMATERIALSOURCE" },
-	{ D3DRS_SPECULARMATERIALSOURCE, "D3DRS_SPECULARMATERIALSOURCE" },
-	{ D3DRS_AMBIENTMATERIALSOURCE, "D3DRS_AMBIENTMATERIALSOURCE" },
-	{ D3DRS_EMISSIVEMATERIALSOURCE, "D3DRS_EMISSIVEMATERIALSOURCE" },
-	{ D3DRS_VERTEXBLEND, "D3DRS_VERTEXBLEND" },
-	{ D3DRS_CLIPPLANEENABLE, "D3DRS_CLIPPLANEENABLE" },
+	{ D3DRS_ZENABLE,                  "D3DRS_ZENABLE" },
+	{ D3DRS_FILLMODE,                 "D3DRS_FILLMODE" },
+	{ D3DRS_SHADEMODE,                "D3DRS_SHADEMODE" },
+	{ D3DRS_LINEPATTERN,              "D3DRS_LINEPATTERN" },
+	{ D3DRS_ZWRITEENABLE,             "D3DRS_ZWRITEENABLE" },
+	{ D3DRS_ALPHATESTENABLE,          "D3DRS_ALPHATESTENABLE" },
+	{ D3DRS_LASTPIXEL,                "D3DRS_LASTPIXEL" },
+	{ D3DRS_SRCBLEND,                 "D3DRS_SRCBLEND" },
+	{ D3DRS_DESTBLEND,                "D3DRS_DESTBLEND" },
+	{ D3DRS_CULLMODE,                 "D3DRS_CULLMODE" },
+	{ D3DRS_ZFUNC,                    "D3DRS_ZFUNC" },
+	{ D3DRS_ALPHAREF,                 "D3DRS_ALPHAREF" },
+	{ D3DRS_ALPHAFUNC,                "D3DRS_ALPHAFUNC" },
+	{ D3DRS_DITHERENABLE,             "D3DRS_DITHERENABLE" },
+	{ D3DRS_ALPHABLENDENABLE,         "D3DRS_ALPHABLENDENABLE" },
+	{ D3DRS_FOGENABLE,                "D3DRS_FOGENABLE" },
+	{ D3DRS_SPECULARENABLE,           "D3DRS_SPECULARENABLE" },
+	{ D3DRS_ZVISIBLE,                 "D3DRS_ZVISIBLE" },
+	{ D3DRS_FOGCOLOR,                 "D3DRS_FOGCOLOR" },
+	{ D3DRS_FOGTABLEMODE,             "D3DRS_FOGTABLEMODE" },
+	{ D3DRS_FOGSTART,                 "D3DRS_FOGSTART" },
+	{ D3DRS_FOGEND,                   "D3DRS_FOGEND" },
+	{ D3DRS_FOGDENSITY,               "D3DRS_FOGDENSITY" },
+	{ D3DRS_EDGEANTIALIAS,            "D3DRS_EDGEANTIALIAS" },
+	{ D3DRS_ZBIAS,                    "D3DRS_ZBIAS" },
+	{ D3DRS_RANGEFOGENABLE,           "D3DRS_RANGEFOGENABLE" },
+	{ D3DRS_STENCILENABLE,            "D3DRS_STENCILENABLE" },
+	{ D3DRS_STENCILFAIL,              "D3DRS_STENCILFAIL" },
+	{ D3DRS_STENCILZFAIL,             "D3DRS_STENCILZFAIL" },
+	{ D3DRS_STENCILPASS,              "D3DRS_STENCILPASS" },
+	{ D3DRS_STENCILFUNC,              "D3DRS_STENCILFUNC" },
+	{ D3DRS_STENCILREF,               "D3DRS_STENCILREF" },
+	{ D3DRS_STENCILMASK,              "D3DRS_STENCILMASK" },
+	{ D3DRS_STENCILWRITEMASK,         "D3DRS_STENCILWRITEMASK" },
+	{ D3DRS_TEXTUREFACTOR,            "D3DRS_TEXTUREFACTOR" },
+	{ D3DRS_WRAP0,                    "D3DRS_WRAP0" },
+	{ D3DRS_WRAP1,                    "D3DRS_WRAP1" },
+	{ D3DRS_WRAP2,                    "D3DRS_WRAP2" },
+	{ D3DRS_WRAP3,                    "D3DRS_WRAP3" },
+	{ D3DRS_WRAP4,                    "D3DRS_WRAP4" },
+	{ D3DRS_WRAP5,                    "D3DRS_WRAP5" },
+	{ D3DRS_WRAP6,                    "D3DRS_WRAP6" },
+	{ D3DRS_WRAP7,                    "D3DRS_WRAP7" },
+	{ D3DRS_CLIPPING,                 "D3DRS_CLIPPING" },
+	{ D3DRS_LIGHTING,                 "D3DRS_LIGHTING" },
+	{ D3DRS_AMBIENT,                  "D3DRS_AMBIENT" },
+	{ D3DRS_FOGVERTEXMODE,            "D3DRS_FOGVERTEXMODE" },
+	{ D3DRS_COLORVERTEX,              "D3DRS_COLORVERTEX" },
+	{ D3DRS_LOCALVIEWER,              "D3DRS_LOCALVIEWER" },
+	{ D3DRS_NORMALIZENORMALS,         "D3DRS_NORMALIZENORMALS" },
+	{ D3DRS_DIFFUSEMATERIALSOURCE,    "D3DRS_DIFFUSEMATERIALSOURCE" },
+	{ D3DRS_SPECULARMATERIALSOURCE,   "D3DRS_SPECULARMATERIALSOURCE" },
+	{ D3DRS_AMBIENTMATERIALSOURCE,    "D3DRS_AMBIENTMATERIALSOURCE" },
+	{ D3DRS_EMISSIVEMATERIALSOURCE,   "D3DRS_EMISSIVEMATERIALSOURCE" },
+	{ D3DRS_VERTEXBLEND,              "D3DRS_VERTEXBLEND" },
+	{ D3DRS_CLIPPLANEENABLE,          "D3DRS_CLIPPLANEENABLE" },
 	{ D3DRS_SOFTWAREVERTEXPROCESSING, "D3DRS_SOFTWAREVERTEXPROCESSING" },
-	{ D3DRS_POINTSIZE, "D3DRS_POINTSIZE" },
-	{ D3DRS_POINTSIZE_MIN, "D3DRS_POINTSIZE_MIN" },
-	{ D3DRS_POINTSPRITEENABLE, "D3DRS_POINTSPRITEENABLE" },
-	{ D3DRS_POINTSCALEENABLE, "D3DRS_POINTSCALEENABLE" },
-	{ D3DRS_POINTSCALE_A, "D3DRS_POINTSCALE_A" },
-	{ D3DRS_POINTSCALE_B, "D3DRS_POINTSCALE_B" },
-	{ D3DRS_POINTSCALE_C, "D3DRS_POINTSCALE_C" },
-	{ D3DRS_MULTISAMPLEANTIALIAS, "D3DRS_MULTISAMPLEANTIALIAS" },
-	{ D3DRS_MULTISAMPLEMASK, "D3DRS_MULTISAMPLEMASK" },
-	{ D3DRS_PATCHEDGESTYLE, "D3DRS_PATCHEDGESTYLE" },
-	{ D3DRS_PATCHSEGMENTS, "D3DRS_PATCHSEGMENTS" },
-	{ D3DRS_DEBUGMONITORTOKEN, "D3DRS_DEBUGMONITORTOKEN" },
-	{ D3DRS_POINTSIZE_MAX, "D3DRS_POINTSIZE_MAX" },
+	{ D3DRS_POINTSIZE,                "D3DRS_POINTSIZE" },
+	{ D3DRS_POINTSIZE_MIN,            "D3DRS_POINTSIZE_MIN" },
+	{ D3DRS_POINTSPRITEENABLE,        "D3DRS_POINTSPRITEENABLE" },
+	{ D3DRS_POINTSCALEENABLE,         "D3DRS_POINTSCALEENABLE" },
+	{ D3DRS_POINTSCALE_A,             "D3DRS_POINTSCALE_A" },
+	{ D3DRS_POINTSCALE_B,             "D3DRS_POINTSCALE_B" },
+	{ D3DRS_POINTSCALE_C,             "D3DRS_POINTSCALE_C" },
+	{ D3DRS_MULTISAMPLEANTIALIAS,     "D3DRS_MULTISAMPLEANTIALIAS" },
+	{ D3DRS_MULTISAMPLEMASK,          "D3DRS_MULTISAMPLEMASK" },
+	{ D3DRS_PATCHEDGESTYLE,           "D3DRS_PATCHEDGESTYLE" },
+	{ D3DRS_PATCHSEGMENTS,            "D3DRS_PATCHSEGMENTS" },
+	{ D3DRS_DEBUGMONITORTOKEN,        "D3DRS_DEBUGMONITORTOKEN" },
+	{ D3DRS_POINTSIZE_MAX,            "D3DRS_POINTSIZE_MAX" },
 	{ D3DRS_INDEXEDVERTEXBLENDENABLE, "D3DRS_INDEXEDVERTEXBLENDENABLE" },
-	{ D3DRS_COLORWRITEENABLE, "D3DRS_COLORWRITEENABLE" },
-	{ D3DRS_TWEENFACTOR, "D3DRS_TWEENFACTOR" },
-	{ D3DRS_BLENDOP, "D3DRS_BLENDOP" },
-	{ D3DRS_POSITIONORDER, "D3DRS_POSITIONORDER" },
-	{ D3DRS_NORMALORDER, "D3DRS_NORMALORDER" }
+	{ D3DRS_COLORWRITEENABLE,         "D3DRS_COLORWRITEENABLE" },
+	{ D3DRS_TWEENFACTOR,              "D3DRS_TWEENFACTOR" },
+	{ D3DRS_BLENDOP,                  "D3DRS_BLENDOP" },
+	{ D3DRS_POSITIONORDER,            "D3DRS_POSITIONORDER" },
+	{ D3DRS_NORMALORDER,              "D3DRS_NORMALORDER" }
 };
 
 static const std::array<D3D_FEATURE_LEVEL, 4> FEATURE_LEVELS =
@@ -400,11 +403,24 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 		throw std::runtime_error("vertex shader creation failed");
 	}
 
-	auto result = VertexShader(shader, blob);
 
-	std::lock_guard<std::recursive_mutex> lock(mutex);
-	shaders[flags] = result;
-	return result;
+	{
+		std::lock_guard<std::recursive_mutex> lock(mutex);
+
+		auto result = VertexShader(shader, blob);
+		shaders[flags] = result;
+
+		LOCK(permutation_mutex);
+
+		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
+		{
+			OutputDebugStringA("writing vs permutation to permutation file\n");
+			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
+			permutation_cache.flush();
+		}
+
+		return result;
+	}
 }
 
 PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_boy,
@@ -466,11 +482,23 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_b
 		throw std::runtime_error("pixel shader creation failed");
 	}
 
-	auto result = PixelShader(shader, blob);
+	{
+		std::lock_guard<std::recursive_mutex> lock(mutex);
 
-	std::lock_guard<std::recursive_mutex> lock(mutex);
-	shaders[flags] = result;
-	return result;
+		auto result = PixelShader(shader, blob);
+		shaders[flags] = result;
+
+		LOCK(permutation_mutex);
+
+		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
+		{
+			OutputDebugStringA("writing ps permutation to permutation file\n");
+			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
+			permutation_cache.flush();
+		}
+
+		return result;
+	}
 }
 
 void Direct3DDevice8::create_depth_stencil()
@@ -722,37 +750,63 @@ void Direct3DDevice8::create_native()
 	context->VSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 
-#if 0
-	OutputDebugStringA("precompiling shaders...\n");
-
-	uint32_t last = std::numeric_limits<uint32_t>::max();
-
-	for (uint32_t i = 0; i <= ShaderFlags::count; ++i)
+	if (!std::filesystem::exists(system_dir))
 	{
-		auto flags = ShaderFlags::sanitize(i);
-		
-		if ((flags & ShaderFlags::vs_mask) != (last & ShaderFlags::vs_mask))
-		{
-			std::stringstream ss;
-			ss << "processing vs: " << flags << "/" << static_cast<uint32_t>(ShaderFlags::count) << "\n";
-			OutputDebugStringA(ss.str().c_str());
-
-			auto temp = get_vs(flags);
-		}
-
-		if ((flags & ShaderFlags::ps_mask) != (last & ShaderFlags::ps_mask))
-		{
-			std::stringstream ss;
-			ss << "processing ps: " << flags << "/" << static_cast<uint32_t>(ShaderFlags::count) << "\n";
-			OutputDebugStringA(ss.str().c_str());
-
-			auto temp = get_ps(flags);
-		}
-
-		last = flags;
+		std::filesystem::create_directory(system_dir);
 	}
-	OutputDebugStringA("done\n");
-#endif
+	{
+		const auto permutation_path = std::filesystem::path(system_dir) / "permutations.bin";
+
+		bool exists = std::filesystem::exists(permutation_path);
+
+		std::fstream file;
+		file.open(permutation_path, std::ios::binary | std::ios::in | std::ios::out);
+
+		if (!file.is_open())
+		{
+			file.open(permutation_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+
+			if (!file.is_open())
+			{
+				OutputDebugStringA("fuck\n");
+			}
+		}
+
+		if (exists)
+		{
+			OutputDebugStringA("precompiling shaders...\n");
+
+			while (!file.eof())
+			{
+				ShaderFlags::type flags = 0;
+
+				file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
+
+				{
+					LOCK(permutation_mutex);
+					permutation_flags.insert(flags);
+				}
+
+				std::stringstream ss;
+				ss << "compiling: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
+				OutputDebugStringA(ss.str().c_str());
+
+				//get_ps(flags & ShaderFlags::ps_mask, false, pixel_shaders, ps_mutex);
+				//get_vs(flags & ShaderFlags::vs_mask, false, vertex_shaders, vs_mutex);
+
+				VertexShader vs_dummy;
+				PixelShader ps_dummy;
+
+				compile_shaders(flags, vs_dummy, ps_dummy);
+			}
+
+			OutputDebugStringA("done\n");
+		}
+
+		file.seekg(0, std::ios_base::end);
+		file.seekp(0, std::ios_base::end);
+		permutation_cache = std::move(file);
+	}
 
 	blend_flags        = 0;
 	raster_flags       = 0;
