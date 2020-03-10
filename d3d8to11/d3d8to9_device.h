@@ -212,6 +212,7 @@ struct OitNode
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
+// TODO: remove ABI-dependent fields, make this an interface
 class Direct3DDevice8 : public Unknown
 {
 	std::fstream permutation_cache;
@@ -421,7 +422,7 @@ public:
 	ComPtr<ID3D11DeviceContext> context;
 	ComPtr<ID3D11InfoQueue> info_queue;
 
-	bool oit_enabled = true;
+	bool oit_enabled = false;
 
 protected:
 	bool oit_actually_enabled = false;
