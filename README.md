@@ -1,4 +1,4 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/eveosylc3ryuayqp?svg=true)](https://ci.appveyor.com/project/SonicFreak94/sadx-d3d11)
+[![Build status](https://ci.appveyor.com/api/projects/status/bkviq8drbm92olmm?svg=true)](https://ci.appveyor.com/project/michael-fadely/d3d8to11)
 
-# sadx-d3d11
-_sadx-d3d11_ is a mod for SADX PC which shims D3D8 to D3D11 and enables Order-Independent Transparency.
+# d3d8to11
+_d3d8to11_ is a shim which emulates the DirectX 8 Fixed-Function Pipeline in DirectX 11.
