@@ -166,15 +166,11 @@
     <None Include="d3d8.def">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="d3d8to11.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="configschema.xml">
       <Filter>Resource Files</Filter>
     </Xml>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="d3d8to11.hlsl">
-      <Filter>Source Files\shaders</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>
