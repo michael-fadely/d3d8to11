@@ -21,6 +21,7 @@
 #include "ShaderIncluder.h"
 #include "safe_release.h"
 #include "globals.h"
+#include "ini_file.h"
 
 static const std::string system_dir(".d3d8to11");
 
@@ -650,6 +651,41 @@ void Direct3DDevice8::get_back_buffer()
 
 void Direct3DDevice8::create_native()
 {
+	if (!std::filesystem::exists(system_dir))
+	{
+		std::filesystem::create_directory(system_dir);
+	}
+
+	const auto config_path = std::filesystem::path(system_dir) / "config.ini";
+
+	if (std::filesystem::exists(config_path))
+	{
+		std::fstream file(config_path.string(), std::fstream::in);
+
+		ini_file ini;
+		ini.read(file);
+
+		auto section = ini.get_section("OIT");
+
+		if (section)
+		{
+			oit_enabled = section->get_or("enabled", false);
+		}
+	}
+	else
+	{
+		std::fstream file(config_path.string(), std::fstream::out);
+
+		ini_file ini;
+
+		auto section = std::make_shared<ini_section>();
+
+		ini.set_section("OIT", section);
+		section->set("enabled", oit_enabled);
+
+		ini.write(file);
+	}
+
 	if (!present_params.EnableAutoDepthStencil)
 	{
 		throw std::runtime_error("manual depth buffer not supported");
@@ -750,10 +786,6 @@ void Direct3DDevice8::create_native()
 	context->VSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 	context->PSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 
-	if (!std::filesystem::exists(system_dir))
-	{
-		std::filesystem::create_directory(system_dir);
-	}
 	{
 		const auto permutation_path = std::filesystem::path(system_dir) / "permutations.bin";
 

@@ -133,7 +133,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -159,7 +159,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -185,7 +185,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -215,7 +215,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -247,7 +247,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -277,7 +277,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;SADXD3D11_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\GSL\include;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
@@ -386,6 +386,9 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </ProjectReference>
     <ProjectReference Include="..\libd3d8to11\libcbuffer.vcxproj">
       <Project>{322c4a08-4b89-4ddf-95c1-e73949432507}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\simpleini\simpleini.vcxproj">
+      <Project>{622921e4-cfa6-484a-9959-785762058bcf}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
