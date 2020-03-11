@@ -8,7 +8,10 @@
 
 inline uint blocks_size_in_bytes(uint w, uint h, uint block_size)
 {
-	return std::max(1u, ((w + 3) / 4) * block_size) * h;
+	uint w_ = std::max(1u, (w + 3u) / 4u);
+	uint h_ = std::max(1u, (h + 3u) / 4u);
+	
+	return w_ * h_ * block_size;
 }
 
 UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)

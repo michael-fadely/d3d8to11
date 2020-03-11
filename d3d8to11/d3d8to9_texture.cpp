@@ -17,6 +17,8 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	auto device  = device8->device;
 	auto context = device8->context;
 
+	block_compressed = is_block_compressed(to_dxgi(format_));
+
 	if (view_of != nullptr)
 	{
 		view_of->GetDesc(&desc);
@@ -136,12 +138,16 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	surfaces.resize(levels_);
 
 	size_t level = 0;
+	size_t total_size = 0;
 
 	for (auto& it : surfaces)
 	{
 		it = new Direct3DSurface8(device8, this, level++);
 		it->create_native();
+		total_size += it->desc8.Size;
 	}
+
+	texture_buffer.resize(total_size);
 }
 // IDirect3DTexture8
 Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
@@ -301,14 +307,10 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width  = width_;
-	auto height = height_;
+	auto surface_desc8 = surfaces[Level]->desc8;
 
-	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
-	{
-		width  = std::max(1u, width / 2);
-		height = std::max(1u, height / 2);
-	}
+	auto width  = surface_desc8.Width;
+	auto height = surface_desc8.Height;
 
 	pDesc->Format          = format_;
 	pDesc->Type            = GetType();
@@ -342,8 +344,6 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 	return D3D_OK;
 }
 
-// TODO: in order to facilitate a d3d8/9 quirk where the entire texture including mipmaps is provided via pointer, re-write buffer management here
-// ^ used by Phantasy Star Online: Blue Burst
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	if (pRect)
@@ -361,34 +361,19 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width  = width_;
-	auto height = height_;
+	auto surface_desc8 = surfaces[Level]->desc8;
+	auto width  = surface_desc8.Width;
 
-	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
-	{
-		width  = std::max(1u, width / 2);
-		height = std::max(1u, height / 2);
-	}
+	size_t level_offset = 0;
+	size_t level_size = 0;
+	get_level_offset(Level, level_offset, level_size);
 
 	D3DLOCKED_RECT rect;
 	rect.Pitch = calc_texture_size(width, 1, 1, format_);
-
-	auto it = texture_levels.find(Level);
-
-	if (it != texture_levels.end())
-	{
-		auto& v = it->second;
-		rect.pBits = v.data();
-	}
-	else
-	{
-		std::vector<uint8_t> v(calc_texture_size(width, height, 1, format_));
-		rect.pBits = v.data();
-		texture_levels[Level] = std::move(v);
-	}
+	rect.pBits = &texture_buffer[level_offset];
 
 	locked_rects[Level] = rect;
-	*pLockedRect        = rect;
+	*pLockedRect = rect;
 	return D3D_OK;
 }
 
@@ -401,14 +386,43 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto& rect = it->second;
 	auto context = device8->context;
 
-	if (!convert(Level))
+	// TODO: make this behavior configurable [safe mipmaps]
+	if (!Level)
 	{
+		if (should_convert())
+		{
+			for (UINT i = 0; i < levels_; ++i)
+			{
+				convert(i);
+			}
+		}
+		else
+		{
+			for (UINT i = 0; i < levels_; ++i)
+			{
+				const auto desc8  = surfaces[i]->desc8;
+				const auto width  = desc8.Width;
+
+				size_t level_offset = 0;
+				size_t level_size = 0;
+				get_level_offset(i, level_offset, level_size);
+
+				D3DLOCKED_RECT rect;
+				rect.Pitch = calc_texture_size(width, 1, 1, format_);
+				rect.pBits = &texture_buffer[level_offset];
+
+				context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
+			}
+		}
+	}
+	else if (!convert(Level))
+	{
+		auto& rect = it->second;
 		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 	}
-
+	
 	locked_rects.erase(it);
 	return D3D_OK;
 }
@@ -422,6 +436,17 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 #endif
 }
 
+void Direct3DTexture8::get_level_offset(UINT level, size_t& offset, size_t& size) const
+{
+	size = surfaces[level]->desc8.Size;
+	offset = 0;
+
+	for (UINT i = 0; i < level; ++i)
+	{
+		offset += surfaces[i]->desc8.Size;
+	}
+}
+
 bool Direct3DTexture8::convert(UINT level)
 {
 	if (IsWindows8OrGreater())
@@ -432,7 +457,12 @@ bool Direct3DTexture8::convert(UINT level)
 	D3DSURFACE_DESC8 level_desc {};
 	GetLevelDesc(level, &level_desc);
 
-	std::vector<uint8_t>& buffer = texture_levels[level];
+	size_t level_offset = 0;
+	size_t level_size = 0;
+	get_level_offset(level, level_offset, level_size);
+
+	uint8_t* buffer = &texture_buffer[level_offset];
+	
 	const DXGI_FORMAT format = to_dxgi(format_);
 
 	std::vector<uint32_t> rgba;
@@ -441,9 +471,9 @@ bool Direct3DTexture8::convert(UINT level)
 	{
 		case DXGI_FORMAT_B5G6R5_UNORM:
 		{
-			rgba.resize(buffer.size() / 2);
+			rgba.resize(level_size / 2);
 
-			auto b16            = reinterpret_cast<uint16_t*>(buffer.data());
+			auto b16            = reinterpret_cast<uint16_t*>(buffer);
 			uint32_t* b32       = rgba.data();
 			const size_t length = rgba.size();
 
@@ -463,9 +493,9 @@ bool Direct3DTexture8::convert(UINT level)
 
 		case DXGI_FORMAT_B5G5R5A1_UNORM:
 		{
-			rgba.resize(buffer.size() / 2);
+			rgba.resize(level_size / 2);
 
-			auto b16      = reinterpret_cast<uint16_t*>(buffer.data());
+			auto b16      = reinterpret_cast<uint16_t*>(buffer);
 			uint32_t* b32 = rgba.data();
 			auto length   = rgba.size();
 
@@ -486,9 +516,9 @@ bool Direct3DTexture8::convert(UINT level)
 
 		case DXGI_FORMAT_B4G4R4A4_UNORM:
 		{
-			rgba.resize(buffer.size() / 2);
+			rgba.resize(level_size / 2);
 
-			auto b16      = reinterpret_cast<uint16_t*>(buffer.data());
+			auto b16      = reinterpret_cast<uint16_t*>(buffer);
 			uint32_t* b32 = rgba.data();
 			auto length   = rgba.size();
 
@@ -509,9 +539,9 @@ bool Direct3DTexture8::convert(UINT level)
 
 		case DXGI_FORMAT_B8G8R8A8_UNORM:
 		{
-			rgba.resize(buffer.size() / 4);
+			rgba.resize(level_size / 4);
 
-			auto bgr      = reinterpret_cast<uint32_t*>(buffer.data());
+			auto bgr      = reinterpret_cast<uint32_t*>(buffer);
 			uint32_t* b32 = rgba.data();
 			auto length   = rgba.size();
 
@@ -532,6 +562,28 @@ bool Direct3DTexture8::convert(UINT level)
 
 	device8->context->UpdateSubresource(texture.Get(), level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
 	return true;
+}
+
+bool Direct3DTexture8::should_convert() const
+{
+	if (IsWindows8OrGreater())
+	{
+		return false;
+	}
+
+	const DXGI_FORMAT format = to_dxgi(format_);
+
+	switch (format)
+	{
+		case DXGI_FORMAT_B5G6R5_UNORM:
+		case DXGI_FORMAT_B5G5R5A1_UNORM:
+		case DXGI_FORMAT_B4G4R4A4_UNORM:
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+			return true;
+
+		default:
+			return false;
+	}
 }
 
 // TODO: IDirect3DCubeTexture8

@@ -83,13 +83,18 @@ public:
 
 	bool is_render_target = false;
 	bool is_depth_stencil = false;
+	bool block_compressed = false;
 
 private:
 	dynarray<ComPtr<Direct3DSurface8>> surfaces;
 
+	void get_level_offset(UINT level, size_t& offset, size_t& size) const;
+
 	bool convert(UINT level);
+	bool should_convert() const;
+
 	Direct3DDevice8* const device8;
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
-	std::unordered_map<UINT, std::vector<uint8_t>> texture_levels;
+	dynarray<uint8_t> texture_buffer;
 };

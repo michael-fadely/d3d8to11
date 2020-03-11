@@ -6,14 +6,6 @@
 #include "stdafx.h"
 #include "d3d8to9.hpp"
 
-namespace d3d8to11
-{
-	const std::filesystem::path storage_directory(".d3d8to11");
-
-	const std::filesystem::path config_file_path      = storage_directory / "config.ini";
-	const std::filesystem::path permutation_file_path = storage_directory / "permutations.bin";
-}
-
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {
 	auto result = new Direct3D8();
@@ -34,6 +26,11 @@ extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 
 namespace d3d8to11
 {
+	const std::filesystem::path storage_directory(".d3d8to11");
+
+	const std::filesystem::path config_file_path      = storage_directory / "config.ini";
+	const std::filesystem::path permutation_file_path = storage_directory / "permutations.bin";
+
 	DXGI_FORMAT to_dxgi(D3DFORMAT value)
 	{
 		switch (static_cast<uint32_t>(value))
@@ -922,5 +919,37 @@ namespace d3d8to11
 		}
 
 		return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	}
+
+	bool is_block_compressed(DXGI_FORMAT value)
+	{
+		switch (value)
+		{
+			case DXGI_FORMAT_BC1_TYPELESS:
+			case DXGI_FORMAT_BC1_UNORM:
+			case DXGI_FORMAT_BC1_UNORM_SRGB:
+			case DXGI_FORMAT_BC2_TYPELESS:
+			case DXGI_FORMAT_BC2_UNORM:
+			case DXGI_FORMAT_BC2_UNORM_SRGB:
+			case DXGI_FORMAT_BC3_TYPELESS:
+			case DXGI_FORMAT_BC3_UNORM:
+			case DXGI_FORMAT_BC3_UNORM_SRGB:
+			case DXGI_FORMAT_BC4_TYPELESS:
+			case DXGI_FORMAT_BC4_UNORM:
+			case DXGI_FORMAT_BC4_SNORM:
+			case DXGI_FORMAT_BC5_TYPELESS:
+			case DXGI_FORMAT_BC5_UNORM:
+			case DXGI_FORMAT_BC5_SNORM:
+			case DXGI_FORMAT_BC6H_TYPELESS:
+			case DXGI_FORMAT_BC6H_UF16:
+			case DXGI_FORMAT_BC6H_SF16:
+			case DXGI_FORMAT_BC7_TYPELESS:
+			case DXGI_FORMAT_BC7_UNORM:
+			case DXGI_FORMAT_BC7_UNORM_SRGB:
+				return true;
+
+			default:
+				return false;
+		}
 	}
 }

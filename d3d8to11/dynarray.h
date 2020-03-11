@@ -71,15 +71,23 @@ public:
 		size_ = 0;
 	}
 
-	// TODO: bounds check
 	T& operator[](size_t i)
 	{
+		if (i >= size())
+		{
+			throw std::out_of_range("index out of array bounds");
+		}
+
 		return data_[i];
 	}
 
-	// TODO: bounds check
 	const T& operator[](size_t i) const
 	{
+		if (i >= size())
+		{
+			throw std::out_of_range("index out of array bounds");
+		}
+
 		return data_[i];
 	}
 
