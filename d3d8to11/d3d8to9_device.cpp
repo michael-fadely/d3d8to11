@@ -690,15 +690,40 @@ void Direct3DDevice8::create_native()
 
 	palette_flag = supports_palettes();
 
-	// TODO: use more modern swap chain creation and management
+	/*
+	 * BackBufferWidth and BackBufferHeight 
+	 * Width and height of the new swap chain's back buffers, in pixels. If Windowed is FALSE (the presentation is full-screen),
+	 * then these values must equal the width and height of one of the enumerated display modes found through IDirect3D8::EnumAdapterModes.
+	 * If Windowed is TRUE and either of these values is zero, then the corresponding dimension of the client area of the hDeviceWindow
+	 * TODO: (or the focus window, if hDeviceWindow is NULL) is taken. 
+	 */
+
+	UINT& width = present_params.BackBufferWidth;
+	UINT& height = present_params.BackBufferHeight;
+
+	if (present_params.Windowed && (!width || !height))
+	{
+		RECT rect;
+		GetClientRect(present_params.hDeviceWindow, &rect);
+
+		if (!width)
+		{
+			width = rect.right - rect.left;
+		}
+
+		if (!height)
+		{
+			height = rect.bottom - rect.top;
+		}
+	}
 
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount        = 1;
 	desc.BufferDesc.Format  = d3d8to11::to_dxgi(present_params.BackBufferFormat);
 	desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferDesc.Width   = present_params.BackBufferWidth;
-	desc.BufferDesc.Height  = present_params.BackBufferHeight;
+	desc.BufferDesc.Width   = width;
+	desc.BufferDesc.Height  = height;
 	desc.BufferDesc.Scaling = DXGI_MODE_SCALING_CENTERED;
 	desc.OutputWindow       = present_params.hDeviceWindow;
 	desc.SampleDesc.Count   = 1;
@@ -713,6 +738,7 @@ void Direct3DDevice8::create_native()
 	constexpr auto flag = 0;
 #endif
 
+	// TODO: use more modern swap chain creation and management
 	auto error = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flag,
 	                                           FEATURE_LEVELS.data(), static_cast<UINT>(FEATURE_LEVELS.size()),
 	                                           D3D11_SDK_VERSION, &desc, &swap_chain,
