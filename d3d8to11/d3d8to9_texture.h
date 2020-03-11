@@ -83,6 +83,7 @@ public:
 
 	bool is_render_target = false;
 	bool is_depth_stencil = false;
+	bool block_compressed = false;
 
 private:
 	dynarray<ComPtr<Direct3DSurface8>> surfaces;

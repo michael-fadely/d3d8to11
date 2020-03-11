@@ -138,7 +138,7 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	size_t level = 0;
 	size_t total_size = 0;
 
-	const bool block_compressed = is_block_compressed(to_dxgi(format_));
+	block_compressed = is_block_compressed(to_dxgi(format_));
 
 	for (auto& it : surfaces)
 	{
@@ -391,8 +391,15 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		height = std::max(1u, height / 2);
 	}
 
+	auto temp_width = width;
+
+	if (block_compressed)
+	{
+		temp_width = int_multiple(temp_width, 4);
+	}
+
 	D3DLOCKED_RECT rect;
-	rect.Pitch = calc_texture_size(width, 1, 1, format_);
+	rect.Pitch = calc_texture_size(temp_width, 1, 1, format_);
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
@@ -416,8 +423,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 
 	auto context = device8->context;
 
-	if (!Level)
-	{
+	/*if (!Level)
+	{*/
 		if (should_convert())
 		{
 			for (UINT i = 0; i < levels_; ++i)
@@ -432,7 +439,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 				const auto width = surfaces[i]->desc8.Width;
 
 				D3DLOCKED_RECT rect;
-				rect.Pitch = calc_texture_size(width, 1, 1, format_);
+				rect.Pitch = calc_texture_size(block_compressed ? int_multiple(width, 4) : width, 1, 1, format_);
 
 				size_t level_offset = 0;
 				size_t level_size = 0;
@@ -443,12 +450,12 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 				context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
 			}
 		}
-	}
+	/*}
 	else if (!convert(Level))
 	{
 		auto& rect = it->second;
 		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
-	}
+	}*/
 	
 	locked_rects.erase(it);
 	return D3D_OK;
@@ -465,6 +472,29 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 
 void Direct3DTexture8::get_level_offset(UINT level, size_t& offset, size_t& size) const
 {
+	if (block_compressed)
+	{
+		auto desc8 = surfaces[level]->desc8;
+
+		auto width = int_multiple(desc8.Width, 4);
+		auto height = int_multiple(desc8.Width, 4);
+
+		size = calc_texture_size(width, height, 1, format_);
+		offset = 0;
+
+		for (UINT i = 0; i < level; ++i)
+		{
+			desc8 = surfaces[i]->desc8;
+
+			width = int_multiple(desc8.Width, 4);
+			height = int_multiple(desc8.Width, 4);
+
+			offset += calc_texture_size(width, height, 1, format_);
+		}
+
+		return;
+	}
+
 	size = surfaces[level]->desc8.Size;
 	offset = 0;
 
