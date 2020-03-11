@@ -1164,8 +1164,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 	// TODO: properly populate pCaps
 	*pCaps = {};
 
-	pCaps->MaxTextureWidth  = UINT_MAX;
-	pCaps->MaxTextureHeight = UINT_MAX;
+	pCaps->MaxTextureWidth  = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+	pCaps->MaxTextureHeight = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 
 	pCaps->Caps2                    = 0xFFFFFFFF;
 	pCaps->Caps3                    = 0xFFFFFFFF;
