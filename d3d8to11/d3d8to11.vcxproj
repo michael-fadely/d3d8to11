@@ -378,9 +378,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="configschema.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\DirectXTK\DirectXTK_Desktop_2019.vcxproj">
       <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
     </ProjectReference>
