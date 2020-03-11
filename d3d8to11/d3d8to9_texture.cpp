@@ -17,6 +17,8 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	auto device  = device8->device;
 	auto context = device8->context;
 
+	block_compressed = is_block_compressed(to_dxgi(format_));
+
 	if (view_of != nullptr)
 	{
 		view_of->GetDesc(&desc);
@@ -138,28 +140,11 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	size_t level = 0;
 	size_t total_size = 0;
 
-	block_compressed = is_block_compressed(to_dxgi(format_));
-
 	for (auto& it : surfaces)
 	{
 		it = new Direct3DSurface8(device8, this, level++);
 		it->create_native();
-
-		// note: this will cause some over-allocation
-		if (block_compressed)
-		{
-			size_t width = it->desc8.Width;
-			size_t height = it->desc8.Height;
-
-			width = int_multiple(width, 4);
-			height = int_multiple(height, 4);
-
-			total_size += calc_texture_size(width, height, 1, format_);
-		}
-		else
-		{
-			total_size += it->desc8.Size;
-		}
+		total_size += it->desc8.Size;
 	}
 
 	texture_buffer.resize(total_size);
@@ -322,14 +307,10 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width  = width_;
-	auto height = height_;
+	auto surface_desc8 = surfaces[Level]->desc8;
 
-	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
-	{
-		width  = std::max(1u, width / 2);
-		height = std::max(1u, height / 2);
-	}
+	auto width  = surface_desc8.Width;
+	auto height = surface_desc8.Height;
 
 	pDesc->Format          = format_;
 	pDesc->Type            = GetType();
@@ -382,29 +363,18 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto width  = width_;
-	auto height = height_;
+	auto surface_desc8 = surfaces[Level]->desc8;
 
-	for (size_t i = 0; i < Level && width > 1 && height > 1; ++i)
-	{
-		width  = std::max(1u, width / 2);
-		height = std::max(1u, height / 2);
-	}
+	auto width  = surface_desc8.Width;
+	auto height = surface_desc8.Height;
 
-	auto temp_width = width;
-
-	if (block_compressed)
-	{
-		temp_width = int_multiple(temp_width, 4);
-	}
-
-	D3DLOCKED_RECT rect;
-	rect.Pitch = calc_texture_size(temp_width, 1, 1, format_);
+	D3DLOCKED_RECT rect {};
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
 	get_level_offset(Level, level_offset, level_size);
-	
+
+	rect.Pitch = calc_texture_size(width, 1, 1, format_);
 	rect.pBits = &texture_buffer[level_offset];
 
 	locked_rects[Level] = rect;
@@ -427,24 +397,25 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 	{*/
 		if (should_convert())
 		{
-			for (UINT i = 0; i < levels_; ++i)
+			for (UINT i = Level; i < levels_; ++i)
 			{
 				convert(i);
 			}
 		}
 		else
 		{
-			for (UINT i = 0; i < levels_; ++i)
+			for (UINT i = Level; i < levels_; ++i)
 			{
-				const auto width = surfaces[i]->desc8.Width;
+				const auto desc8  = surfaces[i]->desc8;
+				const auto width  = desc8.Width;
 
 				D3DLOCKED_RECT rect;
-				rect.Pitch = calc_texture_size(block_compressed ? int_multiple(width, 4) : width, 1, 1, format_);
 
 				size_t level_offset = 0;
 				size_t level_size = 0;
 				get_level_offset(i, level_offset, level_size);
 
+				rect.Pitch = calc_texture_size(width, 1, 1, format_);
 				rect.pBits = &texture_buffer[level_offset];
 
 				context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
@@ -472,29 +443,6 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 
 void Direct3DTexture8::get_level_offset(UINT level, size_t& offset, size_t& size) const
 {
-	if (block_compressed)
-	{
-		auto desc8 = surfaces[level]->desc8;
-
-		auto width = int_multiple(desc8.Width, 4);
-		auto height = int_multiple(desc8.Width, 4);
-
-		size = calc_texture_size(width, height, 1, format_);
-		offset = 0;
-
-		for (UINT i = 0; i < level; ++i)
-		{
-			desc8 = surfaces[i]->desc8;
-
-			width = int_multiple(desc8.Width, 4);
-			height = int_multiple(desc8.Width, 4);
-
-			offset += calc_texture_size(width, height, 1, format_);
-		}
-
-		return;
-	}
-
 	size = surfaces[level]->desc8.Size;
 	offset = 0;
 
