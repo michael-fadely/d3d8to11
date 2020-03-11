@@ -695,7 +695,7 @@ void Direct3DDevice8::create_native()
 	 * Width and height of the new swap chain's back buffers, in pixels. If Windowed is FALSE (the presentation is full-screen),
 	 * then these values must equal the width and height of one of the enumerated display modes found through IDirect3D8::EnumAdapterModes.
 	 * If Windowed is TRUE and either of these values is zero, then the corresponding dimension of the client area of the hDeviceWindow
-	 * TODO: (or the focus window, if hDeviceWindow is NULL) is taken. 
+	 * TODO: (or the focus window, if hDeviceWindow is NULL) is taken.
 	 */
 
 	UINT& width = present_params.BackBufferWidth;
