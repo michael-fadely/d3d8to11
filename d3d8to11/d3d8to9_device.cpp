@@ -1405,16 +1405,18 @@ void Direct3DDevice8::oit_start()
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
 {
+	{
+		ComPtr<Direct3DSurface8> rt_surface;
+		render_target_wrapper->GetSurfaceLevel(0, &rt_surface);
+
+		ComPtr<Direct3DSurface8> bb_surface;
+		back_buffer->GetSurfaceLevel(0, &bb_surface);
+
+		CopyRects(rt_surface.Get(), nullptr, 0, bb_surface.Get(), nullptr);
+	}
+
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
-
-	{
-		ComPtr<Direct3DSurface8> rt_0, bb_0;
-		render_target_wrapper->GetSurfaceLevel(0, &rt_0);
-		back_buffer->GetSurfaceLevel(0, &bb_0);
-
-		CopyRects(rt_0.Get(), nullptr, 0, bb_0.Get(), nullptr);
-	}
 
 	auto interval = present_params.FullScreen_PresentationInterval;
 
@@ -1422,7 +1424,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	{
 		interval = 0;
 	}
-	
+
 	oit_composite();
 
 	per_model.draw_call = 0;
@@ -1494,7 +1496,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL; // HACK
 	}
 
+#if 0
 	auto& bb = back_buffer;
+#else
+	auto& bb = render_target_wrapper;
+#endif
 
 	ComPtr<Direct3DSurface8> surface;
 	bb->GetSurfaceLevel(0, &surface);
@@ -1874,7 +1880,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 	}
 	else if (pSourceSurface->parent)
 	{
-		pSourceSurface->parent->srv->GetResource(&src);
+		src = pSourceSurface->parent->texture;
 		src_index = pSourceSurface->level;
 	}
 
@@ -1884,8 +1890,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 	}
 	else if (pDestinationSurface->parent)
 	{
-		pDestinationSurface->parent->srv->GetResource(&dst);
-		src_index = pDestinationSurface->level;
+		dst = pDestinationSurface->parent->texture;
+		dst_index = pDestinationSurface->level;
 	}
 
 	context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
@@ -2036,16 +2042,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 		{
 			context->ClearRenderTargetView(current_render_target->render_target.Get(), color);
 		}
-
-		/*if (composite_view)
-		{
-			context->ClearRenderTargetView(composite_view.Get(), color);
-		}
-
-		if (back_buffer_view)
-		{
-			context->ClearRenderTargetView(back_buffer_view.Get(), color);
-		}*/
 	}
 
 	if (Flags & (D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL))

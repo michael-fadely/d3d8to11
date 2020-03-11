@@ -386,41 +386,46 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto context = device8->context;
-
-	// TODO: make this behavior configurable [safe mipmaps]
-	if (!Level)
+	// HACK: fixes Phantasy Star Online: Blue Burst
+	// TODO: instead of this, make sure render target data is accessible by the CPU, even if that means we need a staging texture
+	if (!is_render_target && !is_depth_stencil)
 	{
-		if (should_convert())
+		auto context = device8->context;
+
+		// TODO: make this behavior configurable [safe mipmaps]
+		if (!Level)
 		{
-			for (UINT i = 0; i < levels_; ++i)
+			if (should_convert())
 			{
-				convert(i);
+				for (UINT i = 0; i < levels_; ++i)
+				{
+					convert(i);
+				}
+			}
+			else
+			{
+				for (UINT i = 0; i < levels_; ++i)
+				{
+					const auto desc8 = surfaces[i]->desc8;
+					const auto width = desc8.Width;
+
+					size_t level_offset = 0;
+					size_t level_size = 0;
+					get_level_offset(i, level_offset, level_size);
+
+					D3DLOCKED_RECT rect;
+					rect.Pitch = calc_texture_size(width, 1, 1, format_);
+					rect.pBits = &texture_buffer[level_offset];
+
+					context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
+				}
 			}
 		}
-		else
+		else if (!convert(Level))
 		{
-			for (UINT i = 0; i < levels_; ++i)
-			{
-				const auto desc8  = surfaces[i]->desc8;
-				const auto width  = desc8.Width;
-
-				size_t level_offset = 0;
-				size_t level_size = 0;
-				get_level_offset(i, level_offset, level_size);
-
-				D3DLOCKED_RECT rect;
-				rect.Pitch = calc_texture_size(width, 1, 1, format_);
-				rect.pBits = &texture_buffer[level_offset];
-
-				context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
-			}
+			auto& rect = it->second;
+			context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 		}
-	}
-	else if (!convert(Level))
-	{
-		auto& rect = it->second;
-		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 	}
 	
 	locked_rects.erase(it);
