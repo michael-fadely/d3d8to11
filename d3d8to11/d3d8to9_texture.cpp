@@ -452,9 +452,9 @@ bool Direct3DTexture8::convert(UINT level)
 				auto p16  = b16[i];
 				auto& p32 = b32[i];
 
-				auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
-				auto g = static_cast<uint8_t>(((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
-				auto r = static_cast<uint8_t>(((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
+				auto b = static_cast<uint8_t>(static_cast<float>(p16 & 0b011111) / 32.0f * 255.0f);
+				auto g = static_cast<uint8_t>(static_cast<float>((p16 >> 5) & 0b111111) / 64.0f * 255.0f);
+				auto r = static_cast<uint8_t>(static_cast<float>((p16 >> 11) & 0b011111) / 32.0f * 255.0f);
 
 				p32 = 255 << 24 | b << 16 | g << 8 | r;
 			}
@@ -474,9 +474,9 @@ bool Direct3DTexture8::convert(UINT level)
 				auto p16  = b16[i];
 				auto& p32 = b32[i];
 
-				auto b = static_cast<uint8_t>((p16 & 0b011111) / 32.0f * 255.0f);
-				auto g = static_cast<uint8_t>(((p16 >> 5) & 0b011111) / 32.0f * 255.0f);
-				auto r = static_cast<uint8_t>(((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
+				auto b = static_cast<uint8_t>(static_cast<float>(p16 & 0b011111) / 32.0f * 255.0f);
+				auto g = static_cast<uint8_t>(static_cast<float>((p16 >> 5) & 0b011111) / 32.0f * 255.0f);
+				auto r = static_cast<uint8_t>(static_cast<float>((p16 >> 10) & 0b011111) / 32.0f * 255.0f);
 				auto a = static_cast<uint8_t>(p16 & (1 << 15) ? 255 : 0);
 
 				p32 = a << 24 | b << 16 | g << 8 | r;
@@ -497,10 +497,10 @@ bool Direct3DTexture8::convert(UINT level)
 				auto p16  = b16[i];
 				auto& p32 = b32[i];
 
-				auto b = static_cast<uint8_t>((p16 & 0xF) / 15.0f * 255.0f);
-				auto g = static_cast<uint8_t>(((p16 >> 4) & 0xF) / 15.0f * 255.0f);
-				auto r = static_cast<uint8_t>(((p16 >> 8) & 0xF) / 15.0f * 255.0f);
-				auto a = static_cast<uint8_t>(((p16 >> 12) & 0xF) / 15.0f * 255.0f);
+				auto b = static_cast<uint8_t>(static_cast<float>(p16 & 0xF) / 15.0f * 255.0f);
+				auto g = static_cast<uint8_t>(static_cast<float>((p16 >> 4) & 0xF) / 15.0f * 255.0f);
+				auto r = static_cast<uint8_t>(static_cast<float>((p16 >> 8) & 0xF) / 15.0f * 255.0f);
+				auto a = static_cast<uint8_t>(static_cast<float>((p16 >> 12) & 0xF) / 15.0f * 255.0f);
 
 				p32 = a << 24 | b << 16 | g << 8 | r;
 			}
