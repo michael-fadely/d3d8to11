@@ -15,14 +15,14 @@ public:
 	Direct3D8(const Direct3D8&)            = delete;
 	Direct3D8& operator=(const Direct3D8&) = delete;
 
-	Direct3D8()  = default;
-	~Direct3D8() = default;
+	Direct3D8() = default;
+	virtual ~Direct3D8() = default;
 
 	void create_native();
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
-	virtual ULONG STDMETHODCALLTYPE AddRef() override;
-	virtual ULONG STDMETHODCALLTYPE Release() override;
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
+	ULONG STDMETHODCALLTYPE AddRef() override;
+	ULONG STDMETHODCALLTYPE Release() override;
 
 	virtual HRESULT STDMETHODCALLTYPE RegisterSoftwareDevice(void* pInitializeFunction);
 	virtual UINT STDMETHODCALLTYPE GetAdapterCount();

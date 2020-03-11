@@ -14,31 +14,8 @@ namespace d3d8to11
 	const std::filesystem::path permutation_file_path = storage_directory / "permutations.bin";
 }
 
-#ifndef D3D8TO9NOLOG
-// Very simple logging for the purpose of debugging only.
-std::ofstream LOG;
-#endif
-
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {
-#ifndef D3D8TO9NOLOG
-	static bool LogMessageFlag = true;
-
-	if (!LOG.is_open())
-	{
-		LOG.open("d3d8.log", std::ios::trunc);
-	}
-
-	if (!LOG.is_open() && LogMessageFlag)
-	{
-		LogMessageFlag = false;
-		MessageBox(nullptr, TEXT("Failed to open debug log file \"d3d8.log\"!"), nullptr, MB_ICONWARNING);
-	}
-
-	LOG << "Redirecting '" << "Direct3DCreate8" << "(" << SDKVersion << ")' ..." << std::endl;
-	LOG << "> Passing on to 'Direct3DCreate9':" << std::endl;
-#endif
-
 	auto result = new Direct3D8();
 	result->AddRef();
 

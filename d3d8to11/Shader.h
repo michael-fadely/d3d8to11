@@ -39,6 +39,11 @@ struct Shader
 
 	Shader& operator=(const Shader& other)
 	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
 		shader = other.shader;
 		blob   = other.blob;
 		return *this;

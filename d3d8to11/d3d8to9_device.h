@@ -227,11 +227,14 @@ class Direct3DDevice8 : public Unknown
 	bool freeing_shaders = false;
 
 public:
-	Direct3DDevice8(const Direct3DDevice8&)            = delete;
-	Direct3DDevice8& operator=(const Direct3DDevice8&) = delete;
+	Direct3DDevice8(const Direct3DDevice8&)     = delete;
+	Direct3DDevice8(Direct3DDevice8&&) noexcept = delete;
+
+	Direct3DDevice8& operator=(const Direct3DDevice8&)     = delete;
+	Direct3DDevice8& operator=(Direct3DDevice8&&) noexcept = delete;
 
 	Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters);
-	~Direct3DDevice8() = default;
+	~Direct3DDevice8() override = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;

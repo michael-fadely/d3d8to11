@@ -45,11 +45,6 @@ namespace d3d8to11
 	D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
 }
 
-#ifndef D3D8TO9NOLOG
-#include <fstream>
-extern std::ofstream LOG;
-#endif
-
 // TODO: Direct3DSwapChain8
 #if 0
 

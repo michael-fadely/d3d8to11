@@ -5,17 +5,25 @@
 
 #include "ShaderIncluder.h"
 
-HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
+HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) noexcept
 {
 	const std::string str = pFileName;
 
-	const auto& buffer = get_shader_source(str);
-	*ppData = reinterpret_cast<LPCVOID>(buffer.data());
-	*pBytes = static_cast<UINT>(buffer.size());
+	try
+	{
+		const auto& buffer = get_shader_source(str);
+		*ppData = reinterpret_cast<LPCVOID>(buffer.data());
+		*pBytes = static_cast<UINT>(buffer.size());
+	}
+	catch (std::exception&)
+	{
+		return S_FALSE;
+	}
+
 	return S_OK;
 }
 
-HRESULT ShaderIncluder::Close(LPCVOID pData)
+HRESULT ShaderIncluder::Close(LPCVOID /*pData*/) noexcept
 {
 	return S_OK;
 }

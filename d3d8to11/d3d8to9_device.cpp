@@ -1232,10 +1232,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateAdditionalSwapChain(D3DPRESENT_
 	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::CreateAdditionalSwapChain" << "(" << this << ", " << pPresentationParameters << ", " << ppSwapChain << ")' ..." << std::endl;
-#endif
-
 	if (pPresentationParameters == nullptr || ppSwapChain == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
@@ -1803,10 +1799,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::CreateImageSurface" << "(" << this << ", " << Width << ", " << Height << ", " << Format << ", " << ppSurface << ")' ..." << std::endl;
-#endif
-
 	if (ppSurface == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
@@ -1816,10 +1808,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 
 	if (Format == D3DFMT_R8G8B8)
 	{
-	#ifndef D3D8TO9NOLOG
-		LOG << "> Replacing format 'D3DFMT_R8G8B8' with 'D3DFMT_X8R8G8B8' ..." << std::endl;
-	#endif
-
 		Format = D3DFMT_X8R8G8B8;
 	}
 
@@ -1829,10 +1817,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateImageSurface(UINT Width, UINT H
 
 	if (FAILED(hr))
 	{
-	#ifndef D3D8TO9NOLOG
-		LOG << "> 'IDirect3DDevice9::CreateOffscreenPlainSurface' failed with error code " << std::hex << hr << std::dec << "!" << std::endl;
-	#endif
-
 		return hr;
 	}
 
@@ -2805,10 +2789,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateStateBlock(D3DSTATEBLOCKTYPE Ty
 	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::CreateStateBlock" << "(" << Type << ", " << pToken << ")' ..." << std::endl;
-#endif
-
 	if (pToken == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
@@ -3132,10 +3112,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetInfo(DWORD DevInfoID, void* pDevIn
 	UNREFERENCED_PARAMETER(DevInfoID);
 	UNREFERENCED_PARAMETER(pDevInfoStruct);
 	UNREFERENCED_PARAMETER(DevInfoStructSize);
-
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::GetInfo" << "(" << this << ", " << DevInfoID << ", " << pDevInfoStruct << ", " << DevInfoStructSize << ")' ..." << std::endl;
-#endif
 
 	return S_FALSE;
 }
@@ -3636,11 +3612,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderDeclaration(DWORD Hand
 	UNREFERENCED_PARAMETER(pData);
 	UNREFERENCED_PARAMETER(pSizeOfData);
 
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::GetVertexShaderDeclaration" << "(" << this << ", " << Handle << ", " << pData << ", " << pSizeOfData << ")' ..." << std::endl;
-	LOG << "> 'IDirect3DDevice8::GetVertexShaderDeclaration' is not implemented!" << std::endl;
-#endif
-
 	return D3DERR_INVALIDCALL;
 }
 
@@ -3650,10 +3621,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderFunction(DWORD Handle,
 	// not yet supported
 	return D3DERR_INVALIDCALL;
 #else
-#ifndef D3D8TO9NOLOG
-	LOG << "Redirecting '" << "IDirect3DDevice8::GetVertexShaderFunction" << "(" << this << ", " << Handle << ", " << pData << ", " << pSizeOfData << ")' ..." << std::endl;
-#endif
-
 	if ((Handle & 0x80000000) == 0)
 	{
 		return D3DERR_INVALIDCALL;
@@ -3666,10 +3633,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderFunction(DWORD Handle,
 	{
 		return D3DERR_INVALIDCALL;
 	}
-
-#ifndef D3D8TO9NOLOG
-	LOG << "> Returning translated shader byte code." << std::endl;
-#endif
 
 	return VertexShaderInterface->GetFunction(pData, reinterpret_cast<UINT *>(pSizeOfData));
 #endif

@@ -96,6 +96,11 @@ public:
 
 	dynarray& operator=(const dynarray& other)
 	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
 		if (other.size())
 		{
 			resize(other.size());
@@ -135,7 +140,6 @@ public:
 	class iterator
 	{
 	public:
-		using self_type         = iterator;
 		using value_type        = T;
 		using reference         = T&;
 		using pointer           = T*;
@@ -152,27 +156,48 @@ public:
 		{
 		}
 
-		self_type operator++()
+		iterator(const iterator& other)
+			: ptr_(other.ptr_)
+		{
+		}
+
+		iterator(iterator&& other) noexcept
+			: ptr_(std::move(other.ptr_))
+		{
+		}
+
+		iterator operator++()
 		{
 			++ptr_;
 			return *this;
 		}
 
-		self_type operator++(int /*junk*/)
+		iterator operator++(int /*junk*/)
 		{
-			self_type i = *this;
+			iterator i = *this;
 			++ptr_;
 			return i;
 		}
 
 		reference operator*() { return *ptr_; }
 		pointer operator->() { return ptr_; }
-		bool operator==(const self_type& rhs) const { return ptr_ == rhs.ptr_; }
-		bool operator!=(const self_type& rhs) const { return ptr_ != rhs.ptr_; }
+		bool operator==(const iterator& rhs) const { return ptr_ == rhs.ptr_; }
+		bool operator!=(const iterator& rhs) const { return ptr_ != rhs.ptr_; }
 
-		self_type& operator=(const self_type& other)
+		iterator& operator=(const iterator& other)
 		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
 			ptr_ = other.ptr_;
+			return *this;
+		}
+
+		iterator& operator=(iterator&& other) noexcept
+		{
+			ptr_ = std::move(other.ptr_);
 			return *this;
 		}
 
@@ -190,32 +215,58 @@ public:
 		using difference_type   = ptrdiff_t;
 		using iterator_category = size_t;
 
+		const_iterator()
+			: ptr_(nullptr)
+		{
+		}
+
 		const_iterator(pointer ptr)
 			: ptr_(ptr)
 		{
 		}
 
-		self_type operator++()
+		const_iterator(const const_iterator& other)
+			: ptr_(other.ptr_)
+		{
+		}
+
+		const_iterator(const_iterator&& other) noexcept
+			: ptr_(std::move(other.ptr_))
+		{
+		}
+
+		const_iterator operator++()
 		{
 			++ptr_;
 			return *this;
 		}
 
-		self_type operator++(int /*junk*/)
+		const_iterator operator++(int /*junk*/)
 		{
-			self_type i = *this;
+			const_iterator i = *this;
 			++ptr_;
 			return i;
 		}
 
 		reference operator*() const { return *ptr_; }
 		pointer operator->() const { return ptr_; }
-		bool operator==(const self_type& rhs) const { return ptr_ == rhs.ptr_; }
-		bool operator!=(const self_type& rhs) const { return ptr_ != rhs.ptr_; }
+		bool operator==(const const_iterator& rhs) const { return ptr_ == rhs.ptr_; }
+		bool operator!=(const const_iterator& rhs) const { return ptr_ != rhs.ptr_; }
 
-		self_type& operator=(const self_type& other)
+		const_iterator& operator=(const const_iterator& other)
 		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
 			ptr_ = other.ptr_;
+			return *this;
+		}
+
+		const_iterator& operator=(const_iterator&& other) noexcept
+		{
+			ptr_ = std::move(other.ptr_);
 			return *this;
 		}
 

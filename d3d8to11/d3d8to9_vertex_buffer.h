@@ -9,13 +9,16 @@ class __declspec(uuid("8AEEEAC7-05F9-44D4-B591-000B0DF1CB95")) Direct3DVertexBuf
 class Direct3DVertexBuffer8 : public Direct3DResource8
 {
 public:
-	Direct3DVertexBuffer8(const Direct3DVertexBuffer8&)            = delete;
-	Direct3DVertexBuffer8& operator=(const Direct3DVertexBuffer8&) = delete;
+	Direct3DVertexBuffer8(const Direct3DVertexBuffer8&)     = delete;
+	Direct3DVertexBuffer8(Direct3DVertexBuffer8&&) noexcept = delete;
+
+	Direct3DVertexBuffer8& operator=(const Direct3DVertexBuffer8&)     = delete;
+	Direct3DVertexBuffer8& operator=(Direct3DVertexBuffer8&&) noexcept = delete;
 
 	void create_native();
 
 	Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool);
-	~Direct3DVertexBuffer8() = default;
+	~Direct3DVertexBuffer8() override = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;

@@ -7,9 +7,17 @@
 class ShaderIncluder : public ID3DInclude
 {
 public:
-	~ShaderIncluder() = default;
-	HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override;
-	HRESULT __stdcall Close(LPCVOID pData) override;
+	ShaderIncluder()          = default;
+	virtual ~ShaderIncluder() = default;
+
+	ShaderIncluder(const ShaderIncluder&)     = delete;
+	ShaderIncluder(ShaderIncluder&&) noexcept = delete;
+
+	ShaderIncluder& operator=(const ShaderIncluder&)     = delete;
+	ShaderIncluder& operator=(ShaderIncluder&&) noexcept = delete;
+
+	HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) noexcept override;
+	HRESULT __stdcall Close(LPCVOID pData) noexcept override;
 
 protected:
 	std::recursive_mutex shader_sources_mutex;
