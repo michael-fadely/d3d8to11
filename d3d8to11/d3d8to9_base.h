@@ -16,7 +16,7 @@ public:
 	Direct3D8& operator=(const Direct3D8&) = delete;
 
 	Direct3D8() = default;
-	virtual ~Direct3D8() = default;
+	~Direct3D8() = default;
 
 	void create_native();
 

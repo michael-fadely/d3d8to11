@@ -15,7 +15,6 @@ class Direct3DBaseTexture8 : public Direct3DResource8
 {
 public:
 	Direct3DBaseTexture8() = default;
-	virtual ~Direct3DBaseTexture8() = default;
 
 	Direct3DBaseTexture8(const Direct3DBaseTexture8&)     = delete;
 	Direct3DBaseTexture8(Direct3DBaseTexture8&&) noexcept = delete;
@@ -26,6 +25,9 @@ public:
 	virtual DWORD STDMETHODCALLTYPE SetLOD(DWORD LODNew) = 0;
 	virtual DWORD STDMETHODCALLTYPE GetLOD() = 0;
 	virtual DWORD STDMETHODCALLTYPE GetLevelCount() = 0;
+
+protected:
+	~Direct3DBaseTexture8() = default;
 };
 
 class __declspec(uuid("E4CDD575-2866-4F01-B12E-7EECE1EC9358")) Direct3DTexture8;
@@ -42,7 +44,7 @@ public:
 	void create_native(ID3D11Texture2D* view_of = nullptr);
 
 	Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
-	~Direct3DTexture8() override = default;
+	~Direct3DTexture8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;

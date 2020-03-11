@@ -17,7 +17,7 @@ public:
 	Direct3DSurface8& operator=(Direct3DSurface8&&) noexcept = delete;
 
 	Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_);
-	~Direct3DSurface8() override = default;
+	~Direct3DSurface8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;

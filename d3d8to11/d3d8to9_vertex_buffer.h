@@ -18,7 +18,7 @@ public:
 	void create_native();
 
 	Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool);
-	~Direct3DVertexBuffer8() override = default;
+	~Direct3DVertexBuffer8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;
