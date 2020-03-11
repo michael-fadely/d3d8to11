@@ -534,8 +534,10 @@ bool Direct3DTexture8::convert(UINT level)
 	return true;
 }
 
+// TODO: IDirect3DCubeTexture8
+
 #if 0
-// IDirect3DCubeTexture8
+
 Direct3DCubeTexture8::Direct3DCubeTexture8(Direct3DDevice8* device, IDirect3DCubeTexture9* ProxyInterface)
 	: ProxyInterface(ProxyInterface),
 	Device(device)
@@ -704,8 +706,10 @@ HRESULT STDMETHODCALLTYPE Direct3DCubeTexture8::AddDirtyRect(D3DCUBEMAP_FACES Fa
 
 #endif
 
+// TODO: IDirect3DVolumeTexture8
+
 #if 0
-// IDirect3DVolumeTexture8
+
 Direct3DVolumeTexture8::Direct3DVolumeTexture8(Direct3DDevice8 *device, IDirect3DVolumeTexture9 *ProxyInterface) :
 	ProxyInterface(ProxyInterface),
 	Device(device)
