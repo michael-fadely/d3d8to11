@@ -344,8 +344,6 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 	return D3D_OK;
 }
 
-// TODO: in order to facilitate a d3d8/9 quirk where the entire texture including mipmaps is provided via pointer, re-write buffer management here
-// ^ used by Phantasy Star Online: Blue Burst
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
 	if (pRect)
@@ -364,16 +362,13 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 	}
 
 	auto surface_desc8 = surfaces[Level]->desc8;
-
 	auto width  = surface_desc8.Width;
-	auto height = surface_desc8.Height;
-
-	D3DLOCKED_RECT rect {};
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
 	get_level_offset(Level, level_offset, level_size);
 
+	D3DLOCKED_RECT rect;
 	rect.Pitch = calc_texture_size(width, 1, 1, format_);
 	rect.pBits = &texture_buffer[level_offset];
 
@@ -393,40 +388,40 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 
 	auto context = device8->context;
 
-	/*if (!Level)
-	{*/
+	// TODO: make this behavior configurable [safe mipmaps]
+	if (!Level)
+	{
 		if (should_convert())
 		{
-			for (UINT i = Level; i < levels_; ++i)
+			for (UINT i = 0; i < levels_; ++i)
 			{
 				convert(i);
 			}
 		}
 		else
 		{
-			for (UINT i = Level; i < levels_; ++i)
+			for (UINT i = 0; i < levels_; ++i)
 			{
 				const auto desc8  = surfaces[i]->desc8;
 				const auto width  = desc8.Width;
-
-				D3DLOCKED_RECT rect;
 
 				size_t level_offset = 0;
 				size_t level_size = 0;
 				get_level_offset(i, level_offset, level_size);
 
+				D3DLOCKED_RECT rect;
 				rect.Pitch = calc_texture_size(width, 1, 1, format_);
 				rect.pBits = &texture_buffer[level_offset];
 
 				context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
 			}
 		}
-	/*}
+	}
 	else if (!convert(Level))
 	{
 		auto& rect = it->second;
 		context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
-	}*/
+	}
 	
 	locked_rects.erase(it);
 	return D3D_OK;
