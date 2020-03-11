@@ -11,6 +11,7 @@
 #include "d3d8to9_base.h"
 
 using namespace Microsoft::WRL;
+using namespace d3d8to11;
 
 static const D3DFORMAT ADAPTER_FORMATS[] = {
 	D3DFMT_A8R8G8B8,
@@ -52,7 +53,7 @@ void Direct3D8::create_native()
 
 		for (auto format : ADAPTER_FORMATS)
 		{
-			const DXGI_FORMAT dxgi = to_dxgi(format);
+			const DXGI_FORMAT dxgi = d3d8to11::to_dxgi(format);
 
 			UINT count = 0;
 			auto hr = output->GetDisplayModeList(dxgi, 0, &count, nullptr);

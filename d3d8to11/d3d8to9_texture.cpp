@@ -8,6 +8,8 @@
 #include "d3d8to9.hpp"
 #include "dynarray.h"
 
+using namespace d3d8to11;
+
 // TODO: let d3d do the memory management work if possible
 
 void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)

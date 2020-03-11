@@ -6,6 +6,8 @@
 #include "stdafx.h"
 #include "d3d8to9.hpp"
 
+using namespace d3d8to11;
+
 // IDirect3DSurface8
 Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_)
 	: parent(parent_),

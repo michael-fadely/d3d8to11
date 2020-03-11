@@ -23,8 +23,6 @@
 #include "globals.h"
 #include "ini_file.h"
 
-static const std::string system_dir(".d3d8to11");
-
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
 #define SHADER_ASYNC_COMPILE
@@ -33,6 +31,7 @@ static const std::string system_dir(".d3d8to11");
 #define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
 using namespace Microsoft::WRL;
+using namespace d3d8to11;
 
 static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
 
@@ -651,16 +650,14 @@ void Direct3DDevice8::get_back_buffer()
 
 void Direct3DDevice8::create_native()
 {
-	if (!std::filesystem::exists(system_dir))
+	if (!std::filesystem::exists(d3d8to11::storage_directory))
 	{
-		std::filesystem::create_directory(system_dir);
+		std::filesystem::create_directory(d3d8to11::storage_directory);
 	}
 
-	const auto config_path = std::filesystem::path(system_dir) / "config.ini";
-
-	if (std::filesystem::exists(config_path))
+	if (std::filesystem::exists(d3d8to11::config_file_path))
 	{
-		std::fstream file(config_path.string(), std::fstream::in);
+		std::fstream file(d3d8to11::config_file_path.string(), std::fstream::in);
 
 		ini_file ini;
 		ini.read(file);
@@ -674,7 +671,7 @@ void Direct3DDevice8::create_native()
 	}
 	else
 	{
-		std::fstream file(config_path.string(), std::fstream::out);
+		std::fstream file(d3d8to11::config_file_path.string(), std::fstream::out);
 
 		ini_file ini;
 
@@ -698,7 +695,7 @@ void Direct3DDevice8::create_native()
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount        = 1;
-	desc.BufferDesc.Format  = to_dxgi(present_params.BackBufferFormat);
+	desc.BufferDesc.Format  = d3d8to11::to_dxgi(present_params.BackBufferFormat);
 	desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferDesc.Width   = present_params.BackBufferWidth;
 	desc.BufferDesc.Height  = present_params.BackBufferHeight;
@@ -787,16 +784,14 @@ void Direct3DDevice8::create_native()
 	context->PSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
 
 	{
-		const auto permutation_path = std::filesystem::path(system_dir) / "permutations.bin";
-
-		bool exists = std::filesystem::exists(permutation_path);
+		bool exists = std::filesystem::exists(d3d8to11::permutation_file_path);
 
 		std::fstream file;
-		file.open(permutation_path, std::ios::binary | std::ios::in | std::ios::out);
+		file.open(d3d8to11::permutation_file_path, std::ios::binary | std::ios::in | std::ios::out);
 
 		if (!file.is_open())
 		{
-			file.open(permutation_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+			file.open(d3d8to11::permutation_file_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
 
 			if (!file.is_open())
 			{

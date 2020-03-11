@@ -21,26 +21,36 @@
 #include "d3d8to9_index_buffer.h"
 #include "d3d8to9_vertex_buffer.h"
 
+#include <filesystem>
+
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion);
 
-DXGI_FORMAT to_dxgi(D3DFORMAT value);
-D3DFORMAT to_d3d8(DXGI_FORMAT value);
-D3D11_PRIMITIVE_TOPOLOGY to_d3d11(D3DPRIMITIVETYPE value);
-DXGI_FORMAT to_typeless(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_depth(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_uint(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_sint(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_snorm(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_float(DXGI_FORMAT format);
-DXGI_FORMAT typeless_to_unorm(DXGI_FORMAT format, bool srgb = false);
-size_t dxgi_stride(DXGI_FORMAT format);
-D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
+namespace d3d8to11
+{
+	extern const std::filesystem::path storage_directory;
+	extern const std::filesystem::path config_file_path;
+	extern const std::filesystem::path permutation_file_path;
+
+	DXGI_FORMAT to_dxgi(D3DFORMAT value);
+	D3DFORMAT to_d3d8(DXGI_FORMAT value);
+	D3D11_PRIMITIVE_TOPOLOGY to_d3d11(D3DPRIMITIVETYPE value);
+	DXGI_FORMAT to_typeless(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_depth(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_uint(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_sint(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_snorm(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_float(DXGI_FORMAT format);
+	DXGI_FORMAT typeless_to_unorm(DXGI_FORMAT format, bool srgb = false);
+	size_t dxgi_stride(DXGI_FORMAT format);
+	D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
+}
 
 #ifndef D3D8TO9NOLOG
 #include <fstream>
 extern std::ofstream LOG;
 #endif
 
+// TODO: Direct3DSwapChain8
 #if 0
 
 class Direct3DSwapChain8 : public Unknown
