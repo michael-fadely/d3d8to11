@@ -355,7 +355,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
   <ItemGroup>
     <None Include="d3d8.def" />
     <None Include="include.hlsli" />
-    <None Include="mod.ini" />
     <None Include="shader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
