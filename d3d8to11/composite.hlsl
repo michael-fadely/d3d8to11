@@ -75,14 +75,20 @@ float4 blend_colors(uint blendOp, uint srcBlend, uint dstBlend, float4 sourceCol
 
 		case BLENDOP_ADD:
 			return srcResult + dstResult;
-
-		case BLENDOP_REVSUBTRACT: // TODO: BLENDOP_REVSUBTRACT ???
+		case BLENDOP_REVSUBTRACT:
+			return dstResult - srcResult;
 		case BLENDOP_SUBTRACT:
 			return srcResult - dstResult;
 		case BLENDOP_MIN:
 			return min(srcResult, dstResult);
 		case BLENDOP_MAX:
 			return max(srcResult, dstResult);
+		case BLENDOP_DIVIDE:
+			return srcResult / dstResult;
+		case BLENDOP_MULTIPLY:
+			return srcResult * dstResult;
+		case BLENDOP_DODGE:
+			return srcResult / (1.0 - dstResult);
 	}
 }
 
