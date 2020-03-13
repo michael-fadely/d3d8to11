@@ -154,7 +154,7 @@ struct VS_OUTPUT
 	float2 depth      : DEPTH;
 	float  fog        : FOG;
 
-	FVFTexCoordOut uvmeta[8] : TEXCOORDMETA;
+	FVFTexCoordOut uv_meta[8] : TEXCOORDMETA;
 	float4 uv[8] : TEXCOORD;
 };
 
@@ -207,7 +207,7 @@ cbuffer TextureStages : register(b3)
 Texture2D<float4> textures[TEXTURE_STAGE_MAX];
 SamplerState samplers[TEXTURE_STAGE_MAX];
 
-// From FixedFuncEMU.fx, originally calc_fog
+// From FixedFuncEMU.fx
 // Copyright (c) 2005 Microsoft Corporation. All rights reserved.
 // Calculates fog factor based upon distance
 float calc_fog(float d)
@@ -410,11 +410,11 @@ bool compare(uint mode, float a, float b)
 	}
 }
 
-float4 get_arg(uint stageNum, in TextureStage stage, uint textureArg, float4 current, float4 texel, float4 tempreg, float4 in_diffuse, float4 in_specular)
+float4 get_arg(uint stage_num, in TextureStage stage, uint texture_arg, float4 current, float4 texel, float4 tempreg, float4 in_diffuse, float4 in_specular)
 {
 	float4 result = (float4)0;
 
-	switch (textureArg & TA_SELECTMASK)
+	switch (texture_arg & TA_SELECTMASK)
 	{
 		case TA_DIFFUSE:
 		#ifdef FVF_DIFFUSE
@@ -425,11 +425,11 @@ float4 get_arg(uint stageNum, in TextureStage stage, uint textureArg, float4 cur
 			break;
 
 		case TA_CURRENT:
-			result = !stageNum ? in_diffuse : current;
+			result = !stage_num ? in_diffuse : current;
 			break;
 
 		case TA_TEXTURE:
-			result = texel; // TODO: check if texture is bound
+			result = texel; // TODO: check if texture is bound?
 			break;
 
 		case TA_TFACTOR:
@@ -449,7 +449,7 @@ float4 get_arg(uint stageNum, in TextureStage stage, uint textureArg, float4 cur
 			break;
 	}
 
-	uint modifiers = textureArg & ~TA_SELECTMASK;
+	uint modifiers = texture_arg & ~TA_SELECTMASK;
 
 	if (modifiers & TA_COMPLEMENT)
 	{
@@ -627,7 +627,7 @@ float4 sample_texture_stage(in VS_OUTPUT input, uint s)
 
 	uint coord_index     = coord_flags & TSS_TCI_COORD_MASK;
 	uint coord_caps      = coord_flags & TSS_TCI_SELECT_MASK;
-	uint component_count = input.uvmeta[s].component_count;
+	uint component_count = input.uv_meta[s].component_count;
 
 	float4 texcoord = input.uv[coord_index];
 
@@ -998,7 +998,7 @@ void transform(in VS_INPUT input, inout VS_OUTPUT result)
 void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 {
 #if FVF_TEXCOUNT > 0
-	result.uvmeta[0].component_count = FVF_TEXCOORD0_SIZE;
+	result.uv_meta[0].component_count = FVF_TEXCOORD0_SIZE;
 
 	#if FVF_TEXCOORD0_SIZE == 1
 		result.uv[0].x = input.tex0;
@@ -1012,7 +1012,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 1
-	result.uvmeta[1].component_count = FVF_TEXCOORD1_SIZE;
+	result.uv_meta[1].component_count = FVF_TEXCOORD1_SIZE;
 
 	#if FVF_TEXCOORD1_SIZE == 1
 		result.uv[1].x = input.tex1;
@@ -1026,7 +1026,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 2
-	result.uvmeta[2].component_count = FVF_TEXCOORD2_SIZE;
+	result.uv_meta[2].component_count = FVF_TEXCOORD2_SIZE;
 
 	#if FVF_TEXCOORD2_SIZE == 1
 		result.uv[2].x = input.tex2;
@@ -1040,7 +1040,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 3
-	result.uvmeta[3].component_count = FVF_TEXCOORD3_SIZE;
+	result.uv_meta[3].component_count = FVF_TEXCOORD3_SIZE;
 
 	#if FVF_TEXCOORD3_SIZE == 1
 		result.uv[3].x = input.tex3;
@@ -1054,7 +1054,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 4
-	result.uvmeta[4].component_count = FVF_TEXCOORD4_SIZE;
+	result.uv_meta[4].component_count = FVF_TEXCOORD4_SIZE;
 
 	#if FVF_TEXCOORD4_SIZE == 1
 		result.uv[4].x = input.tex4;
@@ -1068,7 +1068,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 5
-	result.uvmeta[5].component_count = FVF_TEXCOORD5_SIZE;
+	result.uv_meta[5].component_count = FVF_TEXCOORD5_SIZE;
 
 	#if FVF_TEXCOORD5_SIZE == 1
 		result.uv[5].x = input.tex5;
@@ -1082,7 +1082,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 6
-	result.uvmeta[6].component_count = FVF_TEXCOORD6_SIZE;
+	result.uv_meta[6].component_count = FVF_TEXCOORD6_SIZE;
 
 	#if FVF_TEXCOORD6_SIZE == 1
 		result.uv[6].x = input.tex6;
@@ -1096,7 +1096,7 @@ void output_texcoord(in VS_INPUT input, inout VS_OUTPUT result)
 #endif
 
 #if FVF_TEXCOUNT > 7
-	result.uvmeta[7].component_count = FVF_TEXCOORD7_SIZE;
+	result.uv_meta[7].component_count = FVF_TEXCOORD7_SIZE;
 
 	#if FVF_TEXCOORD7_SIZE == 1
 		result.uv[7].x = input.tex7;

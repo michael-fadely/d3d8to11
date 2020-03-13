@@ -20,10 +20,10 @@ struct VertexOutput
 	float4 position : SV_POSITION;
 };
 
-VertexOutput vs_main(uint vertexId : SV_VertexID)
+VertexOutput vs_main(uint vertex_id : SV_VERTEXID)
 {
 	VertexOutput output;
-	float2 texcoord = float2((vertexId << 1) & 2, vertexId & 2);
+	float2 texcoord = float2((vertex_id << 1) & 2, vertex_id & 2);
 	output.position = float4(texcoord * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
 	return output;
 }
@@ -60,36 +60,36 @@ float4 get_blend_factor(uint mode, float4 source, float4 destination)
 	}
 }
 
-float4 blend_colors(uint blendOp, uint srcBlend, uint dstBlend, float4 sourceColor, float4 destinationColor)
+float4 blend_colors(uint blend_op, uint source_blend, uint destination_blend, float4 source_color, float4 destination_color)
 {
-	float4 src = get_blend_factor(srcBlend, sourceColor, destinationColor);
-	float4 dst = get_blend_factor(dstBlend, sourceColor, destinationColor);
+	float4 source_factor      = get_blend_factor(source_blend, source_color, destination_color);
+	float4 destination_factor = get_blend_factor(destination_blend, source_color, destination_color);
 
-	float4 srcResult = sourceColor * src;
-	float4 dstResult = destinationColor * dst;
+	float4 source_result      = source_color * source_factor;
+	float4 destination_result = destination_color * destination_factor;
 
-	switch (blendOp)
+	switch (blend_op)
 	{
 		default:
 			return float4(1, 0, 0, 1);
 
 		case BLENDOP_ADD:
-			return srcResult + dstResult;
+			return source_result + destination_result;
 		case BLENDOP_REVSUBTRACT:
-			return dstResult - srcResult;
+			return destination_result - source_result;
 		case BLENDOP_SUBTRACT:
-			return srcResult - dstResult;
+			return source_result - destination_result;
 		case BLENDOP_MIN:
-			return min(srcResult, dstResult);
+			return min(source_result, destination_result);
 		case BLENDOP_MAX:
-			return max(srcResult, dstResult);
+			return max(source_result, destination_result);
 			/*
 		case BLENDOP_DIVIDE:
-			return srcResult / dstResult;
+			return source_result / destination_result;
 		case BLENDOP_MULTIPLY:
-			return srcResult * dstResult;
+			return source_result * destination_result;
 		case BLENDOP_DODGE:
-			return srcResult / (1.0 - dstResult);
+			return source_result / (1.0 - destination_result);
 			*/
 	}
 }
@@ -108,13 +108,13 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	}
 #endif
 
-	float4 backBufferColor = BackBuffer[pos];
+	float4 back_buffer_color = BackBuffer[pos];
 	uint index = FragListHead[pos];
 
 	// TODO: LotR: RotK is bailing here!
 	if (index == FRAGMENT_LIST_NULL)
 	{
-		return backBufferColor;
+		return back_buffer_color;
 	}
 
 	float opaque_depth = DepthBuffer[pos].r;
@@ -172,22 +172,22 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	if (count == 0)
 	{
-		return backBufferColor;
+		return back_buffer_color;
 	}
 
-	float4 final = backBufferColor;
+	float4 final = back_buffer_color;
 
 	for (int i = count - 1; i >= 0; i--)
 	{
 		const OitNode fragment = FragListNodes[indices[i]];
-		uint blend = fragment.flags;
+		uint blend_flags = fragment.flags;
 
-		uint blendOp   = (blend >> 8) & 0xF;
-		uint srcBlend  = (blend >> 4) & 0xF;
-		uint destBlend = blend & 0xF;
+		uint blend_op          = (blend_flags >> 8) & 0xF;
+		uint source_blend      = (blend_flags >> 4) & 0xF;
+		uint destination_blend = (blend_flags & 0xF);
 
 		float4 color = unorm_to_float4(fragment.color);
-		final = blend_colors(blendOp, srcBlend, destBlend, color, final);
+		final = blend_colors(blend_op, source_blend, destination_blend, color, final);
 	}
 
 	return float4(final.rgb, 1);

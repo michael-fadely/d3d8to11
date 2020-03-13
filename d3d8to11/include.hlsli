@@ -150,24 +150,24 @@ uint float_to_uint(float _V, float _Scale)
 	return (uint)floor(_V * _Scale + 0.5f);
 }
 
-float4 unorm_to_float4(uint packedInput)
+float4 unorm_to_float4(uint packed)
 {
-	precise float4 unpackedOutput;
-	unpackedOutput.x = (float)(packedInput & 0x000000ff) / 255;
-	unpackedOutput.y = (float)(((packedInput >> 8) & 0x000000ff)) / 255;
-	unpackedOutput.z = (float)(((packedInput >> 16) & 0x000000ff)) / 255;
-	unpackedOutput.w = (float)(packedInput >> 24) / 255;
-	return unpackedOutput;
+	precise float4 unpacked;
+	unpacked.x = (float)(packed & 0x000000ff) / 255;
+	unpacked.y = (float)(((packed >> 8) & 0x000000ff)) / 255;
+	unpacked.z = (float)(((packed >> 16) & 0x000000ff)) / 255;
+	unpacked.w = (float)(packed >> 24) / 255;
+	return unpacked;
 }
 
-uint float4_to_unorm(precise float4 unpackedInput)
+uint float4_to_unorm(precise float4 unpacked)
 {
-	uint packedOutput;
-	packedOutput = ((float_to_uint(saturate(unpackedInput.x), 255)) |
-		(float_to_uint(saturate(unpackedInput.y), 255) << 8) |
-		(float_to_uint(saturate(unpackedInput.z), 255) << 16) |
-		(float_to_uint(saturate(unpackedInput.w), 255) << 24));
-	return packedOutput;
+	uint packed;
+	packed = ((float_to_uint(saturate(unpacked.x), 255)) |
+	          (float_to_uint(saturate(unpacked.y), 255) << 8) |
+	          (float_to_uint(saturate(unpacked.z), 255) << 16) |
+	          (float_to_uint(saturate(unpacked.w), 255) << 24));
+	return packed;
 }
 
 #endif
