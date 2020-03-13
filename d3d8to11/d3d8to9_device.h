@@ -452,17 +452,17 @@ protected:
 	ComPtr<ID3D11RenderTargetView> composite_view;
 	ComPtr<ID3D11ShaderResourceView> composite_srv;
 
-	ComPtr<ID3D11Texture2D>           FragListHead;
-	ComPtr<ID3D11ShaderResourceView>  FragListHeadSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListHeadUAV;
+	ComPtr<ID3D11Texture2D>           frag_list_head;
+	ComPtr<ID3D11ShaderResourceView>  frag_list_head_srv;
+	ComPtr<ID3D11UnorderedAccessView> frag_list_head_uav;
 
-	ComPtr<ID3D11Texture2D>           FragListCount;
-	ComPtr<ID3D11ShaderResourceView>  FragListCountSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListCountUAV;
+	ComPtr<ID3D11Texture2D>           frag_list_count;
+	ComPtr<ID3D11ShaderResourceView>  frag_list_count_srv;
+	ComPtr<ID3D11UnorderedAccessView> frag_list_count_uav;
 
-	ComPtr<ID3D11Buffer>              FragListNodes;
-	ComPtr<ID3D11ShaderResourceView>  FragListNodesSRV;
-	ComPtr<ID3D11UnorderedAccessView> FragListNodesUAV;
+	ComPtr<ID3D11Buffer>              frag_list_nodes;
+	ComPtr<ID3D11ShaderResourceView>  frag_list_nodes_srv;
+	ComPtr<ID3D11UnorderedAccessView> frag_list_nodes_uav;
 
 	std::unordered_map<DWORD, Direct3DTexture8*> textures;
 	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;

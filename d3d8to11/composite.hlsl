@@ -109,7 +109,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 #endif
 
 	float4 back_buffer_color = BackBuffer[pos];
-	uint index = FragListHead[pos];
+	uint index = frag_list_head[pos];
 
 	// TODO: LotR: RotK is bailing here!
 	if (index == FRAGMENT_LIST_NULL)
@@ -124,7 +124,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	while (index != FRAGMENT_LIST_NULL && count < MAX_FRAGMENTS)
 	{
-		const OitNode node_i = FragListNodes[index];
+		const OitNode node_i = frag_list_nodes[index];
 
 		if (node_i.depth > opaque_depth)
 		{
@@ -144,7 +144,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	//#define DISABLE_SORT
 	#ifndef DISABLE_SORT
-		OitNode node_j = FragListNodes[indices[j - 1]];
+		OitNode node_j = frag_list_nodes[indices[j - 1]];
 
 		uint draw_call_i = (node_i.flags >> 16) & 0xFFFF;
 		uint draw_call_j = (node_j.flags >> 16) & 0xFFFF;
@@ -160,7 +160,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 			uint temp = indices[j];
 			indices[j] = indices[--j];
 			indices[j] = temp;
-			node_j = FragListNodes[indices[j - 1]];
+			node_j = frag_list_nodes[indices[j - 1]];
 			draw_call_j = (node_j.flags >> 16) & 0xFFFF;
 		}
 	#endif
@@ -179,7 +179,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	for (int i = count - 1; i >= 0; i--)
 	{
-		const OitNode fragment = FragListNodes[indices[i]];
+		const OitNode fragment = frag_list_nodes[indices[i]];
 		uint blend_flags = fragment.flags;
 
 		uint blend_op          = (blend_flags >> 8) & 0xF;

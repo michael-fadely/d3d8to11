@@ -127,19 +127,19 @@ struct OitNode
 
 // Read/write mode.
 
-globallycoherent RWTexture2D<uint>           FragListHead  : register(u1);
-globallycoherent RWTexture2D<uint>           FragListCount : register(u2);
-globallycoherent RWStructuredBuffer<OitNode> FragListNodes : register(u3);
+globallycoherent RWTexture2D<uint>           frag_list_head  : register(u1);
+globallycoherent RWTexture2D<uint>           frag_list_count : register(u2);
+globallycoherent RWStructuredBuffer<OitNode> frag_list_nodes : register(u3);
 
 #else
 
 // Read-only mode.
 
-Texture2D<uint>           FragListHead  : register(t0);
-Texture2D<uint>           FragListCount : register(t1);
-StructuredBuffer<OitNode> FragListNodes : register(t2);
-Texture2D                 BackBuffer    : register(t3);
-Texture2D                 DepthBuffer   : register(t4);
+Texture2D<uint>           frag_list_head  : register(t0);
+Texture2D<uint>           frag_list_count : register(t1);
+StructuredBuffer<OitNode> frag_list_nodes : register(t2);
+Texture2D                 BackBuffer      : register(t3);
+Texture2D                 DepthBuffer     : register(t4);
 
 #endif
 

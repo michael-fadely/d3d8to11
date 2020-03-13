@@ -4737,15 +4737,15 @@ void Direct3DDevice8::oit_release()
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr,
 	                                                   1, null.size(), &null[0], nullptr);
 
-	FragListHead     = nullptr;
-	FragListHeadSRV  = nullptr;
-	FragListHeadUAV  = nullptr;
-	FragListCount    = nullptr;
-	FragListCountSRV = nullptr;
-	FragListCountUAV = nullptr;
-	FragListNodes    = nullptr;
-	FragListNodesSRV = nullptr;
-	FragListNodesUAV = nullptr;
+	frag_list_head      = nullptr;
+	frag_list_head_srv  = nullptr;
+	frag_list_head_uav  = nullptr;
+	frag_list_count     = nullptr;
+	frag_list_count_srv = nullptr;
+	frag_list_count_uav = nullptr;
+	frag_list_nodes     = nullptr;
+	frag_list_nodes_srv = nullptr;
+	frag_list_nodes_uav = nullptr;
 }
 
 void Direct3DDevice8::oit_write()
@@ -4756,13 +4756,13 @@ void Direct3DDevice8::oit_write()
 	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
 
 	std::array<ID3D11UnorderedAccessView*, 3> uavs = {
-		FragListHeadUAV.Get(),
-		FragListCountUAV.Get(),
-		FragListNodesUAV.Get()
+		frag_list_head_uav.Get(),
+		frag_list_count_uav.Get(),
+		frag_list_nodes_uav.Get()
 	};
 
-	// This is used to set the hidden counter of FragListNodes to 0.
-	// It only works on FragListNodes, but the number of elements here
+	// This is used to set the hidden counter of frag_list_nodes to 0.
+	// It only works on frag_list_nodes, but the number of elements here
 	// must match the number of UAVs given.
 	static const uint zero[3] = { 0, 0, 0 };
 
@@ -4774,10 +4774,10 @@ void Direct3DDevice8::oit_write()
 	// 4 elements are required as this can be used to clear a texture
 	// with 4 color channels, even though our list head only has one.
 	static const UINT clear_head[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-	context->ClearUnorderedAccessViewUint(FragListHeadUAV.Get(), &clear_head[0]);
+	context->ClearUnorderedAccessViewUint(frag_list_head_uav.Get(), &clear_head[0]);
 
 	static const UINT clear_count[] = { 0, 0, 0, 0 };
-	context->ClearUnorderedAccessViewUint(FragListCountUAV.Get(), &clear_count[0]);
+	context->ClearUnorderedAccessViewUint(frag_list_count_uav.Get(), &clear_count[0]);
 }
 
 void Direct3DDevice8::oit_read() const
@@ -4788,9 +4788,9 @@ void Direct3DDevice8::oit_read() const
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
 
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {
-		FragListHeadSRV.Get(),
-		FragListCountSRV.Get(),
-		FragListNodesSRV.Get(),
+		frag_list_head_srv.Get(),
+		frag_list_count_srv.Get(),
+		frag_list_nodes_srv.Get(),
 		composite_srv.Get(),
 		current_depth_stencil->depth_srv.Get()
 	};
@@ -4822,7 +4822,7 @@ void Direct3DDevice8::FragListHead_Init()
 	desc2D.SampleDesc.Count   = 1;
 	desc2D.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &FragListHead)))
+	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &frag_list_head)))
 	{
 		throw;
 	}
@@ -4834,7 +4834,7 @@ void Direct3DDevice8::FragListHead_Init()
 	descRV.Texture2D.MipLevels       = 1;
 	descRV.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(FragListHead.Get(), &descRV, &FragListHeadSRV)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_head.Get(), &descRV, &frag_list_head_srv)))
 	{
 		throw;
 	}
@@ -4847,7 +4847,7 @@ void Direct3DDevice8::FragListHead_Init()
 	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
 	descUAV.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(FragListHead.Get(), &descUAV, &FragListHeadUAV)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_head.Get(), &descUAV, &frag_list_head_uav)))
 	{
 		throw;
 	}
@@ -4867,7 +4867,7 @@ void Direct3DDevice8::FragListCount_Init()
 	desc2D.SampleDesc.Count   = 1;
 	desc2D.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &FragListCount)))
+	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &frag_list_count)))
 	{
 		throw;
 	}
@@ -4879,7 +4879,7 @@ void Direct3DDevice8::FragListCount_Init()
 	descRV.Texture2D.MipLevels       = 1;
 	descRV.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(FragListCount.Get(), &descRV, &FragListCountSRV)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_count.Get(), &descRV, &frag_list_count_srv)))
 	{
 		throw;
 	}
@@ -4892,7 +4892,7 @@ void Direct3DDevice8::FragListCount_Init()
 	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
 	descUAV.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(FragListCount.Get(), &descUAV, &FragListCountUAV)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_count.Get(), &descUAV, &frag_list_count_uav)))
 	{
 		throw;
 	}
@@ -4909,7 +4909,7 @@ void Direct3DDevice8::FragListNodes_Init()
 	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 	descBuf.StructureByteStride = sizeof(OitNode);
 
-	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &FragListNodes)))
+	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &frag_list_nodes)))
 	{
 		throw;
 	}
@@ -4920,7 +4920,7 @@ void Direct3DDevice8::FragListNodes_Init()
 	descRV.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
 	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 
-	if (FAILED(device->CreateShaderResourceView(FragListNodes.Get(), &descRV, &FragListNodesSRV)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_nodes.Get(), &descRV, &frag_list_nodes_srv)))
 	{
 		throw;
 	}
@@ -4933,7 +4933,7 @@ void Direct3DDevice8::FragListNodes_Init()
 	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 	descUAV.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
 
-	if (FAILED(device->CreateUnorderedAccessView(FragListNodes.Get(), &descUAV, &FragListNodesUAV)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_nodes.Get(), &descUAV, &frag_list_nodes_uav)))
 	{
 		throw;
 	}
