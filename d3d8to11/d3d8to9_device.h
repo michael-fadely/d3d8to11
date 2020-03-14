@@ -226,6 +226,11 @@ class Direct3DDevice8 : public Unknown
 	std::string fragments_str;
 	bool freeing_shaders = false;
 
+	UINT adapter;
+	HWND focus_window;
+	D3DDEVTYPE device_type;
+	DWORD behavior_flags;
+
 public:
 	Direct3DDevice8(const Direct3DDevice8&)     = delete;
 	Direct3DDevice8(Direct3DDevice8&&) noexcept = delete;
@@ -233,7 +238,7 @@ public:
 	Direct3DDevice8& operator=(const Direct3DDevice8&)     = delete;
 	Direct3DDevice8& operator=(Direct3DDevice8&&) noexcept = delete;
 
-	Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters);
+	Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device_type, HWND focus_window, DWORD behavior_flags, const D3DPRESENT_PARAMETERS8& parameters);
 	~Direct3DDevice8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;

@@ -695,7 +695,7 @@ void Direct3DDevice8::create_native()
 	 * Width and height of the new swap chain's back buffers, in pixels. If Windowed is FALSE (the presentation is full-screen),
 	 * then these values must equal the width and height of one of the enumerated display modes found through IDirect3D8::EnumAdapterModes.
 	 * If Windowed is TRUE and either of these values is zero, then the corresponding dimension of the client area of the hDeviceWindow
-	 * TODO: (or the focus window, if hDeviceWindow is NULL) is taken.
+	 * (or the focus window, if hDeviceWindow is NULL) is taken.
 	 */
 
 	UINT& width = present_params.BackBufferWidth;
@@ -703,8 +703,10 @@ void Direct3DDevice8::create_native()
 
 	if (present_params.Windowed && (!width || !height))
 	{
+		HWND handle = present_params.hDeviceWindow ? present_params.hDeviceWindow : focus_window;
+
 		RECT rect;
-		GetClientRect(present_params.hDeviceWindow, &rect);
+		GetClientRect(handle, &rect);
 
 		if (!width)
 		{
@@ -720,7 +722,7 @@ void Direct3DDevice8::create_native()
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount        = 1;
-	desc.BufferDesc.Format  = d3d8to11::to_dxgi(present_params.BackBufferFormat);
+	desc.BufferDesc.Format  = to_dxgi(present_params.BackBufferFormat);
 	desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferDesc.Width   = width;
 	desc.BufferDesc.Height  = height;
@@ -1069,8 +1071,12 @@ void SamplerSettings::mark()
 }
 
 // IDirect3DDevice8
-Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, const D3DPRESENT_PARAMETERS8& parameters)
-	: present_params(parameters),
+Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device_type, HWND focus_window, DWORD behavior_flags, const D3DPRESENT_PARAMETERS8& parameters)
+	: adapter(adapter),
+	  device_type(device_type),
+	  focus_window(focus_window),
+	  behavior_flags(behavior_flags),
+	  present_params(parameters),
 	  d3d(d3d)
 {
 	fragments_str = std::to_string(globals::max_fragments);
@@ -1201,22 +1207,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDisplayMode(D3DDISPLAYMODE* pMode)
 {
-#if 1
-	// not yet supported
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetDisplayMode(0, pMode);
-#endif
+	return d3d->GetAdapterDisplayMode(adapter, pMode);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCreationParameters(D3DDEVICE_CREATION_PARAMETERS* pParameters)
 {
-#if 1
-	// not yet supported
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetCreationParameters(pParameters);
-#endif
+	if (!pParameters)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	pParameters->BehaviorFlags  = behavior_flags;
+	pParameters->AdapterOrdinal = adapter;
+	pParameters->DeviceType     = device_type;
+	pParameters->hFocusWindow   = focus_window;
+
+	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetCursorProperties(UINT XHotSpot, UINT YHotSpot, Direct3DSurface8* pCursorBitmap)
