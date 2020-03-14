@@ -175,6 +175,10 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		return back_buffer_color;
 	}
 
+#ifdef SHOW_FRAGMENT_OVERDRAW
+	return float4((float)count / MAX_FRAGMENTS, 0, 0, 0);
+#endif
+
 	float4 final = back_buffer_color;
 
 	for (int i = count - 1; i >= 0; i--)
