@@ -773,41 +773,41 @@ void Direct3DDevice8::create_native()
 	vp.MaxZ   = 1.0f;
 	SetViewport(&vp);
 	
-	HRESULT hr = make_cbuffer(per_scene, per_scene_cbuf);
+	HRESULT hr = make_cbuffer(per_scene, per_scene_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_model, per_model_cbuf);
+	hr = make_cbuffer(per_model, per_model_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-model CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_pixel, per_pixel_cbuf);
+	hr = make_cbuffer(per_pixel, per_pixel_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-pixel CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_texture, per_texture_cbuf);
+	hr = make_cbuffer(per_texture, per_texture_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-texture CreateBuffer failed");
 	}
 
-	context->VSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
-	context->PSSetConstantBuffers(0, 1, per_scene_cbuf.GetAddressOf());
+	context->VSSetConstantBuffers(0, 1, per_scene_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(0, 1, per_scene_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
-	context->PSSetConstantBuffers(1, 1, per_model_cbuf.GetAddressOf());
+	context->VSSetConstantBuffers(1, 1, per_model_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(1, 1, per_model_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
-	context->PSSetConstantBuffers(2, 1, per_pixel_cbuf.GetAddressOf());
+	context->VSSetConstantBuffers(2, 1, per_pixel_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(2, 1, per_pixel_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
-	context->PSSetConstantBuffers(3, 1, per_texture_cbuf.GetAddressOf());
+	context->VSSetConstantBuffers(3, 1, per_texture_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(3, 1, per_texture_cbuffer.GetAddressOf());
 
 	{
 		bool exists = std::filesystem::exists(d3d8to11::permutation_file_path);
@@ -1408,8 +1408,8 @@ void Direct3DDevice8::oit_composite()
 		SetStreamSource(stream.first, stream.second.buffer, stream.second.stride);
 	}
 
-	auto temp = std::move(index_buffer);
-	SetIndices(temp.Get(), current_base_vertex_index);
+	ComPtr<Direct3DIndexBuffer8> index_buffer_ = std::move(index_buffer);
+	SetIndices(index_buffer_.Get(), current_base_vertex_index);
 }
 
 void Direct3DDevice8::oit_start()
@@ -4171,11 +4171,11 @@ void Direct3DDevice8::commit_per_pixel()
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_pixel_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	context->Map(per_pixel_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	per_pixel.write(writer);
-	context->Unmap(per_pixel_cbuf.Get(), 0);
+	context->Unmap(per_pixel_cbuffer.Get(), 0);
 	per_pixel.clear();
 }
 
@@ -4187,14 +4187,14 @@ void Direct3DDevice8::commit_per_model()
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_model_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	context->Map(per_model_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 
 	per_model.write(writer);
 	per_model.clear();
 
-	context->Unmap(per_model_cbuf.Get(), 0);
+	context->Unmap(per_model_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::commit_per_scene()
@@ -4207,12 +4207,12 @@ void Direct3DDevice8::commit_per_scene()
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_scene_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	context->Map(per_scene_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	per_scene.write(writer);
 	per_scene.clear();
-	context->Unmap(per_scene_cbuf.Get(), 0);
+	context->Unmap(per_scene_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::commit_per_texture()
@@ -4223,12 +4223,12 @@ void Direct3DDevice8::commit_per_texture()
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_texture_cbuf.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	context->Map(per_texture_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 	per_texture.write(writer);
 	per_texture.clear();
-	context->Unmap(per_texture_cbuf.Get(), 0);
+	context->Unmap(per_texture_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::update_sampler()
@@ -4801,14 +4801,14 @@ void Direct3DDevice8::oit_read() const
 
 void Direct3DDevice8::oit_init()
 {
-	FragListHead_Init();
-	FragListCount_Init();
-	FragListNodes_Init();
+	frag_list_head_init();
+	frag_list_count_init();
+	frag_list_nodes_init();
 
 	oit_write();
 }
 
-void Direct3DDevice8::FragListHead_Init()
+void Direct3DDevice8::frag_list_head_init()
 {
 	D3D11_TEXTURE2D_DESC desc2D = {};
 
@@ -4853,7 +4853,7 @@ void Direct3DDevice8::FragListHead_Init()
 	}
 }
 
-void Direct3DDevice8::FragListCount_Init()
+void Direct3DDevice8::frag_list_count_init()
 {
 	D3D11_TEXTURE2D_DESC desc2D = {};
 
@@ -4898,7 +4898,7 @@ void Direct3DDevice8::FragListCount_Init()
 	}
 }
 
-void Direct3DDevice8::FragListNodes_Init()
+void Direct3DDevice8::frag_list_nodes_init()
 {
 	D3D11_BUFFER_DESC descBuf = {};
 

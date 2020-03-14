@@ -483,9 +483,9 @@ protected:
 	void oit_write();
 	void oit_read() const;
 	void oit_init();
-	void FragListHead_Init();
-	void FragListCount_Init();
-	void FragListNodes_Init();
+	void frag_list_head_init();
+	void frag_list_count_init();
+	void frag_list_nodes_init();
 	void up_get(size_t target_size);
 
 	ComPtr<Direct3DVertexBuffer8> up_buffer;
@@ -497,10 +497,10 @@ protected:
 	DepthStencilFlags depthstencil_flags {};
 	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> depth_states;
 
-	ComPtr<ID3D11Buffer> per_scene_cbuf;
-	ComPtr<ID3D11Buffer> per_model_cbuf;
-	ComPtr<ID3D11Buffer> per_pixel_cbuf;
-	ComPtr<ID3D11Buffer> per_texture_cbuf;
+	ComPtr<ID3D11Buffer> per_scene_cbuffer;
+	ComPtr<ID3D11Buffer> per_model_cbuffer;
+	ComPtr<ID3D11Buffer> per_pixel_cbuffer;
+	ComPtr<ID3D11Buffer> per_texture_cbuffer;
 	PerSceneBuffer per_scene {};
 	PerModelBuffer per_model {};
 	PerPixelBuffer per_pixel {};

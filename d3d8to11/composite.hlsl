@@ -108,7 +108,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	}
 #endif
 
-	float4 back_buffer_color = BackBuffer[pos];
+	float4 back_buffer_color = back_buffer[pos];
 	uint index = frag_list_head[pos];
 
 	// TODO: LotR: RotK is bailing here!
@@ -117,7 +117,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		return back_buffer_color;
 	}
 
-	float opaque_depth = DepthBuffer[pos].r;
+	float opaque_depth = depth_buffer[pos].r;
 
 	uint indices[MAX_FRAGMENTS];
 	uint count = 0;
