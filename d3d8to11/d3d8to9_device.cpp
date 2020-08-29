@@ -4812,44 +4812,44 @@ void Direct3DDevice8::oit_init()
 
 void Direct3DDevice8::frag_list_head_init()
 {
-	D3D11_TEXTURE2D_DESC desc2D = {};
+	D3D11_TEXTURE2D_DESC desc_2d = {};
 
-	desc2D.ArraySize          = 1;
-	desc2D.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	desc2D.Usage              = D3D11_USAGE_DEFAULT;
-	desc2D.Format             = DXGI_FORMAT_R32_UINT;
-	desc2D.Width              = static_cast<UINT>(viewport.Width);
-	desc2D.Height             = static_cast<UINT>(viewport.Height);
-	desc2D.MipLevels          = 1;
-	desc2D.SampleDesc.Count   = 1;
-	desc2D.SampleDesc.Quality = 0;
+	desc_2d.ArraySize          = 1;
+	desc_2d.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc_2d.Usage              = D3D11_USAGE_DEFAULT;
+	desc_2d.Format             = DXGI_FORMAT_R32_UINT;
+	desc_2d.Width              = static_cast<UINT>(viewport.Width);
+	desc_2d.Height             = static_cast<UINT>(viewport.Height);
+	desc_2d.MipLevels          = 1;
+	desc_2d.SampleDesc.Count   = 1;
+	desc_2d.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &frag_list_head)))
+	if (FAILED(device->CreateTexture2D(&desc_2d, nullptr, &frag_list_head)))
 	{
 		throw;
 	}
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC descRV;
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc_rv;
 
-	descRV.Format                    = desc2D.Format;
-	descRV.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
-	descRV.Texture2D.MipLevels       = 1;
-	descRV.Texture2D.MostDetailedMip = 0;
+	desc_rv.Format                    = desc_2d.Format;
+	desc_rv.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	desc_rv.Texture2D.MipLevels       = 1;
+	desc_rv.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_head.Get(), &descRV, &frag_list_head_srv)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_head.Get(), &desc_rv, &frag_list_head_srv)))
 	{
 		throw;
 	}
 
-	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc_uav;
 
-	descUAV.Format              = desc2D.Format;
-	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
-	descUAV.Buffer.FirstElement = 0;
-	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
-	descUAV.Buffer.Flags        = 0;
+	desc_uav.Format              = desc_2d.Format;
+	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
+	desc_uav.Buffer.FirstElement = 0;
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	desc_uav.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_head.Get(), &descUAV, &frag_list_head_uav)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_head.Get(), &desc_uav, &frag_list_head_uav)))
 	{
 		throw;
 	}
@@ -4857,44 +4857,44 @@ void Direct3DDevice8::frag_list_head_init()
 
 void Direct3DDevice8::frag_list_count_init()
 {
-	D3D11_TEXTURE2D_DESC desc2D = {};
+	D3D11_TEXTURE2D_DESC desc_2d = {};
 
-	desc2D.ArraySize          = 1;
-	desc2D.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	desc2D.Usage              = D3D11_USAGE_DEFAULT;
-	desc2D.Format             = DXGI_FORMAT_R32_UINT;
-	desc2D.Width              = static_cast<UINT>(viewport.Width);
-	desc2D.Height             = static_cast<UINT>(viewport.Height);
-	desc2D.MipLevels          = 1;
-	desc2D.SampleDesc.Count   = 1;
-	desc2D.SampleDesc.Quality = 0;
+	desc_2d.ArraySize          = 1;
+	desc_2d.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc_2d.Usage              = D3D11_USAGE_DEFAULT;
+	desc_2d.Format             = DXGI_FORMAT_R32_UINT;
+	desc_2d.Width              = static_cast<UINT>(viewport.Width);
+	desc_2d.Height             = static_cast<UINT>(viewport.Height);
+	desc_2d.MipLevels          = 1;
+	desc_2d.SampleDesc.Count   = 1;
+	desc_2d.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc2D, nullptr, &frag_list_count)))
+	if (FAILED(device->CreateTexture2D(&desc_2d, nullptr, &frag_list_count)))
 	{
 		throw;
 	}
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC descRV;
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc_rv;
 
-	descRV.Format                    = desc2D.Format;
-	descRV.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
-	descRV.Texture2D.MipLevels       = 1;
-	descRV.Texture2D.MostDetailedMip = 0;
+	desc_rv.Format                    = desc_2d.Format;
+	desc_rv.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+	desc_rv.Texture2D.MipLevels       = 1;
+	desc_rv.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_count.Get(), &descRV, &frag_list_count_srv)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_count.Get(), &desc_rv, &frag_list_count_srv)))
 	{
 		throw;
 	}
 
-	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc_uav;
 
-	descUAV.Format              = desc2D.Format;
-	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
-	descUAV.Buffer.FirstElement = 0;
-	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
-	descUAV.Buffer.Flags        = 0;
+	desc_uav.Format              = desc_2d.Format;
+	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
+	desc_uav.Buffer.FirstElement = 0;
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	desc_uav.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_count.Get(), &descUAV, &frag_list_count_uav)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_count.Get(), &desc_uav, &frag_list_count_uav)))
 	{
 		throw;
 	}
@@ -4902,40 +4902,40 @@ void Direct3DDevice8::frag_list_count_init()
 
 void Direct3DDevice8::frag_list_nodes_init()
 {
-	D3D11_BUFFER_DESC descBuf = {};
+	D3D11_BUFFER_DESC desc_buf = {};
 
 	per_scene.buffer_len = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 
-	descBuf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	descBuf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	descBuf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
-	descBuf.StructureByteStride = sizeof(OitNode);
+	desc_buf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc_buf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc_buf.ByteWidth           = sizeof(OitNode) * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_buf.StructureByteStride = sizeof(OitNode);
 
-	if (FAILED(device->CreateBuffer(&descBuf, nullptr, &frag_list_nodes)))
+	if (FAILED(device->CreateBuffer(&desc_buf, nullptr, &frag_list_nodes)))
 	{
 		throw;
 	}
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC descRV = {};
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc_rv = {};
 
-	descRV.Format             = DXGI_FORMAT_UNKNOWN;
-	descRV.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
-	descRV.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_rv.Format             = DXGI_FORMAT_UNKNOWN;
+	desc_rv.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
+	desc_rv.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_nodes.Get(), &descRV, &frag_list_nodes_srv)))
+	if (FAILED(device->CreateShaderResourceView(frag_list_nodes.Get(), &desc_rv, &frag_list_nodes_srv)))
 	{
 		throw;
 	}
 
-	D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV;
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc_uav;
 
-	descUAV.Format              = DXGI_FORMAT_UNKNOWN;
-	descUAV.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
-	descUAV.Buffer.FirstElement = 0;
-	descUAV.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
-	descUAV.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
+	desc_uav.Format              = DXGI_FORMAT_UNKNOWN;
+	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
+	desc_uav.Buffer.FirstElement = 0;
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_uav.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_nodes.Get(), &descUAV, &frag_list_nodes_uav)))
+	if (FAILED(device->CreateUnorderedAccessView(frag_list_nodes.Get(), &desc_uav, &frag_list_nodes_uav)))
 	{
 		throw;
 	}
