@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "d3d8to9.hpp"
+#include "not_implemented.h"
 
 using namespace d3d8to11;
 
@@ -99,42 +100,22 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDevice(Direct3DDevice8** ppDevice
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetPrivateData(refguid, pData, SizeOfData, Flags);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetPrivateData(refguid, pData, pSizeOfData);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::FreePrivateData(REFGUID refguid)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->FreePrivateData(refguid);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetContainer(REFIID riid, void** ppContainer)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetContainer(riid, ppContainer);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8* pDesc)

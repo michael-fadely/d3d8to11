@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "d3d8to9.hpp"
+#include "not_implemented.h"
 
 #ifndef USE_SUBRESOURCE
 #define USE_SUBRESOURCE
@@ -98,60 +99,32 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDevice(Direct3DDevice8** ppD
 
 HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetPrivateData(refguid, pData, SizeOfData, Flags);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetPrivateData(refguid, pData, pSizeOfData);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::FreePrivateData(REFGUID refguid)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->FreePrivateData(refguid);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 DWORD STDMETHODCALLTYPE Direct3DVertexBuffer8::SetPriority(DWORD PriorityNew)
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetPriority(PriorityNew);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 DWORD STDMETHODCALLTYPE Direct3DVertexBuffer8::GetPriority()
 {
-#if 1
-	// not needed for SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetPriority();
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 void STDMETHODCALLTYPE Direct3DVertexBuffer8::PreLoad()
 {
-	// not needed for SADX
-#if 0
-	ProxyInterface->PreLoad();
-#endif
+	NOT_IMPLEMENTED;
 }
 
 D3DRESOURCETYPE STDMETHODCALLTYPE Direct3DVertexBuffer8::GetType()

@@ -4,9 +4,12 @@
  */
 
 #include "stdafx.h"
+
 #include <iomanip>
+
 #include "d3d8to9.hpp"
 #include "dynarray.h"
+#include "not_implemented.h"
 
 using namespace d3d8to11;
 
@@ -214,60 +217,33 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetDevice(Direct3DDevice8** ppDevice
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::SetPrivateData(REFGUID refguid, const void* pData, DWORD SizeOfData, DWORD Flags)
 {
-#if 1
-	// not used in SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetPrivateData(refguid, pData, SizeOfData, Flags);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetPrivateData(REFGUID refguid, void* pData, DWORD* pSizeOfData)
 {
-#if 1
-	// not used in SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->GetPrivateData(refguid, pData, pSizeOfData);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::FreePrivateData(REFGUID refguid)
 {
-#if 1
-	// not used in SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->FreePrivateData(refguid);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::SetPriority(DWORD PriorityNew)
 {
-#if 1
-	// not used in SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetPriority(PriorityNew);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::GetPriority()
 {
-#if 1
-	// not used in SADX
+	NOT_IMPLEMENTED;
 	return -1;
-#else
-	return ProxyInterface->GetPriority();
-#endif
 }
 
 void STDMETHODCALLTYPE Direct3DTexture8::PreLoad()
 {
-	// not used in SADX
-#if 0
-	ProxyInterface->PreLoad();
-#endif
+	NOT_IMPLEMENTED;
 }
 
 D3DRESOURCETYPE STDMETHODCALLTYPE Direct3DTexture8::GetType()
@@ -277,22 +253,13 @@ D3DRESOURCETYPE STDMETHODCALLTYPE Direct3DTexture8::GetType()
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::SetLOD(DWORD LODNew)
 {
-#if 1
-	// not used in SADX
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->SetLOD(LODNew);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::GetLOD()
 {
-#if 1
-	// not used in SADX
+	NOT_IMPLEMENTED;
 	return 0;
-#else
-	return ProxyInterface->GetLOD();
-#endif
 }
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::GetLevelCount()
@@ -434,11 +401,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 {
-#if 1
-	return D3DERR_INVALIDCALL;
-#else
-	return ProxyInterface->AddDirtyRect(pDirtyRect);
-#endif
+	NOT_IMPLEMENTED_RETURN;
 }
 
 void Direct3DTexture8::get_level_offset(UINT level, size_t& offset, size_t& size) const

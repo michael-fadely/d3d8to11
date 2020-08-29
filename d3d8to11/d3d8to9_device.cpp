@@ -13,37 +13,21 @@
 #include <sstream>
 #include <filesystem>
 
-#include "d3d8to9.hpp"
-#include "SimpleMath.h"
-#include "int_multiple.h"
 #include "CBufferWriter.h"
-#include "Material.h"
-#include "ShaderIncluder.h"
-#include "safe_release.h"
+#include "d3d8to9.hpp"
 #include "globals.h"
 #include "ini_file.h"
+#include "int_multiple.h"
+#include "Material.h"
+#include "not_implemented.h"
+#include "safe_release.h"
+#include "ShaderIncluder.h"
+#include "SimpleMath.h"
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
-inline void output_not_implemented(const char* function, const char* file, size_t line)
-{
-	std::stringstream ss;
-
-	ss << "NOT IMPLEMENTED: "
-	   << function << " (" << file << ":" << line << ")\n";
-
-	OutputDebugStringA(ss.str().c_str());
-}
-
 #define SHADER_ASYNC_COMPILE
 //#define SHADER_FAST_FALLBACK
-
-#define NOT_IMPLEMENTED_RETURN                           \
-	output_not_implemented(__FUNCTION__, __FILE__, __LINE__); \
-	return D3DERR_INVALIDCALL
-
-#define NOT_IMPLEMENTED \
-	output_not_implemented(__FUNCTION__, __FILE__, __LINE__)
 
 #define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
