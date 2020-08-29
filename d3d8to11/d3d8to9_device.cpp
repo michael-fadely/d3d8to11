@@ -1528,11 +1528,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL; // HACK
 	}
 
-#if 0
-	auto& bb = back_buffer;
-#else
 	auto& bb = render_target_wrapper;
-#endif
 
 	ComPtr<Direct3DSurface8> surface;
 	bb->GetSurfaceLevel(0, &surface);
