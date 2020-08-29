@@ -307,10 +307,10 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto surface_desc8 = surfaces[Level]->desc8;
+	const D3DSURFACE_DESC8& surface_desc8 = surfaces[Level]->desc8;
 
-	auto width  = surface_desc8.Width;
-	auto height = surface_desc8.Height;
+	const auto width  = surface_desc8.Width;
+	const auto height = surface_desc8.Height;
 
 	pDesc->Format          = format_;
 	pDesc->Type            = GetType();
@@ -361,8 +361,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		return D3DERR_INVALIDCALL;
 	}
 
-	auto surface_desc8 = surfaces[Level]->desc8;
-	auto width  = surface_desc8.Width;
+	const D3DSURFACE_DESC8& surface_desc8 = surfaces[Level]->desc8;
+	const auto width = surface_desc8.Width;
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
