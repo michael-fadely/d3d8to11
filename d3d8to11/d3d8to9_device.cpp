@@ -420,7 +420,6 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 		throw std::runtime_error("vertex shader creation failed");
 	}
 
-
 	{
 		std::lock_guard<std::recursive_mutex> lock(mutex);
 
