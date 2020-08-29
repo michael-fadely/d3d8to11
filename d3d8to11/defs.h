@@ -1,6 +1,7 @@
 #pragma once
 
 constexpr auto LIGHT_COUNT           = 8;
+constexpr auto FVF_TEXCOORD_MAX      = 8;
 constexpr auto MAX_FRAGMENTS_DEFAULT = 32;
 
 // preprocessor because reasons

@@ -1162,47 +1162,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDirect3D(Direct3D8** ppD3D8)
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 {
-	if (!pCaps)
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
-	// TODO: properly populate pCaps
-	*pCaps = {};
-
-	pCaps->MaxTextureWidth  = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-	pCaps->MaxTextureHeight = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-
-	pCaps->Caps2                    = 0xFFFFFFFF;
-	pCaps->Caps3                    = 0xFFFFFFFF;
-	pCaps->PresentationIntervals    = 0xFFFFFFFF;
-	pCaps->DevCaps                  = 0xFFFFFFFF;
-	pCaps->PrimitiveMiscCaps        = 0xFFFFFFFF;
-	pCaps->RasterCaps               = 0xFFFFFFFF;
-	pCaps->ZCmpCaps                 = 0xFFFFFFFF;
-	pCaps->SrcBlendCaps             = 0xFFFFFFFF;
-	pCaps->DestBlendCaps            = 0xFFFFFFFF;
-	pCaps->AlphaCmpCaps             = 0xFFFFFFFF;
-	pCaps->ShadeCaps                = 0xFFFFFFFF;
-	pCaps->TextureCaps              = D3DPTEXTURECAPS_MIPMAP | D3DPTEXTURECAPS_ALPHA | D3DPTEXTURECAPS_NONPOW2CONDITIONAL | D3DPTEXTURECAPS_PROJECTED;
-	pCaps->TextureFilterCaps        = 0xFFFFFFFF;
-	pCaps->CubeTextureFilterCaps    = 0xFFFFFFFF;
-	pCaps->VolumeTextureFilterCaps  = 0xFFFFFFFF;
-	pCaps->TextureAddressCaps       = 0xFFFFFFFF;
-	pCaps->VolumeTextureAddressCaps = 0xFFFFFFFF;
-	pCaps->LineCaps                 = 0xFFFFFFFF;
-	pCaps->MaxTextureRepeat         = 0xFFFFFFFF;
-	pCaps->MaxTextureAspectRatio    = 0xFFFFFFFF;
-	pCaps->MaxAnisotropy            = 16;
-	pCaps->StencilCaps              = 0xFFFFFFFF;
-	pCaps->FVFCaps                  = 0xFFFFFFFF;
-	pCaps->TextureOpCaps            = 0xFFFFFFFF;
-	pCaps->MaxActiveLights          = LIGHT_COUNT;
-
-	pCaps->MaxTextureBlendStages   = TEXTURE_STAGE_MAX;
-	pCaps->MaxSimultaneousTextures = TEXTURE_STAGE_MAX;
-
-	return D3D_OK;
+	return d3d->GetDeviceCaps(adapter, device_type, pCaps);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDisplayMode(D3DDISPLAYMODE* pMode)
@@ -1317,6 +1277,29 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 	// TODO: handle actual device lost state
 	// TODO: handle/fix fullscreen toggle
+
+	UINT& width = pPresentationParameters->BackBufferWidth;
+	UINT& height = pPresentationParameters->BackBufferHeight;
+
+	if (pPresentationParameters->Windowed && (!width || !height))
+	{
+		HWND handle = pPresentationParameters->hDeviceWindow
+		              ? pPresentationParameters->hDeviceWindow
+		              : focus_window;
+
+		RECT rect;
+		GetClientRect(handle, &rect);
+
+		if (!width)
+		{
+			width = rect.right - rect.left;
+		}
+
+		if (!height)
+		{
+			height = rect.bottom - rect.top;
+		}
+	}
 
 	if (pPresentationParameters->BackBufferWidth != present_params.BackBufferWidth ||
 	    pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight ||
