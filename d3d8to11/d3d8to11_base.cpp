@@ -8,7 +8,7 @@
 #include <d3d11_1.h>
 #include <wrl/client.h>
 
-#include "d3d8to9_base.h"
+#include "d3d8to11_base.h"
 
 using namespace Microsoft::WRL;
 using namespace d3d8to11;

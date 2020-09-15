@@ -14,12 +14,12 @@
 //class __declspec(uuid("BD7349F5-14F1-42E4-9C79-972380DB40C0")) Direct3DVolume8;
 
 #include "d3d8types.hpp"
-#include "d3d8to9_base.h"
-#include "d3d8to9_device.h"
-#include "d3d8to9_texture.h"
-#include "d3d8to9_surface.h"
-#include "d3d8to9_index_buffer.h"
-#include "d3d8to9_vertex_buffer.h"
+#include "d3d8to11_base.h"
+#include "d3d8to11_device.h"
+#include "d3d8to11_texture.h"
+#include "d3d8to11_surface.h"
+#include "d3d8to11_index_buffer.h"
+#include "d3d8to11_vertex_buffer.h"
 
 #include <filesystem>
 

@@ -3,7 +3,7 @@
 #include <d3d11_1.h>
 #include <vector>
 #include "d3d8types.hpp"
-#include "d3d8to9_resource.h"
+#include "d3d8to11_resource.h"
 #include "dynarray.h"
 
 class Direct3DDevice8;

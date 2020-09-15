@@ -301,14 +301,14 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="cbuffers.h" />
-    <ClInclude Include="d3d8to9.hpp" />
-    <ClInclude Include="d3d8to9_base.h" />
-    <ClInclude Include="d3d8to9_device.h" />
-    <ClInclude Include="d3d8to9_index_buffer.h" />
-    <ClInclude Include="d3d8to9_resource.h" />
-    <ClInclude Include="d3d8to9_surface.h" />
-    <ClInclude Include="d3d8to9_texture.h" />
-    <ClInclude Include="d3d8to9_vertex_buffer.h" />
+    <ClInclude Include="d3d8to11.hpp" />
+    <ClInclude Include="d3d8to11_base.h" />
+    <ClInclude Include="d3d8to11_device.h" />
+    <ClInclude Include="d3d8to11_index_buffer.h" />
+    <ClInclude Include="d3d8to11_resource.h" />
+    <ClInclude Include="d3d8to11_surface.h" />
+    <ClInclude Include="d3d8to11_texture.h" />
+    <ClInclude Include="d3d8to11_vertex_buffer.h" />
     <ClInclude Include="d3d8types.h" />
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
@@ -329,15 +329,15 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cbuffers.cpp" />
-    <ClCompile Include="d3d8to9.cpp" />
-    <ClCompile Include="d3d8to9_base.cpp" />
-    <ClCompile Include="d3d8to9_device.cpp" />
-    <ClCompile Include="d3d8to9_index_buffer.cpp" />
-    <ClCompile Include="d3d8to9_surface.cpp" />
-    <ClCompile Include="d3d8to9_swap_chain.cpp" />
-    <ClCompile Include="d3d8to9_texture.cpp" />
-    <ClCompile Include="d3d8to9_vertex_buffer.cpp" />
-    <ClCompile Include="d3d8to9_volume.cpp" />
+    <ClCompile Include="d3d8to11.cpp" />
+    <ClCompile Include="d3d8to11_base.cpp" />
+    <ClCompile Include="d3d8to11_device.cpp" />
+    <ClCompile Include="d3d8to11_index_buffer.cpp" />
+    <ClCompile Include="d3d8to11_surface.cpp" />
+    <ClCompile Include="d3d8to11_swap_chain.cpp" />
+    <ClCompile Include="d3d8to11_texture.cpp" />
+    <ClCompile Include="d3d8to11_vertex_buffer.cpp" />
+    <ClCompile Include="d3d8to11_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />

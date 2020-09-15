@@ -1,21 +1,24 @@
 #pragma once
 
-#include "d3d8to9_resource.h"
+#include "d3d8to11_resource.h"
 
 class Direct3DDevice8;
 
-class __declspec(uuid("0E689C9A-053D-44A0-9D92-DB0E3D750F86")) Direct3DIndexBuffer8;
+class __declspec(uuid("8AEEEAC7-05F9-44D4-B591-000B0DF1CB95")) Direct3DVertexBuffer8;
 
-class Direct3DIndexBuffer8 : public Direct3DResource8
+class Direct3DVertexBuffer8 : public Direct3DResource8
 {
 public:
-	Direct3DIndexBuffer8(const Direct3DIndexBuffer8&)            = delete;
-	Direct3DIndexBuffer8& operator=(const Direct3DIndexBuffer8&) = delete;
+	Direct3DVertexBuffer8(const Direct3DVertexBuffer8&)     = delete;
+	Direct3DVertexBuffer8(Direct3DVertexBuffer8&&) noexcept = delete;
+
+	Direct3DVertexBuffer8& operator=(const Direct3DVertexBuffer8&)     = delete;
+	Direct3DVertexBuffer8& operator=(Direct3DVertexBuffer8&&) noexcept = delete;
 
 	void create_native();
 
-	Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
-	~Direct3DIndexBuffer8() = default;
+	Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool);
+	~Direct3DVertexBuffer8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;
@@ -32,17 +35,18 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE Lock(UINT OffsetToLock, UINT SizeToLock, BYTE** ppbData, DWORD Flags);
 	virtual HRESULT STDMETHODCALLTYPE Unlock();
-	virtual HRESULT STDMETHODCALLTYPE GetDesc(D3DINDEXBUFFER_DESC* pDesc);
+	virtual HRESULT STDMETHODCALLTYPE GetDesc(D3DVERTEXBUFFER_DESC* pDesc);
+
+	void get_buffer(size_t offset, size_t size, uint8_t** ptr);
 
 	ComPtr<ID3D11Buffer> buffer_resource;
-	D3D11_MAPPED_SUBRESOURCE mapped {};
-	D3DINDEXBUFFER_DESC desc8 {};
+	dynarray<uint8_t> buffer;
+	D3DVERTEXBUFFER_DESC desc8 {};
 
 private:
 	bool locked      = false;
 	UINT lock_offset = 0;
 	UINT lock_size   = 0;
 	DWORD lock_flags = 0;
-	dynarray<uint8_t> buffer;
 	Direct3DDevice8* const device8;
 };

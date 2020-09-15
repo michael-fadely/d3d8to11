@@ -4,7 +4,7 @@
  */
 
 #include "stdafx.h"
-#include "d3d8to9.hpp"
+#include "d3d8to11.hpp"
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {

@@ -4,7 +4,7 @@
  */
 
 #include "stdafx.h"
-#include "d3d8to9.hpp"
+#include "d3d8to11.hpp"
 
 #if 0
 // IDirect3DVolume8
