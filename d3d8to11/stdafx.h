@@ -39,6 +39,7 @@
 #include <SimpleMath.h>
 
 // Local
+#include "alignment.h"
 #include "cbuffers.h"
 #include "CBufferWriter.h"
 #include "d3d8to11.hpp"
@@ -53,7 +54,6 @@
 #include "defs.h"
 #include <dirty_t.h>
 #include "hash_combine.h"
-#include "int_multiple.h"
 #include "Light.h"
 #include "Material.h"
 #include "Shader.h"

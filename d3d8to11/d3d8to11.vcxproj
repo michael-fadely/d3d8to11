@@ -316,7 +316,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="dynarray.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="hash_combine.h" />
-    <ClInclude Include="int_multiple.h" />
+    <ClInclude Include="alignment.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="not_implemented.h" />

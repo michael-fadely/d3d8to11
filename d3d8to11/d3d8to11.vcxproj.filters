@@ -63,7 +63,7 @@
     <ClInclude Include="dirty_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="int_multiple.h">
+    <ClInclude Include="alignment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="simple_math.h">

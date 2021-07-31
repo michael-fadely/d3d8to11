@@ -16,7 +16,7 @@
 #include "hash_combine.h"
 #include <future>
 #include <optional>
-#include "int_multiple.h"
+#include "alignment.h"
 #include <unordered_set>
 
 class Direct3DBaseTexture8;
@@ -393,7 +393,7 @@ public:
 
 		const auto cbuffer_size = interface_.cbuffer_size();
 
-		desc.ByteWidth           = int_multiple(cbuffer_size, 16);
+		desc.ByteWidth           = align_up(cbuffer_size, 16);
 		desc.Usage               = D3D11_USAGE_DYNAMIC;
 		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;

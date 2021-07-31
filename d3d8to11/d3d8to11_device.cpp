@@ -13,11 +13,11 @@
 #include <sstream>
 #include <filesystem>
 
+#include "alignment.h"
 #include "CBufferWriter.h"
 #include "d3d8to11.hpp"
 #include "globals.h"
 #include "ini_file.h"
-#include "int_multiple.h"
 #include "Material.h"
 #include "not_implemented.h"
 #include "safe_release.h"
