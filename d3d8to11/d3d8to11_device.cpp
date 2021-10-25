@@ -159,9 +159,9 @@ size_t Direct3DDevice8::count_texture_stages() const
 
 static std::unordered_map<size_t, std::string> digit_strings;
 
-const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags_)
+const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags)
 {
-	static std::array<const char*, 8> texcoord_size_strings = {
+	static const std::array texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
 		"FVF_TEXCOORD1_SIZE",
 		"FVF_TEXCOORD2_SIZE",
@@ -172,7 +172,7 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		"FVF_TEXCOORD7_SIZE"
 	};
 
-	static std::array<const char*, 8> texcoord_size_types = {
+	static const std::array texcoord_size_types = {
 		"FVF_TEXCOORD0_TYPE",
 		"FVF_TEXCOORD1_TYPE",
 		"FVF_TEXCOORD2_TYPE",
@@ -183,20 +183,20 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		"FVF_TEXCOORD7_TYPE"
 	};
 
-	static std::array<const char*, 4> texcoord_format_types = {
+	static const std::array texcoord_format_types = {
 		"float2",
 		"float3",
 		"float4",
 		"float1",
 	};
 
-	auto flags = ShaderFlags::sanitize(flags_);
-	flags &= ~ShaderFlags::stage_count;
-	flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count;
+	auto sanitized_flags = ShaderFlags::sanitize(flags);
+	sanitized_flags &= ~ShaderFlags::stage_count_mask;
+	sanitized_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
 
 	std::lock_guard shader_preproc_lock(shader_preproc_mutex);
 
-	auto it = shader_preproc_definitions.find(flags);
+	const auto it = shader_preproc_definitions.find(sanitized_flags);
 
 	if (it != shader_preproc_definitions.end())
 	{
@@ -209,12 +209,13 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		{ "TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX) }
 	};
 
-	auto format = flags >> 16u;
-	auto tex_count = static_cast<size_t>(((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT) & 0xF);
+	auto uv_format = sanitized_flags >> 16u;
+	const auto tex_count = static_cast<size_t>(((sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT) & 0xF);
 
 	for (size_t i = 0; i < tex_count; i++)
 	{
-		const auto f = static_cast<size_t>(format & 3u);
+		const auto f = static_cast<size_t>(uv_format & 3u);
+		uv_format >>= 2;
 
 		switch (f)
 		{
@@ -235,26 +236,13 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 				break;
 
 			default:
-				break;
+				continue;
 		}
 
-		switch (f)
-		{
-			case D3DFVF_TEXTUREFORMAT2:
-			case D3DFVF_TEXTUREFORMAT1:
-			case D3DFVF_TEXTUREFORMAT3:
-			case D3DFVF_TEXTUREFORMAT4:
-				definitions.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
-				break;
-
-			default:
-				break;
-		}
-
-		format >>= 2;
+		definitions.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
 	}
 
-	const size_t stage_count = (flags >> ShaderFlags::stage_count_shift) & 0xF;
+	const size_t stage_count = (sanitized_flags & ShaderFlags::stage_count_mask) >> ShaderFlags::stage_count_shift;
 	auto digit_string = digit_strings.find(stage_count);
 
 	if (digit_string == digit_strings.end())
@@ -270,66 +258,42 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 
 	definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string->second.c_str() });
 
-	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
+	auto one_or_zero_value = [&](ShaderFlags::type mask, ShaderFlags::type value)
 	{
-		definitions.push_back({ "FVF_RHW", "1" });
-	}
+		return ((sanitized_flags & mask) == value) ? "1" : "0";
+	};
 
-	if ((flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZ)
+	auto one_or_zero = [&](ShaderFlags::type mask)
 	{
-		definitions.push_back({ "FVF_XYZ", "1" });
-	}
+		return one_or_zero_value(mask, mask);
+	};
 
-	if (flags & D3DFVF_NORMAL)
-	{
-		definitions.push_back({ "FVF_NORMAL", "1" });
-	}
+	definitions.push_back({ "FVF_RHW", one_or_zero_value(D3DFVF_POSITION_MASK, D3DFVF_XYZRHW) });
+	definitions.push_back({ "FVF_XYZ", one_or_zero_value(D3DFVF_POSITION_MASK, D3DFVF_XYZ) });
+	definitions.push_back({ "FVF_NORMAL", one_or_zero(D3DFVF_NORMAL) });
+	definitions.push_back({ "FVF_DIFFUSE", one_or_zero(D3DFVF_DIFFUSE) });
+	definitions.push_back({ "FVF_SPECULAR", one_or_zero(D3DFVF_SPECULAR) });
 
-	if (flags & D3DFVF_DIFFUSE)
+	if (sanitized_flags & D3DFVF_TEXCOUNT_MASK)
 	{
-		definitions.push_back({ "FVF_DIFFUSE", "1" });
-	}
-
-	if (flags & D3DFVF_SPECULAR)
-	{
-		definitions.push_back({ "FVF_SPECULAR", "1" });
-	}
-
-	if (flags & D3DFVF_TEXCOUNT_MASK)
-	{
-		texcount_str = std::to_string((flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
+		texcount_str = std::to_string((sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
 		definitions.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
 	}
-
-	if ((flags & (ShaderFlags::rs_lighting | D3DFVF_NORMAL)) == (ShaderFlags::rs_lighting | D3DFVF_NORMAL))
+	else
 	{
-		definitions.push_back({ "RS_LIGHTING", "1" });
+		definitions.push_back({ "FVF_TEXCOUNT", "0" });
 	}
 
-	if (flags & ShaderFlags::rs_specular)
-	{
-		definitions.push_back({ "RS_SPECULAR", "1" });
-	}
+	constexpr ShaderFlags::type lighting_mask = ShaderFlags::rs_lighting | D3DFVF_NORMAL;
 
-	if (flags & ShaderFlags::rs_alpha)
-	{
-		definitions.push_back({ "RS_ALPHA", "1" });
-	}
+	definitions.push_back({ "RS_LIGHTING", one_or_zero_value(lighting_mask, lighting_mask) });
+	definitions.push_back({ "RS_SPECULAR", one_or_zero(ShaderFlags::rs_specular) });
+	definitions.push_back({ "RS_ALPHA", one_or_zero(ShaderFlags::rs_alpha) });
+	definitions.push_back({ "RS_FOG", one_or_zero(ShaderFlags::rs_fog) });
+	definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
 
-	if (flags & ShaderFlags::rs_oit)
-	{
-		definitions.push_back({ "RS_OIT", "1" });
-	}
-
-	if (flags & ShaderFlags::rs_fog)
-	{
-		definitions.push_back({ "RS_FOG", "1" });
-	}
-
-	//shader_preproc_defs.push_back({});
-
-	shader_preproc_definitions[flags] = std::move(definitions);
-	return shader_preproc_definitions[flags];
+	shader_preproc_definitions[sanitized_flags] = std::move(definitions);
+	return shader_preproc_definitions[sanitized_flags];
 }
 
 void Direct3DDevice8::draw_call_increment()
@@ -345,8 +309,10 @@ static constexpr auto SHADER_COMPILER_FLAGS =
 #endif
 ;
 
-VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_boy,
-                                     std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex)
+VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags,
+                                     bool speedy_speed_boy,
+                                     std::unordered_map<ShaderFlags::type, VertexShader>& shaders,
+                                     std::recursive_mutex& mutex)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 
@@ -364,11 +330,7 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vs_map.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
-
-	if (speedy_speed_boy)
-	{
-		preproc.push_back({ "SPEEDY_SPEED_BOY", "1" });
-	}
+	preproc.push_back({ "SPEEDY_SPEED_BOY", speedy_speed_boy ? "1" : "0"});
 	
 	preproc.push_back({});
 
@@ -423,8 +385,10 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool speedy_speed_
 	}
 }
 
-PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_boy,
-                                    std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex)
+PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags,
+                                    bool speedy_speed_boy,
+                                    std::unordered_map<ShaderFlags::type, PixelShader>& shaders,
+                                    std::recursive_mutex& mutex)
 {
 	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
@@ -442,11 +406,7 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool speedy_speed_b
 	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, shaders.size() + 1);
 
 	auto preproc = shader_preprocess(flags);
-
-	if (speedy_speed_boy)
-	{
-		preproc.push_back({ "SPEEDY_SPEED_BOY", "1" });
-	}
+	preproc.push_back({ "SPEEDY_SPEED_BOY", speedy_speed_boy ? "1" : "0" });
 	
 	preproc.push_back({});
 
@@ -774,8 +734,14 @@ void Direct3DDevice8::create_native()
 	vp.Height = present_params.BackBufferHeight;
 	vp.MaxZ   = 1.0f;
 	SetViewport(&vp);
-	
-	HRESULT hr = make_cbuffer(per_scene, per_scene_cbuffer);
+
+	HRESULT hr = make_cbuffer(uber_shader_flags, uber_shader_cbuffer);
+	if (FAILED(hr))
+	{
+		throw std::runtime_error("uber-shader CreateBuffer failed");
+	}
+
+	hr = make_cbuffer(per_scene, per_scene_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-scene CreateBuffer failed");
@@ -799,17 +765,20 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("per-texture CreateBuffer failed");
 	}
 
-	context->VSSetConstantBuffers(0, 1, per_scene_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(0, 1, per_scene_cbuffer.GetAddressOf());
+	context->VSSetConstantBuffers(0, 1, uber_shader_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(0, 1, uber_shader_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(1, 1, per_model_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(1, 1, per_model_cbuffer.GetAddressOf());
+	context->VSSetConstantBuffers(1, 1, per_scene_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(1, 1, per_scene_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(2, 1, per_pixel_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(2, 1, per_pixel_cbuffer.GetAddressOf());
+	context->VSSetConstantBuffers(2, 1, per_model_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(2, 1, per_model_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(3, 1, per_texture_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(3, 1, per_texture_cbuffer.GetAddressOf());
+	context->VSSetConstantBuffers(3, 1, per_pixel_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(3, 1, per_pixel_cbuffer.GetAddressOf());
+
+	context->VSSetConstantBuffers(4, 1, per_texture_cbuffer.GetAddressOf());
+	context->PSSetConstantBuffers(4, 1, per_texture_cbuffer.GetAddressOf());
 
 	{
 		bool exists = std::filesystem::exists(d3d8to11::permutation_file_path);
@@ -3998,8 +3967,8 @@ void Direct3DDevice8::update_shaders()
 		shader_flags |= ShaderFlags::rs_oit;
 	}
 
-	shader_flags &= ~ShaderFlags::stage_count;
-	shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count;
+	shader_flags &= ~ShaderFlags::stage_count_mask;
+	shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
 
 	shader_flags = ShaderFlags::sanitize(shader_flags);
 

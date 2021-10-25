@@ -7,6 +7,22 @@
 #include "Material.h"
 #include "defs.h"
 
+class UberShaderFlagsBuffer : public ICBuffer, dirty_impl
+{
+public:
+	dirty_t<bool> rs_lighting;
+	dirty_t<bool> rs_specular;
+	dirty_t<bool> rs_alpha;
+	dirty_t<bool> rs_fog;
+	dirty_t<bool> rs_oit;
+
+	void write(CBufferBase& cbuf) const override;
+
+	[[nodiscard]] bool dirty() const override;
+	void clear() override;
+	void mark() override;
+};
+
 class PerSceneBuffer : public ICBuffer, dirty_impl
 {
 public:

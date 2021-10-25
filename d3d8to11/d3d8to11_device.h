@@ -38,20 +38,20 @@ struct ShaderFlags
 	enum T : type
 	{
 		none,
-		rs_lighting  = 0b00001000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_specular  = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_alpha     = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_fog       = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_oit       = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		fvf_position = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110,
-		fvf_fields   = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'11110000,
-		fvf_texcount = 0b00000000'00000000'00000000'00000000'00000000'00000000'00001111'00000000,
-		fvf_lastbeta = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
-		fvf_texfmt   = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
-		stage_count  = 0b00000000'00000000'00000000'00001111'00000000'00000000'00000000'00000000,
-		fvf_mask     = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
-		rs_mask      = rs_lighting | rs_specular | rs_alpha | rs_fog | rs_oit,
-		mask         = rs_mask | fvf_mask | stage_count,
+		rs_lighting      = 0b00001000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_specular      = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_alpha         = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_fog           = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		rs_oit           = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
+		fvf_position     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110,
+		fvf_fields       = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'11110000,
+		fvf_texcount     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00001111'00000000,
+		fvf_lastbeta     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
+		fvf_texfmt       = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
+		stage_count_mask = 0b00000000'00000000'00000000'00001111'00000000'00000000'00000000'00000000,
+		fvf_mask         = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
+		rs_mask          = rs_lighting | rs_specular | rs_alpha | rs_fog | rs_oit,
+		mask             = rs_mask | fvf_mask | stage_count_mask,
 		count
 	};
 
@@ -64,7 +64,7 @@ struct ShaderFlags
 	// TODO
 #else
 	static constexpr type vs_mask = rs_lighting | rs_specular | fvf_mask;
-	static constexpr type ps_mask = stage_count | rs_mask | light_sanitize_flags;
+	static constexpr type ps_mask = stage_count_mask | rs_mask | light_sanitize_flags;
 #endif
 
 	static type sanitize(type flags);
@@ -353,7 +353,7 @@ public:
 	std::recursive_mutex shader_preproc_mutex;
 	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
 	[[nodiscard]] size_t count_texture_stages() const;
-	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags_);
+	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags);
 
 	void draw_call_increment();
 
@@ -417,6 +417,9 @@ public:
 
 	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
+
+	std::unordered_map<ShaderFlags::type, VertexShader> uber_vertex_shaders;
+	std::unordered_map<ShaderFlags::type, PixelShader> uber_pixel_shaders;
 
 	std::recursive_mutex vs_tasks_mutex, ps_tasks_mutex;
 	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> vs_tasks;
@@ -502,10 +505,13 @@ protected:
 	DepthStencilFlags depthstencil_flags {};
 	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> depth_states;
 
+	ComPtr<ID3D11Buffer> uber_shader_cbuffer;
 	ComPtr<ID3D11Buffer> per_scene_cbuffer;
 	ComPtr<ID3D11Buffer> per_model_cbuffer;
 	ComPtr<ID3D11Buffer> per_pixel_cbuffer;
 	ComPtr<ID3D11Buffer> per_texture_cbuffer;
+
+	UberShaderFlagsBuffer uber_shader_flags {};
 	PerSceneBuffer per_scene {};
 	PerModelBuffer per_model {};
 	PerPixelBuffer per_pixel {};

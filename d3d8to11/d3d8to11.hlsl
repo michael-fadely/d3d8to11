@@ -158,16 +158,50 @@ struct VS_OUTPUT
 	float4 uv[8] : TEXCOORD;
 };
 
-cbuffer PerSceneBuffer : register(b0)
+#define UBER 1
+
+#if defined(UBER) && UBER == 1
+
+#define SHADER_FLAGS_BEGIN \
+	cbuffer PerSceneBuffer : register(b0) \
+	{
+
+#define SHADER_FLAGS_END }
+
+#define SHADER_FLAG(NAME) bool NAME;
+#define SHADER_FLAG_CHECK(NAME) NAME == true
+
+#else
+
+#define SHADER_FLAGS_BEGIN
+#define SHADER_FLAGS_END
+
+#define SHADER_FLAG(NAME)
+
+#define SHADER_FLAG_CHECK(NAME) (NAME) == 1
+
+#endif
+
+SHADER_FLAGS_BEGIN
+
+SHADER_FLAG(RS_LIGHTING)
+SHADER_FLAG(RS_SPECULAR)
+SHADER_FLAG(RS_ALPHA)
+SHADER_FLAG(RS_FOG)
+SHADER_FLAG(RS_OIT)
+
+SHADER_FLAGS_END
+
+cbuffer PerSceneBuffer : register(b1)
 {
 	matrix view_matrix;
 	matrix projection_matrix;
 	float2 screen_dimensions;
 	float3 view_position;
 	uint   buffer_len;
-};
+}
 
-cbuffer PerModelBuffer : register(b1)
+cbuffer PerModelBuffer : register(b2)
 {
 	uint draw_call;
 	matrix world_matrix;
@@ -179,9 +213,9 @@ cbuffer PerModelBuffer : register(b1)
 
 	Light lights[LIGHT_COUNT];
 	Material material;
-};
+}
 
-cbuffer PerPixelBuffer : register(b2)
+cbuffer PerPixelBuffer : register(b3)
 {
 	uint   src_blend;
 	uint   dst_blend;
@@ -197,9 +231,9 @@ cbuffer PerPixelBuffer : register(b2)
 	float alpha_reject_threshold;
 
 	float4 texture_factor;
-};
+}
 
-cbuffer TextureStages : register(b3)
+cbuffer TextureStages : register(b4)
 {
 	TextureStage texture_stages[TEXTURE_STAGE_MAX];
 }
@@ -232,20 +266,26 @@ float calc_fog(float d)
 
 float4 white_not_lit(float4 color)
 {
-#ifdef RS_LIGHTING
-	return color;
-#else
-	return float4(1, 1, 1, 1);
-#endif
+	if (SHADER_FLAG_CHECK(RS_LIGHTING))
+	{
+		return color;
+	}
+	else
+	{
+		return float4(1, 1, 1, 1);
+	}
 }
 
 float4 black_not_lit(float4 color)
 {
-#ifdef RS_LIGHTING
-	return color;
-#else
-	return float4(0, 0, 0, 0);
-#endif
+	if (SHADER_FLAG_CHECK(RS_LIGHTING))
+	{
+		return color;
+	}
+	else
+	{
+		return float4(0, 0, 0, 0);
+	}
 }
 
 void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 in_specular,
@@ -263,10 +303,14 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 	out_diffuse  = c_d;
 	out_specular = c_s;
 
-	#ifdef RS_SPECULAR
-		float p = max(0, material.power);
-		float3 view_dir = normalize(view_position - world_position.xyz);
-	#endif
+	float p;
+	float3 view_dir;
+
+	if (SHADER_FLAG_CHECK(RS_SPECULAR))
+	{
+		p = max(0, material.power);
+		view_dir = normalize(view_position - world_position.xyz);
+	}
 
 	for (uint i = 0; i < LIGHT_COUNT; ++i)
 	{
@@ -354,18 +398,19 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 		// sum(Atteni*Spoti*Lai)
 		ambient += Atten * Spot * lights[i].ambient;
 
-		#ifdef RS_SPECULAR
+		if (SHADER_FLAG_CHECK(RS_SPECULAR))
+		{
 			float4 Ls = lights[i].specular;
-			float3 H = normalize(view_dir + normalize(Ldir));
 
 			#ifdef FVF_NORMAL
+				float3 H = normalize(view_dir + normalize(Ldir));
 				float NdotH = max(0, dot(N, H));
 			#else
 				float NdotH = 0;
 			#endif
 
 			specular += Ls * pow(NdotH, p) * Atten * Spot;
-		#endif
+		}
 	}
 
 	// Ambient Lighting = c_a*[Ga + sum(Atteni*Spoti*Lai)]
@@ -1120,8 +1165,13 @@ VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 	float4 diffuse;
 	float4 specular;
 
-	perform_lighting(result.ambient, result.diffuse, result.specular, result.w_position, result.w_normal,
-	                 diffuse, specular);
+	perform_lighting(result.ambient,
+	                 result.diffuse,
+	                 result.specular,
+	                 result.w_position,
+	                 result.w_normal,
+	                 diffuse,
+	                 specular);
 
 	result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
 	result.specular.rgb = specular.rgb;
