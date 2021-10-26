@@ -54,6 +54,9 @@ class ShaderCompilationQueue
 	std::unordered_map<ShaderCompilationQueueEntry, CompilationFunction> _functions;
 	std::queue<ShaderCompilationQueueEntry> _queue;
 
+	size_t _active_threads = 0;
+	size_t _enqueued_count = 0;
+
 public:
 	explicit ShaderCompilationQueue(size_t thread_count);
 	~ShaderCompilationQueue();
@@ -61,6 +64,9 @@ public:
 	void enqueue(ShaderCompilationType type, ShaderFlags::type flags, CompilationFunction function);
 	void start();
 	void shutdown();
+
+	[[nodiscard]] size_t active_threads() const;
+	[[nodiscard]] size_t enqueued_count() const;
 
 private:
 	void work_thread();

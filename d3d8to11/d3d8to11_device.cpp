@@ -891,32 +891,83 @@ void Direct3DDevice8::create_native()
 		{
 			OutputDebugStringA("precompiling shaders...\n");
 
-			while (!file.eof())
+			auto uber_enqueue_vs = [this](const auto& e)
 			{
-				ShaderFlags::type flags = 0;
+				get_vs_internal(e.flags, uber_vertex_shaders, uber_vs_mutex, true);
+			};
 
-				auto start = file.tellg();
-				file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
-				auto end = file.tellg();
+			auto uber_enqueue_ps = [this](const auto& e)
+			{
+				get_ps_internal(e.flags, uber_pixel_shaders, uber_ps_mutex, true);
+			};
 
-				if (end - start != sizeof(flags))
+			auto standard_enqueue_vs = [this](const auto& e)
+			{
+				get_vs_internal(e.flags, vertex_shaders, vs_mutex, false);
+			};
+
+			auto standard_enqueue_ps = [this](const auto& e)
+			{
+				get_ps_internal(e.flags, pixel_shaders, ps_mutex, false);
+			};
+
+			{
+				_LOCK(permutation_mutex);
+
+				while (!file.eof())
 				{
-					break;
+					ShaderFlags::type flags = 0;
+
+					auto start = file.tellg();
+					file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
+					auto end = file.tellg();
+
+					if (end - start != sizeof(flags))
+					{
+						break;
+					}
+
+					{
+						permutation_flags.insert(flags);
+					}
 				}
 
+				for (ShaderFlags::type flags : permutation_flags)
 				{
-					_LOCK(permutation_mutex);
-					permutation_flags.insert(flags);
+					std::stringstream ss;
+					ss << "enqueueing uber shader: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
+					OutputDebugStringA(ss.str().c_str());
+
+					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::uber_vs_mask);
+					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::uber_ps_mask);
+					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, uber_enqueue_vs);
+					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, uber_enqueue_ps);
 				}
+			}
 
-				std::stringstream ss;
-				ss << "compiling: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
-				OutputDebugStringA(ss.str().c_str());
+			OutputDebugStringA("waiting for uber shader compilation to finish...");
 
-				VertexShader vs_dummy;
-				PixelShader ps_dummy;
+			while (shader_compilation_queue.enqueued_count())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 
-				compile_shaders(flags, &vs_dummy, &ps_dummy);
+			OutputDebugStringA("done\nenqueueing standard shaders now...");
+
+			{
+				_LOCK(permutation_mutex);
+
+				for (ShaderFlags::type flags : permutation_flags)
+				{
+					std::stringstream ss;
+					ss << "enqueueing standard shader: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
+					OutputDebugStringA(ss.str().c_str());
+
+					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
+					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
+					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, standard_enqueue_vs);
+					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, standard_enqueue_ps);
+				}
 			}
 
 			OutputDebugStringA("done\n");

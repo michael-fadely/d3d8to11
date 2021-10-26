@@ -23,9 +23,6 @@ bool ShaderCompilationQueueEntry::operator!=(const ShaderCompilationQueueEntry& 
 	return type != rhs.type || flags != rhs.flags;
 }
 
-static size_t thread_count = 0;
-static size_t enqueued_items = 0;
-
 ShaderCompilationQueue::ShaderCompilationQueue(size_t thread_count)
 	: _thread_count(thread_count),
 	  _running(true),
@@ -56,13 +53,13 @@ void ShaderCompilationQueue::enqueue(ShaderCompilationType type, ShaderFlags::ty
 		return;
 	}
 
-	++enqueued_items;
+	++_enqueued_count;
 	_queue.emplace(key);
 	_functions[key] = std::move(function);
 	_condition.notify_one();
 
 	std::stringstream ss;
-	ss << "active threads: " << thread_count << "; enqueued shaders: " << enqueued_items << "\n";
+	ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
 	OutputDebugStringA(ss.str().c_str());
 }
 
@@ -97,6 +94,16 @@ void ShaderCompilationQueue::shutdown()
 	}
 }
 
+size_t ShaderCompilationQueue::active_threads() const
+{
+	return _active_threads;
+}
+
+size_t ShaderCompilationQueue::enqueued_count() const
+{
+	return _enqueued_count;
+}
+
 void ShaderCompilationQueue::work_thread()
 {
 	while (_running == true)
@@ -122,9 +129,9 @@ void ShaderCompilationQueue::work_thread()
 				}
 			}
 
-			++thread_count;
+			++_active_threads;
 			std::stringstream ss;
-			ss << "active threads: " << thread_count << "; enqueued shaders: " << enqueued_items << "\n";
+			ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
 			OutputDebugStringA(ss.str().c_str());
 
 			key = _queue.front();
@@ -139,10 +146,10 @@ void ShaderCompilationQueue::work_thread()
 			std::unique_lock lock(_mutex);
 			_functions.erase(key);
 
-			--enqueued_items;
-			--thread_count;
+			--_enqueued_count;
+			--_active_threads;
 			std::stringstream ss;
-			ss << "active threads: " << thread_count << "; enqueued shaders: " << enqueued_items << "\n";
+			ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
 			OutputDebugStringA(ss.str().c_str());
 		}
 	}
