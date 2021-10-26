@@ -322,6 +322,8 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="not_implemented.h" />
     <ClInclude Include="safe_release.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="ShaderCompilationQueue.h" />
+    <ClInclude Include="ShaderFlags.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="typedefs.h" />
@@ -342,6 +344,8 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="ShaderCompilationQueue.cpp" />
+    <ClCompile Include="ShaderFlags.cpp" />
     <ClCompile Include="simple_math.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

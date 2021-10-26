@@ -9,9 +9,9 @@
 #include <DirectXMath.h>
 #include <cassert>
 #include <fstream>
-#include <optional>
 #include <sstream>
 #include <filesystem>
+#include <shared_mutex>
 
 #include "alignment.h"
 #include "CBufferWriter.h"
@@ -23,13 +23,13 @@
 #include "safe_release.h"
 #include "ShaderIncluder.h"
 #include "SimpleMath.h"
+#include "ShaderFlags.h"
 
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
 #define SHADER_ASYNC_COMPILE
-//#define SHADER_FAST_FALLBACK
 
-#define LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
+#define _LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
 using namespace Microsoft::WRL;
 using namespace d3d8to11;
@@ -159,7 +159,7 @@ size_t Direct3DDevice8::count_texture_stages() const
 
 static std::unordered_map<size_t, std::string> digit_strings;
 
-const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags)
+const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber)
 {
 	static const std::array texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
@@ -194,14 +194,14 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 	sanitized_flags &= ~ShaderFlags::stage_count_mask;
 	sanitized_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
 
-	std::lock_guard shader_preproc_lock(shader_preproc_mutex);
+	//std::lock_guard shader_preproc_lock(shader_preproc_mutex);
 
-	const auto it = shader_preproc_definitions.find(sanitized_flags);
+	//const auto it = shader_preproc_definitions.find(sanitized_flags);
 
-	if (it != shader_preproc_definitions.end())
-	{
-		return it->second;
-	}
+	//if (it != shader_preproc_definitions.end())
+	//{
+	//	return it->second;
+	//}
 
 	std::vector<D3D_SHADER_MACRO> definitions
 	{
@@ -258,21 +258,30 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 
 	definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string->second.c_str() });
 
-	auto one_or_zero_value = [&](ShaderFlags::type mask, ShaderFlags::type value)
+	if ((sanitized_flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
-		return ((sanitized_flags & mask) == value) ? "1" : "0";
-	};
+		definitions.push_back({ "FVF_RHW", "1" });
+	}
 
-	auto one_or_zero = [&](ShaderFlags::type mask)
+	if ((sanitized_flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZ)
 	{
-		return one_or_zero_value(mask, mask);
-	};
+		definitions.push_back({ "FVF_XYZ", "1" });
+	}
 
-	definitions.push_back({ "FVF_RHW", one_or_zero_value(D3DFVF_POSITION_MASK, D3DFVF_XYZRHW) });
-	definitions.push_back({ "FVF_XYZ", one_or_zero_value(D3DFVF_POSITION_MASK, D3DFVF_XYZ) });
-	definitions.push_back({ "FVF_NORMAL", one_or_zero(D3DFVF_NORMAL) });
-	definitions.push_back({ "FVF_DIFFUSE", one_or_zero(D3DFVF_DIFFUSE) });
-	definitions.push_back({ "FVF_SPECULAR", one_or_zero(D3DFVF_SPECULAR) });
+	if ((sanitized_flags & D3DFVF_NORMAL) != 0)
+	{
+		definitions.push_back({ "FVF_NORMAL", "1" });
+	}
+
+	if ((sanitized_flags & D3DFVF_DIFFUSE) != 0)
+	{
+		definitions.push_back({ "FVF_DIFFUSE", "1" });
+	}
+
+	if ((sanitized_flags & D3DFVF_SPECULAR) != 0)
+	{
+		definitions.push_back({ "FVF_SPECULAR", "1" });
+	}
 
 	if (sanitized_flags & D3DFVF_TEXCOUNT_MASK)
 	{
@@ -284,13 +293,25 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		definitions.push_back({ "FVF_TEXCOUNT", "0" });
 	}
 
-	constexpr ShaderFlags::type lighting_mask = ShaderFlags::rs_lighting | D3DFVF_NORMAL;
+	auto one_or_zero = [&](ShaderFlags::type mask)
+	{
+		return (sanitized_flags & mask) != 0 ? "1" : "0";
+	};
 
-	definitions.push_back({ "RS_LIGHTING", one_or_zero_value(lighting_mask, lighting_mask) });
-	definitions.push_back({ "RS_SPECULAR", one_or_zero(ShaderFlags::rs_specular) });
-	definitions.push_back({ "RS_ALPHA", one_or_zero(ShaderFlags::rs_alpha) });
-	definitions.push_back({ "RS_FOG", one_or_zero(ShaderFlags::rs_fog) });
-	definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
+	if (is_uber)
+	{
+		definitions.push_back({ "UBER", "1" });
+	}
+	else
+	{
+		definitions.push_back({ "UBER", "0" });
+
+		definitions.push_back({ "RS_LIGHTING", one_or_zero(ShaderFlags::rs_lighting) });
+		definitions.push_back({ "RS_SPECULAR", one_or_zero(ShaderFlags::rs_specular) });
+		definitions.push_back({ "RS_ALPHA", one_or_zero(ShaderFlags::rs_alpha) });
+		definitions.push_back({ "RS_FOG", one_or_zero(ShaderFlags::rs_fog) });
+		definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
+	}
 
 	shader_preproc_definitions[sanitized_flags] = std::move(definitions);
 	return shader_preproc_definitions[sanitized_flags];
@@ -309,29 +330,14 @@ static constexpr auto SHADER_COMPILER_FLAGS =
 #endif
 ;
 
-VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags,
-                                     bool speedy_speed_boy,
-                                     std::unordered_map<ShaderFlags::type, VertexShader>& shaders,
-                                     std::recursive_mutex& mutex)
+VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
+                                              std::unordered_map<ShaderFlags::type, VertexShader>& shaders,
+                                              std::shared_mutex& mutex,
+                                              bool is_uber)
 {
-	flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
-
-	{
-		std::lock_guard<std::recursive_mutex> lock(mutex);
-
-		const auto it = shaders.find(flags);
-
-		if (it != shaders.end())
-		{
-			return it->second;
-		}
-	}
-
 	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vs_map.size() + 1);
 
-	auto preproc = shader_preprocess(flags);
-	preproc.push_back({ "SPEEDY_SPEED_BOY", speedy_speed_boy ? "1" : "0"});
-	
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
 	ComPtr<ID3DBlob> errors;
@@ -367,47 +373,33 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags,
 	}
 
 	{
-		std::lock_guard<std::recursive_mutex> lock(mutex);
+		std::unique_lock lock(mutex);
 
 		auto result = VertexShader(shader, blob);
 		shaders[flags] = result;
 
-		LOCK(permutation_mutex);
+		_LOCK(permutation_mutex);
 
 		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
 		{
 			OutputDebugStringA("writing vs permutation to permutation file\n");
 			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
 			permutation_cache.flush();
+			permutation_flags.insert(flags);
 		}
 
 		return result;
 	}
 }
 
-PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags,
-                                    bool speedy_speed_boy,
-                                    std::unordered_map<ShaderFlags::type, PixelShader>& shaders,
-                                    std::recursive_mutex& mutex)
+PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
+                                             std::unordered_map<ShaderFlags::type, PixelShader>& shaders,
+                                             std::shared_mutex& mutex,
+                                             bool is_uber)
 {
-	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
-
-	{
-		std::lock_guard<std::recursive_mutex> lock(mutex);
-
-		const auto it = shaders.find(flags);
-
-		if (it != shaders.end())
-		{
-			return it->second;
-		}
-	}
-
 	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, shaders.size() + 1);
 
-	auto preproc = shader_preprocess(flags);
-	preproc.push_back({ "SPEEDY_SPEED_BOY", speedy_speed_boy ? "1" : "0" });
-	
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
 	ComPtr<ID3DBlob> errors;
@@ -443,22 +435,121 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags,
 	}
 
 	{
-		std::lock_guard<std::recursive_mutex> lock(mutex);
+		std::unique_lock lock(mutex);
 
 		auto result = PixelShader(shader, blob);
 		shaders[flags] = result;
 
-		LOCK(permutation_mutex);
+		_LOCK(permutation_mutex);
 
 		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
 		{
 			OutputDebugStringA("writing ps permutation to permutation file\n");
 			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
 			permutation_cache.flush();
+			permutation_flags.insert(flags);
 		}
 
 		return result;
 	}
+}
+
+VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool use_uber_shader_fallback)
+{
+	flags = ShaderFlags::sanitize(flags);
+
+	const auto base_flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
+	const auto uber_flags = ShaderFlags::sanitize(flags & ShaderFlags::uber_vs_mask);
+
+	{
+		std::shared_lock lock(vs_mutex);
+
+		const auto it = vertex_shaders.find(base_flags);
+
+		if (it != vertex_shaders.end())
+		{
+			return it->second;
+		}
+	}
+
+	if (!use_uber_shader_fallback)
+	{
+		return get_vs_internal(base_flags, vertex_shaders, vs_mutex, false);
+	}
+
+	{
+		std::shared_lock lock(uber_vs_mutex);
+
+#ifdef SHADER_ASYNC_COMPILE
+		auto enqueue_function = [this](const ShaderCompilationQueueEntry& e)
+		{
+			get_vs_internal(e.flags, vertex_shaders, vs_mutex, false);
+		};
+
+		shader_compilation_queue.enqueue(ShaderCompilationType::vertex, base_flags, enqueue_function);
+#else
+		get_vs_internal(base_flags, vertex_shaders, vs_mutex, false);
+#endif
+
+		const auto it = uber_vertex_shaders.find(uber_flags);
+
+		if (it != uber_vertex_shaders.end())
+		{
+			return it->second;
+		}
+	}
+
+	auto result = get_vs_internal(uber_flags, uber_vertex_shaders, uber_vs_mutex, true);
+	return result;
+}
+
+PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool use_uber_shader_fallback)
+{
+	flags = ShaderFlags::sanitize(flags);
+
+	const auto base_flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
+	const auto uber_flags = ShaderFlags::sanitize(flags & ShaderFlags::uber_ps_mask);
+
+	{
+		std::shared_lock lock(ps_mutex);
+
+		const auto it = pixel_shaders.find(base_flags);
+
+		if (it != pixel_shaders.end())
+		{
+			return it->second;
+		}
+	}
+
+	if (!use_uber_shader_fallback)
+	{
+		return get_ps_internal(base_flags, pixel_shaders, ps_mutex, false);
+	}
+
+	{
+		std::shared_lock lock(uber_ps_mutex);
+
+#ifdef SHADER_ASYNC_COMPILE
+		auto enqueue_function = [this](const ShaderCompilationQueueEntry& e)
+		{
+			get_ps_internal(e.flags, pixel_shaders, ps_mutex, false);
+		};
+
+		shader_compilation_queue.enqueue(ShaderCompilationType::pixel, base_flags, enqueue_function);
+#else
+		get_ps_internal(base_flags, pixel_shaders, ps_mutex, false);
+#endif
+
+		const auto it = uber_pixel_shaders.find(uber_flags);
+
+		if (it != uber_pixel_shaders.end())
+		{
+			return it->second;
+		}
+	}
+
+	auto result = get_ps_internal(uber_flags, uber_pixel_shaders, uber_ps_mutex, true);
+	return result;
 }
 
 void Direct3DDevice8::create_depth_stencil()
@@ -804,10 +895,17 @@ void Direct3DDevice8::create_native()
 			{
 				ShaderFlags::type flags = 0;
 
+				auto start = file.tellg();
 				file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
+				auto end = file.tellg();
+
+				if (end - start != sizeof(flags))
+				{
+					break;
+				}
 
 				{
-					LOCK(permutation_mutex);
+					_LOCK(permutation_mutex);
 					permutation_flags.insert(flags);
 				}
 
@@ -815,13 +913,10 @@ void Direct3DDevice8::create_native()
 				ss << "compiling: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
 				OutputDebugStringA(ss.str().c_str());
 
-				//get_ps(flags & ShaderFlags::ps_mask, false, pixel_shaders, ps_mutex);
-				//get_vs(flags & ShaderFlags::vs_mask, false, vertex_shaders, vs_mutex);
-
 				VertexShader vs_dummy;
 				PixelShader ps_dummy;
 
-				compile_shaders(flags, vs_dummy, ps_dummy);
+				compile_shaders(flags, &vs_dummy, &ps_dummy);
 			}
 
 			OutputDebugStringA("done\n");
@@ -920,6 +1015,7 @@ void Direct3DDevice8::create_native()
 	FVF = 0;
 	FVF.mark();
 
+	uber_shader_flags.mark();
 	per_scene.mark();
 	per_model.mark();
 	per_pixel.mark();
@@ -929,23 +1025,6 @@ void Direct3DDevice8::create_native()
 	oit_init();
 
 	update();
-}
-
-ShaderFlags::type ShaderFlags::sanitize(type flags)
-{
-	flags &= mask;
-
-	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
-	{
-		flags &= ~rs_lighting;
-	}
-
-	if (flags & rs_oit && !(flags & rs_alpha))
-	{
-		flags &= ~rs_oit;
-	}
-
-	return flags;
 }
 
 bool DepthStencilFlags::dirty() const
@@ -1046,7 +1125,8 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device
 	  focus_window(focus_window),
 	  behavior_flags(behavior_flags),
 	  present_params(parameters),
-	  d3d(d3d)
+	  d3d(d3d),
+	  shader_compilation_queue(std::thread::hardware_concurrency())
 {
 	fragments_str = std::to_string(globals::max_fragments);
 }
@@ -2864,7 +2944,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 
 void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
-	const auto& preproc = shader_preprocess(shader_flags);
+	const auto& preproc = shader_preprocess(shader_flags, false); // WIP: assuming non-uber
 	for (auto& fn : draw_prologues[callback])
 	{
 		fn(preproc, shader_flags);
@@ -2873,7 +2953,7 @@ void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 
 void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
-	const auto& preproc = shader_preprocess(shader_flags);
+	const auto& preproc = shader_preprocess(shader_flags, false); // WIP: assuming non-uber
 	for (auto& fn : draw_epilogues[callback])
 	{
 		fn(preproc, shader_flags);
@@ -3700,7 +3780,7 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	auto vs = get_vs(shader_flags, true, vertex_speed_shaders, vs_speed_mutex);
+	VertexShader vs = get_vs(shader_flags, true);
 
 	ComPtr<ID3D11InputLayout> layout;
 
@@ -3722,6 +3802,22 @@ bool Direct3DDevice8::update_input_layout()
 	OutputDebugStringA(ss.str().c_str());
 
 	return true;
+}
+
+void Direct3DDevice8::commit_uber_shader_flags()
+{
+	if (!uber_shader_flags.dirty())
+	{
+		return;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mapped {};
+	context->Map(uber_shader_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+
+	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	uber_shader_flags.write(writer);
+	context->Unmap(uber_shader_cbuffer.Get(), 0);
+	uber_shader_flags.clear();
 }
 
 void Direct3DDevice8::commit_per_pixel()
@@ -3842,88 +3938,7 @@ void Direct3DDevice8::update_sampler()
 	}
 }
 
-std::optional<PixelShader> Direct3DDevice8::get_ps_async(ShaderFlags::type flags)
-{
-	flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
-
-	{
-		LOCK(ps_tasks_mutex);
-
-		auto task_it = ps_tasks.find(flags);
-
-		if (task_it != ps_tasks.end())
-		{
-			auto status = task_it->second.wait_for(std::chrono::milliseconds(0));
-
-			if (status == std::future_status::ready)
-			{
-				auto result = task_it->second.get();
-				ps_tasks.erase(task_it);
-				return result;
-			}
-
-			return std::nullopt;
-		}
-
-		// clean
-		for (auto it = ps_tasks.begin(); it != ps_tasks.end();)
-		{
-			auto status = it->second.wait_for(std::chrono::milliseconds(0));
-
-			if (status == std::future_status::ready)
-			{
-				if (it->first != flags)
-				{
-					it = ps_tasks.erase(it);
-				}
-				else
-				{
-					auto result = it->second.get();
-					ps_tasks.erase(it);
-					return result;
-				}
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-
-	{
-		LOCK(ps_mutex);
-
-		const auto ps_it = pixel_shaders.find(flags);
-
-		if (ps_it != pixel_shaders.end())
-		{
-			LOCK(ps_tasks_mutex);
-			ps_tasks.erase(ps_it->first);
-			return ps_it->second;
-		}
-	}
-
-	{
-		LOCK(ps_tasks_mutex);
-
-		if (ps_tasks.size() >= std::thread::hardware_concurrency())
-		{
-			//OutputDebugStringA("PS TASK COUNT REACHED HARDWARE LIMIT\n");
-			return std::nullopt;
-		}
-
-		auto task = std::async(std::launch::async, [this, flags]() -> auto
-		{
-			return get_ps(flags, false, pixel_shaders, ps_mutex);
-		});
-
-		ps_tasks[flags] = std::move(task);
-	}
-
-	return std::nullopt;
-}
-
-void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps)
+void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps)
 {
 	int result;
 
@@ -3931,25 +3946,8 @@ void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader& vs,
 	{
 		try
 		{
-			vs = get_vs(flags, false, vertex_shaders, vs_mutex);
-
-		#ifdef SHADER_ASYNC_COMPILE
-			auto ps_async = get_ps_async(flags);
-
-			if (ps_async.has_value())
-			{
-				ps = ps_async.value();
-			}
-			#ifdef SHADER_FAST_FALLBACK
-			else
-			{
-				ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
-			}
-			#endif
-		#else
-			ps = get_ps(flags, true, pixel_shaders, ps_speed_mutex);
-		#endif
-
+			*vs = get_vs(flags, true);
+			*ps = get_ps(flags, true);
 			break;
 		}
 		catch (std::exception& ex)
@@ -3972,7 +3970,13 @@ void Direct3DDevice8::update_shaders()
 
 	shader_flags = ShaderFlags::sanitize(shader_flags);
 
-	shader_preprocess(shader_flags);
+	uber_shader_flags.rs_lighting = (shader_flags & ShaderFlags::rs_lighting) != 0;
+	uber_shader_flags.rs_specular = (shader_flags & ShaderFlags::rs_specular) != 0;
+	uber_shader_flags.rs_alpha    = (shader_flags & ShaderFlags::rs_alpha) != 0;
+	uber_shader_flags.rs_fog      = (shader_flags & ShaderFlags::rs_fog) != 0;
+	uber_shader_flags.rs_oit      = (shader_flags & ShaderFlags::rs_oit) != 0;
+
+	commit_uber_shader_flags();
 
 	if (last_shader_flags == shader_flags)
 	{
@@ -3982,27 +3986,21 @@ void Direct3DDevice8::update_shaders()
 	VertexShader vs;
 	PixelShader ps;
 
-	compile_shaders(shader_flags, vs, ps);
+	compile_shaders(shader_flags, &vs, &ps);
 
-	if ((shader_flags & ShaderFlags::vs_mask) != (last_shader_flags & ShaderFlags::vs_mask))
+	if (vs != current_vs)
 	{
 		context->VSSetShader(vs.shader.Get(), nullptr, 0);
+		current_vs = vs;
 	}
 
-	if ((shader_flags & ShaderFlags::ps_mask) != (last_shader_flags & ShaderFlags::ps_mask))
+	if (ps != current_ps)
 	{
 		context->PSSetShader(ps.shader.Get(), nullptr, 0);
+		current_ps = ps;
 	}
 
 	last_shader_flags = shader_flags;
-
-	if (!ps.has_value())
-	{
-		last_shader_flags &= ShaderFlags::ps_mask;
-	}
-
-	current_vs = vs;
-	current_ps = ps;
 }
 
 void Direct3DDevice8::update_blend()
@@ -4183,19 +4181,16 @@ bool Direct3DDevice8::skip_draw() const
 
 void Direct3DDevice8::free_shaders()
 {
+	shader_compilation_queue.shutdown();
+	shader_compilation_queue.start();
+
 	last_shader_flags = ShaderFlags::mask;
 
-	LOCK(ps_tasks_mutex);
-	ps_tasks.clear();
-
-	LOCK(vs_tasks_mutex);
-	vs_tasks.clear();
-
-	LOCK(shader_sources_mutex);
-	LOCK(vs_mutex);
-	LOCK(vs_speed_mutex);
-	LOCK(ps_mutex);
-	LOCK(ps_speed_mutex);
+	_LOCK(shader_sources_mutex);
+	std::unique_lock vs_lock(vs_mutex);
+	std::unique_lock ps_lock(ps_mutex);
+	std::unique_lock uber_vs_lock(uber_vs_mutex);
+	std::unique_lock uber_ps_lock(uber_ps_mutex);
 
 	current_vs = {};
 	current_ps = {};
@@ -4203,8 +4198,8 @@ void Direct3DDevice8::free_shaders()
 	shader_sources.clear();
 	vertex_shaders.clear();
 	pixel_shaders.clear();
-	vertex_speed_shaders.clear();
-	pixel_speed_shaders.clear();
+	uber_vertex_shaders.clear();
+	uber_pixel_shaders.clear();
 
 	fvf_layouts.clear();
 
@@ -4221,6 +4216,7 @@ void Direct3DDevice8::free_shaders()
 		pair.second.mark();
 	}
 
+	uber_shader_flags.mark();
 	per_model.mark();
 	per_pixel.mark();
 	per_scene.mark();

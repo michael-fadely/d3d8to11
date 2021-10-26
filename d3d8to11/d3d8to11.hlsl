@@ -20,6 +20,7 @@
 #ifdef RS_LIGHTING
 	#ifdef FVF_RHW
 		#undef RS_LIGHTING
+		#define RS_LIGHTING 0
 	#endif
 #endif
 
@@ -158,39 +159,22 @@ struct VS_OUTPUT
 	float4 uv[8] : TEXCOORD;
 };
 
-#define UBER 1
-
-#if defined(UBER) && UBER == 1
-
-#define SHADER_FLAGS_BEGIN \
-	cbuffer PerSceneBuffer : register(b0) \
-	{
-
-#define SHADER_FLAGS_END }
-
-#define SHADER_FLAG(NAME) bool NAME;
-#define SHADER_FLAG_CHECK(NAME) NAME == true
-
+#if UBER == 1
+cbuffer PerSceneBuffer : register(b0)
+{
+	bool rs_lighting;
+	bool rs_specular;
+	bool rs_alpha;
+	bool rs_fog;
+	bool rs_oit;
+}
 #else
-
-#define SHADER_FLAGS_BEGIN
-#define SHADER_FLAGS_END
-
-#define SHADER_FLAG(NAME)
-
-#define SHADER_FLAG_CHECK(NAME) (NAME) == 1
-
+static const bool rs_lighting = (bool)RS_LIGHTING;
+static const bool rs_specular = (bool)RS_SPECULAR;
+static const bool rs_alpha = (bool)RS_ALPHA;
+static const bool rs_fog = (bool)RS_FOG;
+static const bool rs_oit = (bool)RS_OIT;
 #endif
-
-SHADER_FLAGS_BEGIN
-
-SHADER_FLAG(RS_LIGHTING)
-SHADER_FLAG(RS_SPECULAR)
-SHADER_FLAG(RS_ALPHA)
-SHADER_FLAG(RS_FOG)
-SHADER_FLAG(RS_OIT)
-
-SHADER_FLAGS_END
 
 cbuffer PerSceneBuffer : register(b1)
 {
@@ -266,7 +250,7 @@ float calc_fog(float d)
 
 float4 white_not_lit(float4 color)
 {
-	if (SHADER_FLAG_CHECK(RS_LIGHTING))
+	if (rs_lighting)
 	{
 		return color;
 	}
@@ -278,7 +262,7 @@ float4 white_not_lit(float4 color)
 
 float4 black_not_lit(float4 color)
 {
-	if (SHADER_FLAG_CHECK(RS_LIGHTING))
+	if (rs_lighting)
 	{
 		return color;
 	}
@@ -306,7 +290,7 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 	float p;
 	float3 view_dir;
 
-	if (SHADER_FLAG_CHECK(RS_SPECULAR))
+	if (rs_specular)
 	{
 		p = max(0, material.power);
 		view_dir = normalize(view_position - world_position.xyz);
@@ -398,7 +382,7 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 		// sum(Atteni*Spoti*Lai)
 		ambient += Atten * Spot * lights[i].ambient;
 
-		if (SHADER_FLAG_CHECK(RS_SPECULAR))
+		if (rs_specular)
 		{
 			float4 Ls = lights[i].specular;
 
@@ -422,9 +406,10 @@ void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 
 	*/
 	diffuse = saturate(diffuse);
 
-	#ifdef RS_SPECULAR
+	if (rs_specular)
+	{
 		specular = float4(saturate(c_s * saturate(specular)).rgb, 0);
-	#endif
+	}
 
 	out_diffuse.rgb = saturate(diffuse.rgb + ambient.rgb);
 	out_specular.rgb = specular.rgb;
@@ -653,11 +638,14 @@ void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specula
 	diffuse = input.diffuse;
 	specular = input.specular;
 
-#if defined(PIXEL_LIGHTING) && RS_LIGHTING == 1
-	perform_lighting(input.ambient, input.diffuse, input.specular, input.w_position, normalize(input.w_normal),
-	                 diffuse, specular);
+#if defined(PIXEL_LIGHTING)
+	if (rs_lighting)
+	{
+		perform_lighting(input.ambient, input.diffuse, input.specular, input.w_position, normalize(input.w_normal),
+		                 diffuse, specular);
 
-	diffuse = saturate(diffuse + input.emissive);
+		diffuse = saturate(diffuse + input.emissive);
+	}
 #endif
 }
 
@@ -772,19 +760,21 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 	float4 result = (float4)1;
 #endif
 
-#ifdef RS_SPECULAR
-	result.rgb = saturate(result.rgb + specular.rgb);
-#endif
+	if (rs_specular)
+	{
+		result.rgb = saturate(result.rgb + specular.rgb);
+	}
 
 	return result;
 }
 
 float4 apply_fog(float4 result, float fog)
 {
-#ifdef RS_FOG
-	float factor = calc_fog(fog);
-	result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
-#endif
+	if (rs_fog)
+	{
+		float factor = calc_fog(fog);
+		result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
+	}
 
 	return result;
 }
@@ -797,33 +787,39 @@ bool is_standard_blending()
 
 void do_alpha_reject(float4 result, bool standard_blending)
 {
-#ifdef RS_ALPHA
-	#ifdef RS_OIT
-		// if we're using OIT and the alpha is 0,
-		// don't bother sorting it, but also don't
-		// subject it to alpha rejection.
-		if (standard_blending)
+	if (rs_alpha)
+	{
+		if (rs_oit)
 		{
-			if (floor(result.a * 255) < 1)
+			// if we're using OIT and the alpha is 0,
+			// don't bother sorting it, but also don't
+			// subject it to alpha rejection.
+			if (standard_blending)
 			{
-				clip(-1);
+				if (floor(result.a * 255) < 1)
+				{
+					clip(-1);
+				}
 			}
+
 		}
-	#else
-		if (alpha_reject == true)
+		else
 		{
-			uint alpha = floor(result.a * 255);
-			uint threshold = floor(alpha_reject_threshold * 255);
-			clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
+			if (alpha_reject == true)
+			{
+				uint alpha = floor(result.a * 255);
+				uint threshold = floor(alpha_reject_threshold * 255);
+				clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
+			}
+
 		}
-	#endif
-#endif
+	}
 }
 
 void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 {
-#if defined(RS_OIT) && defined(RS_ALPHA)
-
+	if (rs_oit && rs_alpha)
+	{
 	#if !defined(FVF_RHW)
 		// if the pixel is effectively opaque with actual blending,
 		// write it directly to the backbuffer as opaque
@@ -849,153 +845,156 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 		}
 	#endif
 
-	uint new_index = frag_list_nodes.IncrementCounter();
+		uint new_index = frag_list_nodes.IncrementCounter();
 
-	if (new_index >= buffer_len)
-	{
+		if (new_index >= buffer_len)
+		{
+			clip(-1);
+		}
+
+		uint old_index;
+		InterlockedExchange(frag_list_head[input.position.xy], new_index, old_index);
+
+		OitNode n;
+
+		n.depth = input.depth.x / input.depth.y;
+		n.color = float4_to_unorm(result);
+		n.flags = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
+		n.next = old_index;
+
+		frag_list_nodes[new_index] = n;
 		clip(-1);
 	}
-
-	uint old_index;
-	InterlockedExchange(frag_list_head[input.position.xy], new_index, old_index);
-
-	OitNode n;
-
-	n.depth = input.depth.x / input.depth.y;
-	n.color = float4_to_unorm(result);
-	n.flags = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
-	n.next  = old_index;
-
-	frag_list_nodes[new_index] = n;
-	clip(-1);
-#endif
 }
 
 void get_colors(in VS_INPUT input, inout VS_OUTPUT result)
 {
 	if (color_vertex == true)
 	{
-	#ifndef RS_LIGHTING
-		#ifdef FVF_DIFFUSE
-			result.diffuse = input.diffuse;
-		#else
-			result.diffuse = float4(1, 1, 1, 1);
-		#endif
-
-		#ifdef FVF_SPECULAR
-			result.specular = input.specular;
-		#else
-			result.specular = float4(0, 0, 0, 0);
-		#endif
-	#else
-		switch (material_sources.ambient)
+		if (rs_lighting)
 		{
-			case CS_MATERIAL:
-				result.ambient = black_not_lit(material.ambient);
-				break;
-
-			case CS_COLOR1:
-			#ifdef FVF_DIFFUSE
-				result.ambient = input.diffuse;
-			#else
-				result.ambient = black_not_lit(material.ambient);
-			#endif
-				break;
-
-			case CS_COLOR2:
-			#ifdef FVF_SPECULAR
-				result.ambient = input.specular;
-			#else
-				result.ambient = black_not_lit(material.ambient);
-			#endif
-				break;
-
-			default:
-				result.ambient = float4(1, 0, 0, 1);
-				break;
-		}
-
-		switch (material_sources.diffuse)
-		{
-			case CS_MATERIAL:
-				result.diffuse = white_not_lit(material.diffuse);
-				break;
-
-			case CS_COLOR1:
 			#ifdef FVF_DIFFUSE
 				result.diffuse = input.diffuse;
 			#else
-				result.diffuse = white_not_lit(material.diffuse);
+				result.diffuse = float4(1, 1, 1, 1);
 			#endif
-				break;
 
-			case CS_COLOR2:
-			#ifdef FVF_SPECULAR
-				result.diffuse = input.specular;
-			#else
-				result.diffuse = white_not_lit(material.diffuse);
-			#endif
-				break;
-
-			default:
-				result.diffuse = float4(1, 0, 0, 1);
-				break;
-		}
-
-		switch (material_sources.specular)
-		{
-			case CS_MATERIAL:
-				result.specular = black_not_lit(material.specular);
-				break;
-
-			case CS_COLOR1:
-			#ifdef FVF_DIFFUSE
-				result.specular = input.diffuse;
-			#else
-				result.specular = black_not_lit(material.specular);
-			#endif
-				break;
-
-			case CS_COLOR2:
 			#ifdef FVF_SPECULAR
 				result.specular = input.specular;
 			#else
-				result.specular = black_not_lit(material.specular);
+				result.specular = float4(0, 0, 0, 0);
 			#endif
-				break;
-
-			default:
-				result.specular = float4(1, 0, 0, 1);
-				break;
 		}
-
-		switch (material_sources.emissive)
+		else
 		{
-			case CS_MATERIAL:
-				result.emissive = black_not_lit(material.emissive);
-				break;
+			switch (material_sources.ambient)
+			{
+				case CS_MATERIAL:
+					result.ambient = black_not_lit(material.ambient);
+					break;
 
-			case CS_COLOR1:
-			#ifdef FVF_DIFFUSE
-				result.emissive = input.diffuse;
-			#else
-				result.emissive = black_not_lit(material.emissive);
-			#endif
-				break;
+				case CS_COLOR1:
+				#ifdef FVF_DIFFUSE
+					result.ambient = input.diffuse;
+				#else
+					result.ambient = black_not_lit(material.ambient);
+				#endif
+					break;
 
-			case CS_COLOR2:
-			#ifdef FVF_SPECULAR
-				result.emissive = input.specular;
-			#else
-				result.emissive = black_not_lit(material.emissive);
-			#endif
-				break;
+				case CS_COLOR2:
+				#ifdef FVF_SPECULAR
+					result.ambient = input.specular;
+				#else
+					result.ambient = black_not_lit(material.ambient);
+				#endif
+					break;
 
-			default:
-				result.emissive = float4(1, 0, 0, 1);
-				break;
+				default:
+					result.ambient = float4(1, 0, 0, 1);
+					break;
+			}
+
+			switch (material_sources.diffuse)
+			{
+				case CS_MATERIAL:
+					result.diffuse = white_not_lit(material.diffuse);
+					break;
+
+				case CS_COLOR1:
+				#ifdef FVF_DIFFUSE
+					result.diffuse = input.diffuse;
+				#else
+					result.diffuse = white_not_lit(material.diffuse);
+				#endif
+					break;
+
+				case CS_COLOR2:
+				#ifdef FVF_SPECULAR
+					result.diffuse = input.specular;
+				#else
+					result.diffuse = white_not_lit(material.diffuse);
+				#endif
+					break;
+
+				default:
+					result.diffuse = float4(1, 0, 0, 1);
+					break;
+			}
+
+			switch (material_sources.specular)
+			{
+				case CS_MATERIAL:
+					result.specular = black_not_lit(material.specular);
+					break;
+
+				case CS_COLOR1:
+				#ifdef FVF_DIFFUSE
+					result.specular = input.diffuse;
+				#else
+					result.specular = black_not_lit(material.specular);
+				#endif
+					break;
+
+				case CS_COLOR2:
+				#ifdef FVF_SPECULAR
+					result.specular = input.specular;
+				#else
+					result.specular = black_not_lit(material.specular);
+				#endif
+					break;
+
+				default:
+					result.specular = float4(1, 0, 0, 1);
+					break;
+			}
+
+			switch (material_sources.emissive)
+			{
+				case CS_MATERIAL:
+					result.emissive = black_not_lit(material.emissive);
+					break;
+
+				case CS_COLOR1:
+				#ifdef FVF_DIFFUSE
+					result.emissive = input.diffuse;
+				#else
+					result.emissive = black_not_lit(material.emissive);
+				#endif
+					break;
+
+				case CS_COLOR2:
+				#ifdef FVF_SPECULAR
+					result.emissive = input.specular;
+				#else
+					result.emissive = black_not_lit(material.emissive);
+				#endif
+					break;
+
+				default:
+					result.emissive = float4(1, 0, 0, 1);
+					break;
+			}
 		}
-	#endif
 	}
 	else
 	{
@@ -1161,20 +1160,23 @@ VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 	transform(input, result);
 	get_colors(input, result);
 
-#if defined(VERTEX_LIGHTING) && RS_LIGHTING == 1
-	float4 diffuse;
-	float4 specular;
+#if defined(VERTEX_LIGHTING)
+	if (rs_lighting)
+	{
+		float4 diffuse;
+		float4 specular;
 
-	perform_lighting(result.ambient,
-	                 result.diffuse,
-	                 result.specular,
-	                 result.w_position,
-	                 result.w_normal,
-	                 diffuse,
-	                 specular);
+		perform_lighting(result.ambient,
+		                 result.diffuse,
+		                 result.specular,
+		                 result.w_position,
+		                 result.w_normal,
+		                 diffuse,
+		                 specular);
 
-	result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
-	result.specular.rgb = specular.rgb;
+		result.diffuse.rgb  = saturate(result.emissive.rgb + diffuse.rgb);
+		result.specular.rgb = specular.rgb;
+	}
 #endif
 
 	output_texcoord(input, result);

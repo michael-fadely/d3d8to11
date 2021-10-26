@@ -4,6 +4,9 @@
 #include <deque>
 #include <unordered_map>
 #include <fstream>
+#include <unordered_set>
+#include <shared_mutex>
+#include <mutex>
 
 #include <d3d11_1.h>
 #include <wrl/client.h>
@@ -14,10 +17,9 @@
 #include "Shader.h"
 #include "cbuffers.h"
 #include "hash_combine.h"
-#include <future>
-#include <optional>
 #include "alignment.h"
-#include <unordered_set>
+#include "ShaderCompilationQueue.h"
+#include "ShaderFlags.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -30,45 +32,6 @@ using Direct3DCubeTexture8 = void;
 using Direct3DVolumeTexture8 = void;
 
 using Microsoft::WRL::ComPtr;
-
-struct ShaderFlags
-{
-	using type = uint64_t;
-
-	enum T : type
-	{
-		none,
-		rs_lighting      = 0b00001000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_specular      = 0b00010000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_alpha         = 0b00100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_fog           = 0b01000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		rs_oit           = 0b10000000'00000000'00000000'00000000'00000000'00000000'00000000'00000000,
-		fvf_position     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110,
-		fvf_fields       = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'11110000,
-		fvf_texcount     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00001111'00000000,
-		fvf_lastbeta     = 0b00000000'00000000'00000000'00000000'00000000'00000000'00010000'00000000,
-		fvf_texfmt       = 0b00000000'00000000'00000000'00000000'11111111'11111111'00000000'00000000,
-		stage_count_mask = 0b00000000'00000000'00000000'00001111'00000000'00000000'00000000'00000000,
-		fvf_mask         = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
-		rs_mask          = rs_lighting | rs_specular | rs_alpha | rs_fog | rs_oit,
-		mask             = rs_mask | fvf_mask | stage_count_mask,
-		count
-	};
-
-	static constexpr type stage_count_shift = 32;
-
-	static constexpr type light_sanitize_flags = rs_lighting | rs_specular |
-	                                             D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_NORMAL | D3DFVF_XYZRHW;
-
-#ifdef PER_PIXEL
-	// TODO
-#else
-	static constexpr type vs_mask = rs_lighting | rs_specular | fvf_mask;
-	static constexpr type ps_mask = stage_count_mask | rs_mask | light_sanitize_flags;
-#endif
-
-	static type sanitize(type flags);
-};
 
 struct DepthFlags
 {
@@ -353,12 +316,14 @@ public:
 	std::recursive_mutex shader_preproc_mutex;
 	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
 	[[nodiscard]] size_t count_texture_stages() const;
-	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags);
+	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags, bool is_uber);
 
 	void draw_call_increment();
 
-	VertexShader get_vs(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::recursive_mutex& mutex);
-	PixelShader get_ps(ShaderFlags::type flags, bool speedy_speed_boy, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::recursive_mutex& mutex);
+	VertexShader get_vs_internal(ShaderFlags::type flags, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::shared_mutex& mutex, bool is_uber);
+	PixelShader get_ps_internal(ShaderFlags::type flags, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::shared_mutex& mutex, bool is_uber);
+	VertexShader get_vs(ShaderFlags::type flags, bool use_uber_shader_fallback);
+	PixelShader get_ps(ShaderFlags::type flags, bool use_uber_shader_fallback);
 	void create_depth_stencil();
 	void create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc);
 	void create_render_target(D3D11_TEXTURE2D_DESC& tex_desc);
@@ -369,13 +334,13 @@ public:
 	void oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE);
 	void oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE);
 	bool update_input_layout();
+	void commit_uber_shader_flags();
 	void commit_per_pixel();
 	void commit_per_model();
 	void commit_per_scene();
 	void commit_per_texture();
 	void update_sampler();
-	std::optional<PixelShader> get_ps_async(ShaderFlags::type flags);
-	void compile_shaders(ShaderFlags::type flags, VertexShader& vs, PixelShader& ps);
+	void compile_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps);
 	void update_shaders();
 	void update_blend();
 	void update_depth();
@@ -413,20 +378,17 @@ public:
 	VertexShader current_vs;
 	PixelShader current_ps;
 
-	std::recursive_mutex ps_mutex, ps_speed_mutex, vs_mutex, vs_speed_mutex;
+	ShaderCompilationQueue shader_compilation_queue;
+
+	std::shared_mutex ps_mutex, vs_mutex;
 
 	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
 
+	std::shared_mutex uber_ps_mutex, uber_vs_mutex;
+
 	std::unordered_map<ShaderFlags::type, VertexShader> uber_vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> uber_pixel_shaders;
-
-	std::recursive_mutex vs_tasks_mutex, ps_tasks_mutex;
-	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> vs_tasks;
-	std::unordered_map<ShaderFlags::type, std::future<PixelShader>> ps_tasks;
-
-	std::unordered_map<ShaderFlags::type, VertexShader> vertex_speed_shaders;
-	std::unordered_map<ShaderFlags::type, PixelShader>  pixel_speed_shaders;
 
 	D3DPRESENT_PARAMETERS8 present_params {};
 	ComPtr<IDXGISwapChain> swap_chain;

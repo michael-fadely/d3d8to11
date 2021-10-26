@@ -19,6 +19,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <shared_mutex>
+#include <mutex>
 
 // Windows
 #include <Windows.h>
@@ -42,6 +44,7 @@
 #include "alignment.h"
 #include "cbuffers.h"
 #include "CBufferWriter.h"
+#include "ShaderFlags.h"
 #include "d3d8to11.hpp"
 #include "d3d8to11_base.h"
 #include "d3d8to11_device.h"
