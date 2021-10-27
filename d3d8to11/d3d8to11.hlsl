@@ -871,7 +871,7 @@ void get_colors(in VS_INPUT input, inout VS_OUTPUT result)
 {
 	if (color_vertex == true)
 	{
-		if (rs_lighting)
+		if (!rs_lighting)
 		{
 			#ifdef FVF_DIFFUSE
 				result.diffuse = input.diffuse;
