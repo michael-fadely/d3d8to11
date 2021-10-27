@@ -160,7 +160,7 @@ struct VS_OUTPUT
 };
 
 #if UBER == 1
-cbuffer PerSceneBuffer : register(b0)
+cbuffer UberBuffer : register(b0)
 {
 	bool rs_lighting;
 	bool rs_specular;
