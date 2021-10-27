@@ -945,14 +945,14 @@ void Direct3DDevice8::create_native()
 				}
 			}
 
-			OutputDebugStringA("waiting for uber shader compilation to finish...");
+			OutputDebugStringA("waiting for uber shader compilation to finish...\n");
 
 			while (shader_compilation_queue.enqueued_count())
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
 
-			OutputDebugStringA("done\nenqueueing standard shaders now...");
+			OutputDebugStringA("done\nenqueueing standard shaders now...\n");
 
 			{
 				_LOCK(permutation_mutex);
