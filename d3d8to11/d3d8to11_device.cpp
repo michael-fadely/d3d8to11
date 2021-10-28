@@ -159,7 +159,7 @@ size_t Direct3DDevice8::count_texture_stages() const
 
 static std::unordered_map<size_t, std::string> digit_strings;
 
-const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber)
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber)
 {
 	static const std::array texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
@@ -193,15 +193,6 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 	auto sanitized_flags = ShaderFlags::sanitize(flags);
 	sanitized_flags &= ~ShaderFlags::stage_count_mask;
 	sanitized_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
-
-	//std::lock_guard shader_preproc_lock(shader_preproc_mutex);
-
-	//const auto it = shader_preproc_definitions.find(sanitized_flags);
-
-	//if (it != shader_preproc_definitions.end())
-	//{
-	//	return it->second;
-	//}
 
 	std::vector<D3D_SHADER_MACRO> definitions
 	{
@@ -313,8 +304,7 @@ const std::vector<D3D_SHADER_MACRO>& Direct3DDevice8::shader_preprocess(ShaderFl
 		definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
 	}
 
-	shader_preproc_definitions[sanitized_flags] = std::move(definitions);
-	return shader_preproc_definitions[sanitized_flags];
+	return definitions;
 }
 
 void Direct3DDevice8::draw_call_increment()
@@ -2995,7 +2985,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 
 void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
-	const auto& preproc = shader_preprocess(shader_flags, false); // WIP: assuming non-uber
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(shader_flags, false); // FIXME: assuming non-uber
 	for (auto& fn : draw_prologues[callback])
 	{
 		fn(preproc, shader_flags);
@@ -3004,7 +2994,7 @@ void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 
 void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
-	const auto& preproc = shader_preprocess(shader_flags, false); // WIP: assuming non-uber
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(shader_flags, false); // FIXME: assuming non-uber
 	for (auto& fn : draw_epilogues[callback])
 	{
 		fn(preproc, shader_flags);

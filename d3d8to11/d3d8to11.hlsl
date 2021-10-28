@@ -506,7 +506,7 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 		return color_arg2;
 	}
 
-	float4 result = (float4)0;
+	float4 result;
 
 	switch (color_op)
 	{
@@ -517,51 +517,63 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 		case TOP_MODULATE:
 			result = color_arg1 * color_arg2;
 			break;
+
 		case TOP_MODULATE2X:
 			result = 2 * (color_arg1 * color_arg2);
 			break;
+
 		case TOP_MODULATE4X:
 			result = 4 * (color_arg1 * color_arg2);
 			break;
+
 		case TOP_ADD:
 			result = color_arg1 + color_arg2;
 			break;
+
 		case TOP_ADDSIGNED:
 			result = (color_arg1 + color_arg2) - 0.5;
 			break;
+
 		case TOP_ADDSIGNED2X:
 			result = 2 * ((color_arg1 + color_arg2) - 0.5);
 			break;
+
 		case TOP_SUBTRACT:
 			result = color_arg1 - color_arg2;
 			break;
+
 		case TOP_ADDSMOOTH:
 			result = (color_arg1 + color_arg2) - (color_arg1 * color_arg2);
 			break;
+
 		case TOP_BLENDDIFFUSEALPHA:
 		{
 			float alpha = in_diffuse.a;
 			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
+
 		case TOP_BLENDTEXTUREALPHA:
 		{
 			float alpha = texel.a;
 			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
+
 		case TOP_BLENDFACTORALPHA:
 		{
 			float alpha = texture_factor.a;
 			result = (color_arg1 * alpha) + (color_arg2 * (1 - alpha));
 			break;
 		}
+
 		case TOP_BLENDTEXTUREALPHAPM:
 		{
 			float alpha = texel.a;
 			result = color_arg1 + (color_arg2 * (1 - alpha));
 			break;
 		}
+
 		case TOP_BLENDCURRENTALPHA:
 		{
 			float alpha = current.a;
@@ -571,30 +583,31 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 
 		case TOP_PREMODULATE: // TODO: NOT SUPPORTED
 			return float4(1, 0, 0, 1);
-			break;
 
 		case TOP_MODULATEALPHA_ADDCOLOR:
 			result = float4(color_arg1.rgb + (color_arg2.rgb * color_arg1.a), color_arg1.a * color_arg2.a);
 			break;
+
 		case TOP_MODULATECOLOR_ADDALPHA:
 			result = float4(color_arg1.rgb * color_arg2.rgb, color_arg1.a + color_arg2.a);
 			break;
+
 		case TOP_MODULATEINVALPHA_ADDCOLOR:
 			result = float4(color_arg1.rgb + (color_arg2.rgb * (1 - color_arg1.a)), color_arg1.a * color_arg2.a);
 			break;
+
 		case TOP_MODULATEINVCOLOR_ADDALPHA:
 			result = float4((1 - color_arg1.rgb) * color_arg2.rgb, color_arg1.a + color_arg2.a);
 			break;
 
 		case TOP_BUMPENVMAP: // TODO: NOT SUPPORTED
 			return float4(1, 0, 0, 1);
-			break;
+
 		case TOP_BUMPENVMAPLUMINANCE: // TODO: NOT SUPPORTED
 			return float4(1, 0, 0, 1);
-			break;
+
 		case TOP_DOTPRODUCT3: // TODO: NOT SUPPORTED
 			return float4(1, 0, 0, 1);
-			break;
 
 		case TOP_MULTIPLYADD:
 			result = color_arg1 + color_arg2 * color_arg0;
@@ -641,8 +654,13 @@ void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specula
 #if defined(PIXEL_LIGHTING)
 	if (rs_lighting)
 	{
-		perform_lighting(input.ambient, input.diffuse, input.specular, input.w_position, normalize(input.w_normal),
-		                 diffuse, specular);
+		perform_lighting(input.ambient,
+		                 input.diffuse,
+		                 input.specular,
+		                 input.w_position,
+		                 normalize(input.w_normal),
+		                 diffuse,
+		                 specular);
 
 		diffuse = saturate(diffuse + input.emissive);
 	}

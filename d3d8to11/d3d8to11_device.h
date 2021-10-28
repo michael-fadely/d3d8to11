@@ -313,10 +313,8 @@ public:
 
 	void print_info_queue() const;
 
-	std::recursive_mutex shader_preproc_mutex;
-	std::unordered_map<ShaderFlags::type, std::vector<D3D_SHADER_MACRO>> shader_preproc_definitions;
 	[[nodiscard]] size_t count_texture_stages() const;
-	const std::vector<D3D_SHADER_MACRO>& shader_preprocess(ShaderFlags::type flags, bool is_uber);
+	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags, bool is_uber);
 
 	void draw_call_increment();
 
