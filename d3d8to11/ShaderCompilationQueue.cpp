@@ -25,15 +25,10 @@ bool ShaderCompilationQueueEntry::operator!=(const ShaderCompilationQueueEntry& 
 
 ShaderCompilationQueue::ShaderCompilationQueue(size_t thread_count)
 	: _thread_count(thread_count),
-	  _running(true),
-	  _threads(_thread_count),
-	  _functions(),
-	  _queue()
+	  _running(false),
+	  _threads(_thread_count)
 {
-	for (std::thread& t : _threads)
-	{
-		t = std::thread(&ShaderCompilationQueue::work_thread, this);
-	}
+	start();
 }
 
 ShaderCompilationQueue::~ShaderCompilationQueue()
@@ -80,7 +75,7 @@ void ShaderCompilationQueue::start()
 
 void ShaderCompilationQueue::shutdown()
 {
-	if (_running == true)
+	if (_running == false)
 	{
 		return;
 	}
