@@ -304,7 +304,8 @@ void Direct3DDevice8::draw_call_increment()
 static constexpr auto SHADER_COMPILER_FLAGS =
 	D3DCOMPILE_PREFER_FLOW_CONTROL |
 	D3DCOMPILE_DEBUG
-#ifndef _DEBUG
+// just keeping optimization on for now
+#if 1 || !defined(_DEBUG)
 	| D3DCOMPILE_OPTIMIZATION_LEVEL3
 #endif
 ;
@@ -890,6 +891,8 @@ void Direct3DDevice8::create_native()
 				get_ps_internal(e.flags, pixel_shaders, ps_mutex, false);
 			};
 
+			const auto uber_start = std::chrono::high_resolution_clock::now();
+
 			{
 				_LOCK(permutation_mutex);
 
@@ -906,9 +909,7 @@ void Direct3DDevice8::create_native()
 						break;
 					}
 
-					{
-						permutation_flags.insert(flags);
-					}
+					permutation_flags.insert(flags);
 				}
 
 				for (ShaderFlags::type flags : permutation_flags)
@@ -928,10 +929,29 @@ void Direct3DDevice8::create_native()
 
 			while (shader_compilation_queue.enqueued_count())
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::yield();
 			}
 
-			OutputDebugStringA("done\nenqueueing standard shaders now...\n");
+			const auto uber_end = std::chrono::high_resolution_clock::now();
+			const auto uber_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(uber_end - uber_start);
+
+			{
+				std::stringstream ss;
+
+				const size_t uber_vs_count = uber_vertex_shaders.size();
+				const size_t uber_ps_count = uber_pixel_shaders.size();
+
+				ss << "done ("
+					<< uber_vs_count
+					<< " vertex shader(s) and "
+					<< uber_ps_count
+					<< " pixel shader(s) ("
+					<< uber_vs_count + uber_ps_count
+					<< " total) in "
+					<< uber_elapsed.count() << " ms)\nenqueueing standard shaders now...\n";
+
+				OutputDebugStringA(ss.str().c_str());
+			}
 
 			{
 				_LOCK(permutation_mutex);
