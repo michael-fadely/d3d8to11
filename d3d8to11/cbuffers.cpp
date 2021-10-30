@@ -1,15 +1,58 @@
 #include "stdafx.h"
 #include "cbuffers.h"
 
+void UberShaderFlagsBuffer::write(CBufferBase& cbuf) const
+{
+	cbuf << rs_lighting
+	     << rs_specular
+	     << rs_alpha
+	     << rs_fog
+	     << rs_oit;
+}
+
+bool UberShaderFlagsBuffer::dirty() const
+{
+	return rs_lighting.dirty() ||
+	       rs_specular.dirty() ||
+	       rs_alpha.dirty() ||
+	       rs_fog.dirty() ||
+	       rs_oit.dirty();
+}
+
+void UberShaderFlagsBuffer::clear()
+{
+	rs_lighting.clear();
+	rs_specular.clear();
+	rs_alpha.clear();
+	rs_fog.clear();
+	rs_oit.clear();
+}
+
+void UberShaderFlagsBuffer::mark()
+{
+	rs_lighting.mark();
+	rs_specular.mark();
+	rs_alpha.mark();
+	rs_fog.mark();
+	rs_oit.mark();
+}
+
 void PerSceneBuffer::write(CBufferBase& cbuf) const
 {
-	cbuf << this->view_matrix << this->projection_matrix << this->screen_dimensions << this->view_position << this->buffer_len;
+	cbuf << this->view_matrix
+	     << this->projection_matrix
+	     << this->screen_dimensions
+	     << this->view_position
+	     << this->buffer_len;
 }
 
 bool PerSceneBuffer::dirty() const
 {
-	return view_matrix.dirty() || projection_matrix.dirty() ||
-	       screen_dimensions.dirty() || view_position.dirty() || buffer_len.dirty();
+	return view_matrix.dirty() ||
+	       projection_matrix.dirty() ||
+	       screen_dimensions.dirty() ||
+	       view_position.dirty() ||
+	       buffer_len.dirty();
 }
 
 void PerSceneBuffer::clear()
@@ -86,8 +129,13 @@ bool PerModelBuffer::dirty() const
 		}
 	}
 
-	return draw_call.dirty() || world_matrix.dirty() || wv_matrix_inv_t.dirty() ||
-	       material.dirty() || material_sources.dirty() || ambient.dirty() || color_vertex.dirty();
+	return draw_call.dirty() ||
+	       world_matrix.dirty() ||
+	       wv_matrix_inv_t.dirty() ||
+	       material.dirty() ||
+	       material_sources.dirty() ||
+	       ambient.dirty() ||
+	       color_vertex.dirty();
 }
 
 void PerModelBuffer::clear()
@@ -125,8 +173,8 @@ void PerModelBuffer::mark()
 void PerPixelBuffer::write(CBufferBase& cbuf) const
 {
 	cbuf << src_blend << dst_blend << blend_op
-		<< fog_mode << fog_start << fog_end << fog_density << fog_color
-		<< alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
+	     << fog_mode << fog_start << fog_end << fog_density << fog_color
+	     << alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
 }
 
 bool PerPixelBuffer::dirty() const

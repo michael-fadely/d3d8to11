@@ -1,14 +1,14 @@
 #include "include.hlsli"
 
 // copy-pasted -- bad
-cbuffer PerSceneBuffer : register(b0)
+cbuffer PerSceneBuffer : register(b1)
 {
 	matrix view_matrix;
 	matrix projection_matrix;
 	float2 screen_dimensions;
 	float3 view_position;
 	uint   buffer_len;
-};
+}
 
 /*
 	This shader draws a full screen triangle onto
