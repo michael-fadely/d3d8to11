@@ -188,9 +188,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		"float1",
 	};
 
-	auto sanitized_flags = ShaderFlags::sanitize(flags);
-	sanitized_flags &= ~ShaderFlags::stage_count_mask;
-	sanitized_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
+	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(flags);
 
 	std::vector<D3D_SHADER_MACRO> definitions
 	{
