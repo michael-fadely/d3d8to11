@@ -582,7 +582,8 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 		}
 
 		case TOP_PREMODULATE: // TODO: NOT SUPPORTED
-			return float4(1, 0, 0, 1);
+			result = float4(1, 0, 0, 1);
+			break;
 
 		case TOP_MODULATEALPHA_ADDCOLOR:
 			result = float4(color_arg1.rgb + (color_arg2.rgb * color_arg1.a), color_arg1.a * color_arg2.a);
@@ -601,13 +602,16 @@ float4 texture_op(uint color_op, float4 color_arg1, float4 color_arg2, float4 co
 			break;
 
 		case TOP_BUMPENVMAP: // TODO: NOT SUPPORTED
-			return float4(1, 0, 0, 1);
+			result = float4(1, 0, 0, 1);
+			break;
 
 		case TOP_BUMPENVMAPLUMINANCE: // TODO: NOT SUPPORTED
-			return float4(1, 0, 0, 1);
+			result = float4(1, 0, 0, 1);
+			break;
 
 		case TOP_DOTPRODUCT3: // TODO: NOT SUPPORTED
-			return float4(1, 0, 0, 1);
+			result = float4(1, 0, 0, 1);
+			break;
 
 		case TOP_MULTIPLYADD:
 			result = color_arg1 + color_arg2 * color_arg0;
@@ -819,7 +823,6 @@ void do_alpha_reject(float4 result, bool standard_blending)
 					clip(-1);
 				}
 			}
-
 		}
 		else
 		{
@@ -829,7 +832,6 @@ void do_alpha_reject(float4 result, bool standard_blending)
 				uint threshold = floor(alpha_reject_threshold * 255);
 				clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 			}
-
 		}
 	}
 }
