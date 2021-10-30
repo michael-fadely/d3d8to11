@@ -3994,7 +3994,7 @@ void Direct3DDevice8::update_sampler()
 	}
 }
 
-void Direct3DDevice8::compile_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps)
+void Direct3DDevice8::get_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps)
 {
 	int result;
 
@@ -4042,7 +4042,7 @@ void Direct3DDevice8::update_shaders()
 	VertexShader vs;
 	PixelShader ps;
 
-	compile_shaders(shader_flags, &vs, &ps);
+	get_shaders(shader_flags, &vs, &ps);
 
 	if (vs != current_vs)
 	{

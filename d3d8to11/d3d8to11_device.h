@@ -91,8 +91,8 @@ namespace std
 		{
 			size_t h = std::hash<size_t>()(s.flags.data());
 
-			hash_combine(h, (size_t)s.depth_flags.data());
-			hash_combine(h, (size_t)s.stencil_flags.data());
+			hash_combine(h, static_cast<size_t>(s.depth_flags.data()));
+			hash_combine(h, static_cast<size_t>(s.stencil_flags.data()));
 
 			return h;
 		}
@@ -341,7 +341,7 @@ public:
 	void commit_per_scene();
 	void commit_per_texture();
 	void update_sampler();
-	void compile_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps);
+	void get_shaders(ShaderFlags::type flags, VertexShader* vs, PixelShader* ps);
 	void update_shaders();
 	void update_blend();
 	void update_depth();
