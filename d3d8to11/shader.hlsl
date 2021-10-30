@@ -1,6 +1,8 @@
 #define NODE_WRITE
 #include "d3d8to11.hlsl"
 
+//#define UBER_DEMO_MODE
+
 VS_OUTPUT vs_main(VS_INPUT input)
 {
 	return fixed_func_vs(input);
@@ -21,7 +23,7 @@ float4 ps_main(VS_OUTPUT input) : SV_TARGET
 	do_alpha_reject(result, standard_blending);
 	do_oit(result, input, standard_blending);
 
-#if UBER == 1
+#if UBER == 1 && defined(UBER_DEMO_MODE)
 	result.rgb = float3(1, 0, 0);
 #endif
 
