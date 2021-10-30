@@ -157,9 +157,7 @@ size_t Direct3DDevice8::count_texture_stages() const
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-static std::unordered_map<size_t, std::string> digit_strings;
-
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber)
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber) const
 {
 	static const std::array texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
@@ -233,21 +231,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		definitions.push_back({ texcoord_size_types[i], texcoord_format_types[f] });
 	}
 
-	const size_t stage_count = (sanitized_flags & ShaderFlags::stage_count_mask) >> ShaderFlags::stage_count_shift;
-	auto digit_string = digit_strings.find(stage_count);
-
-	if (digit_string == digit_strings.end())
 	{
-		digit_strings[stage_count] = std::to_string(stage_count);
-		digit_string = digit_strings.find(stage_count);
-
-		std::stringstream ss;
-		ss << "generating shader with texture stage count: " << stage_count << "\n";
-
-		OutputDebugStringA(ss.str().c_str());
+		const size_t stage_count = (sanitized_flags & ShaderFlags::stage_count_mask) >> ShaderFlags::stage_count_shift;
+		const std::string& digit_string = digit_strings.at(stage_count);
+		definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string.c_str() });
 	}
-
-	definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string->second.c_str() });
 
 	if ((sanitized_flags & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW)
 	{
@@ -276,8 +264,9 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 	if (sanitized_flags & D3DFVF_TEXCOUNT_MASK)
 	{
-		texcount_str = std::to_string((sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT);
-		definitions.push_back({ "FVF_TEXCOUNT", texcount_str.c_str() });
+		const size_t texcount = (sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT;
+		const std::string& digit_string = digit_strings.at(texcount);
+		definitions.push_back({ "FVF_TEXCOUNT", digit_string.c_str() });
 	}
 	else
 	{
@@ -1161,15 +1150,21 @@ void SamplerSettings::mark()
 
 // IDirect3DDevice8
 Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device_type, HWND focus_window, DWORD behavior_flags, const D3DPRESENT_PARAMETERS8& parameters)
-	: adapter(adapter),
-	  device_type(device_type),
+	: fragments_str(std::to_string(globals::max_fragments)),
+	  adapter(adapter),
 	  focus_window(focus_window),
+	  device_type(device_type),
 	  behavior_flags(behavior_flags),
+	  shader_compilation_queue(std::thread::hardware_concurrency()),
 	  present_params(parameters),
-	  d3d(d3d),
-	  shader_compilation_queue(std::thread::hardware_concurrency())
+	  d3d(d3d)
 {
-	fragments_str = std::to_string(globals::max_fragments);
+	constexpr size_t max_digit_strings = std::max(static_cast<size_t>(TEXTURE_STAGE_MAX), FVF_TEXCOORD_MAX);
+
+	for (size_t i = 0; i <= max_digit_strings; ++i)
+	{
+		digit_strings[i] = std::to_string(i);
+	}
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::QueryInterface(REFIID riid, void** ppvObj)

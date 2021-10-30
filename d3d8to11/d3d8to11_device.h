@@ -185,8 +185,11 @@ class Direct3DDevice8 : public Unknown
 	std::recursive_mutex shader_sources_mutex;
 	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
-	std::string texcount_str;
-	std::string fragments_str;
+
+	std::unordered_map<size_t, std::string> digit_strings;
+
+	const std::string fragments_str;
+
 	bool freeing_shaders = false;
 
 	UINT adapter;
@@ -314,7 +317,7 @@ public:
 	void print_info_queue() const;
 
 	[[nodiscard]] size_t count_texture_stages() const;
-	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags, bool is_uber);
+	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags, bool is_uber) const;
 
 	void draw_call_increment();
 

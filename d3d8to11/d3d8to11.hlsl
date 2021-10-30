@@ -3,7 +3,7 @@
 
 #include "include.hlsli"
 
-#ifdef SPEEDY_SPEED_BOY
+#if UBER == 1
 	#define TSS_UNROLL [loop]
 #else
 	#define TSS_UNROLL [unroll(TEXTURE_STAGE_COUNT)]
