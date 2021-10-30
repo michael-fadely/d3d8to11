@@ -2838,7 +2838,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_ALPHAARG0:
 			*pValue = per_texture.stages[Stage].alpha_arg0;
 			break;
-		// TODO: case D3DTSS_RESULTARG:
+		case D3DTSS_RESULTARG:
+			*pValue = per_texture.stages[Stage].result_arg;
+			break;
 
 		default:
 			return D3DERR_INVALIDCALL;
@@ -2854,27 +2856,35 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 		case D3DTSS_ADDRESSU:
 			sampler_setting_values[Stage].address_u = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
+
 		case D3DTSS_ADDRESSV:
 			sampler_setting_values[Stage].address_v = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
+
 		case D3DTSS_MAGFILTER:
 			sampler_setting_values[Stage].filter_mag = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
+
 		case D3DTSS_MINFILTER:
 			sampler_setting_values[Stage].filter_min = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
+
 		case D3DTSS_MIPFILTER:
 			sampler_setting_values[Stage].filter_mip = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
+
 		case D3DTSS_MIPMAPLODBIAS:
 			sampler_setting_values[Stage].mip_lod_bias = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_MAXMIPLEVEL:
 			sampler_setting_values[Stage].max_mip_level = Value;
 			break;
+
 		case D3DTSS_MAXANISOTROPY:
 			sampler_setting_values[Stage].max_anisotropy = Value;
 			break;
+
 		case D3DTSS_ADDRESSW:
 			sampler_setting_values[Stage].address_w = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
@@ -2895,12 +2905,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 					break;
 			}
 			break;
+
 		case D3DTSS_COLORARG1:
 			per_texture.stages[Stage].color_arg1 = Value;
 			break;
+
 		case D3DTSS_COLORARG2:
 			per_texture.stages[Stage].color_arg2 = Value;
 			break;
+
 		case D3DTSS_ALPHAOP:
 			per_texture.stages[Stage].alpha_op = static_cast<D3DTEXTUREOP>(Value);
 
@@ -2917,43 +2930,63 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 					break;
 			}
 			break;
+
 		case D3DTSS_ALPHAARG1:
 			per_texture.stages[Stage].alpha_arg1 = Value;
 			break;
+
 		case D3DTSS_ALPHAARG2:
 			per_texture.stages[Stage].alpha_arg2 = Value;
 			break;
+
 		case D3DTSS_BUMPENVMAT00:
 			per_texture.stages[Stage].bump_env_mat00 = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_BUMPENVMAT01:
 			per_texture.stages[Stage].bump_env_mat01 = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_BUMPENVMAT10:
 			per_texture.stages[Stage].bump_env_mat10 = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_BUMPENVMAT11:
 			per_texture.stages[Stage].bump_env_mat11 = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_TEXCOORDINDEX:
 			per_texture.stages[Stage].tex_coord_index = Value;
 			break;
+
 		case D3DTSS_BUMPENVLSCALE:
 			per_texture.stages[Stage].bump_env_lscale = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_BUMPENVLOFFSET:
 			per_texture.stages[Stage].bump_env_loffset = *reinterpret_cast<float*>(&Value);
 			break;
+
 		case D3DTSS_TEXTURETRANSFORMFLAGS:
 			per_texture.stages[Stage].texture_transform_flags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
 			break;
+
 		case D3DTSS_COLORARG0:
 			per_texture.stages[Stage].color_arg0 = Value;
 			break;
+
 		case D3DTSS_ALPHAARG0:
 			per_texture.stages[Stage].alpha_arg0 = Value;
 			break;
-		//case D3DTSS_RESULTARG: // TODO
+
+		case D3DTSS_RESULTARG:
+			if (Value != D3DTA_CURRENT && Value != D3DTA_TEMP)
+			{
+				return D3DERR_INVALIDCALL;
+			}
+
+			per_texture.stages[Stage].result_arg = Value;
+			break;
 
 		default:
 			return D3DERR_INVALIDCALL;

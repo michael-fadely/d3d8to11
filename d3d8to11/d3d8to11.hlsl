@@ -89,6 +89,7 @@ struct TextureStage
 	uint   texture_transform_flags;
 	uint   color_arg0;             // D3DTA
 	uint   alpha_arg0;             // D3DTA
+	uint   result_arg;             // D3DTA_CURRENT or D3DTA_TEMP
 };
 
 #define MAKE_TEXN(N) \
@@ -440,7 +441,7 @@ bool compare(uint mode, float a, float b)
 	}
 }
 
-float4 get_arg(uint stage_num, in TextureStage stage, uint texture_arg, float4 current, float4 texel, float4 tempreg, float4 in_diffuse, float4 in_specular)
+float4 get_arg(uint stage_num, uint texture_arg, float4 current, float4 texel, float4 temp_reg, float4 in_diffuse, float4 in_specular)
 {
 	float4 result = (float4)0;
 
@@ -475,7 +476,7 @@ float4 get_arg(uint stage_num, in TextureStage stage, uint texture_arg, float4 c
 			break;
 
 		case TA_TEMP:
-			result = tempreg;
+			result = temp_reg;
 			break;
 	}
 
@@ -715,7 +716,7 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 {
 #if TEXTURE_STAGE_COUNT > 0
 	float4 current = diffuse;
-	float4 tempreg = (float4)0;
+	float4 temp_reg = (float4)0;
 
 	float4 samples[TEXTURE_STAGE_COUNT];
 
@@ -730,14 +731,14 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 
 	TSS_UNROLL for (uint i = 0; i < TEXTURE_STAGE_COUNT; i++)
 	{
-		TextureStage stage = texture_stages[i];
+		const TextureStage stage = texture_stages[i];
 
 		if (stage.color_op <= TOP_DISABLE && stage.alpha_op <= TOP_DISABLE)
 		{
 			break;
 		}
 
-		float4 texel = samples[i];
+		const float4 texel = samples[i];
 
 		if (stage.color_op <= TOP_DISABLE)
 		{
@@ -746,11 +747,20 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 
 		if (!color_done)
 		{
-			float4 color_arg1 = get_arg(i, stage, stage.color_arg1, current, texel, tempreg, diffuse, specular);
-			float4 color_arg2 = get_arg(i, stage, stage.color_arg2, current, texel, tempreg, diffuse, specular);
-			float4 color_arg0 = get_arg(i, stage, stage.color_arg0, current, texel, tempreg, diffuse, specular);
+			const float4 color_arg1 = get_arg(i, stage.color_arg1, current, texel, temp_reg, diffuse, specular);
+			const float4 color_arg2 = get_arg(i, stage.color_arg2, current, texel, temp_reg, diffuse, specular);
+			const float4 color_arg0 = get_arg(i, stage.color_arg0, current, texel, temp_reg, diffuse, specular);
 
-			current.rgb = texture_op(stage.color_op, color_arg1, color_arg2, color_arg0, texel, current, diffuse).rgb;
+			const float3 texture_op_result = texture_op(stage.color_op, color_arg1, color_arg2, color_arg0, texel, current, diffuse).rgb;
+
+			if (stage.result_arg == TA_CURRENT)
+			{
+				current.rgb = texture_op_result;
+			}
+			else if (stage.result_arg == TA_TEMP)
+			{
+				temp_reg.rgb = texture_op_result;
+			}
 		}
 
 		if (stage.alpha_op <= TOP_DISABLE)
@@ -760,11 +770,20 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 
 		if (!alpha_done)
 		{
-			float4 alpha_arg1 = get_arg(i, stage, stage.alpha_arg1, current, texel, tempreg, diffuse, specular);
-			float4 alpha_arg2 = get_arg(i, stage, stage.alpha_arg2, current, texel, tempreg, diffuse, specular);
-			float4 alpha_arg0 = get_arg(i, stage, stage.alpha_arg0, current, texel, tempreg, diffuse, specular);
+			const float4 alpha_arg1 = get_arg(i, stage.alpha_arg1, current, texel, temp_reg, diffuse, specular);
+			const float4 alpha_arg2 = get_arg(i, stage.alpha_arg2, current, texel, temp_reg, diffuse, specular);
+			const float4 alpha_arg0 = get_arg(i, stage.alpha_arg0, current, texel, temp_reg, diffuse, specular);
 
-			current.a = texture_op(stage.alpha_op, alpha_arg1, alpha_arg2, alpha_arg0, texel, current, diffuse).a;
+			const float texture_op_result = texture_op(stage.alpha_op, alpha_arg1, alpha_arg2, alpha_arg0, texel, current, diffuse).a;
+
+			if (stage.result_arg == TA_CURRENT)
+			{
+				current.a = texture_op_result;
+			}
+			else if (stage.result_arg == TA_TEMP)
+			{
+				temp_reg.a = texture_op_result;
+			}
 		}
 
 		// TODO: D3DTTFF_PROJECTED

@@ -116,6 +116,7 @@ struct TextureStage : dirty_impl
 	dirty_t<D3DTEXTURETRANSFORMFLAGS>        texture_transform_flags;
 	dirty_t<uint>                            color_arg0; // D3DTA
 	dirty_t<uint>                            alpha_arg0; // D3DTA
+	dirty_t<uint>                            result_arg; // D3DTA_CURRENT or D3DTA_TEMP
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;

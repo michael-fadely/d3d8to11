@@ -244,7 +244,8 @@ bool TextureStage::dirty() const
 	       bump_env_loffset.dirty() ||
 	       texture_transform_flags.dirty() ||
 	       color_arg0.dirty() ||
-	       alpha_arg0.dirty();
+	       alpha_arg0.dirty() ||
+	       result_arg.dirty();
 }
 
 void TextureStage::clear()
@@ -267,6 +268,7 @@ void TextureStage::clear()
 	texture_transform_flags.clear();
 	color_arg0.clear();
 	alpha_arg0.clear();
+	result_arg.clear();
 }
 
 void TextureStage::mark()
@@ -289,6 +291,7 @@ void TextureStage::mark()
 	texture_transform_flags.mark();
 	color_arg0.mark();
 	alpha_arg0.mark();
+	result_arg.mark();
 }
 
 void TextureStages::write(CBufferBase& cbuf) const
@@ -314,6 +317,7 @@ void TextureStages::write(CBufferBase& cbuf) const
 			<< static_cast<uint>(it.texture_transform_flags.data())
 			<< it.color_arg0
 			<< it.alpha_arg0
+			<< it.result_arg
 			<< CBufferAlign();
 	}
 }
