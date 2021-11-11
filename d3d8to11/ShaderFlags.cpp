@@ -5,7 +5,7 @@ ShaderFlags::type ShaderFlags::sanitize(type flags)
 {
 	flags &= mask;
 
-	if (flags & rs_lighting && !(flags & D3DFVF_NORMAL))
+	if (flags & rs_lighting && (flags & D3DFVF_XYZRHW))
 	{
 		flags &= ~rs_lighting;
 	}
