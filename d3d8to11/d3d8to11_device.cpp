@@ -1733,6 +1733,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 		return D3DERR_INVALIDCALL;
 	}
 
+	if ((FVF & D3DFVF_XYZRHW) && D3DFVF_XYZRHW != (FVF & (D3DFVF_XYZRHW | D3DFVF_XYZ | D3DFVF_NORMAL)))
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
 	*ppVertexBuffer = nullptr;
 	auto result = new Direct3DVertexBuffer8(this, Length, Usage, FVF, Pool);
 	result->AddRef();
@@ -4588,5 +4593,5 @@ void Direct3DDevice8::up_get(size_t target_size)
 		}
 	}
 
-	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
+	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
 }
