@@ -315,8 +315,6 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
                                               std::shared_mutex& mutex,
                                               bool is_uber)
 {
-	//printf(__FUNCTION__ " compiling vs: %04X (total: %u)\n", flags, vs_map.size() + 1);
-
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
@@ -377,8 +375,6 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
                                              std::shared_mutex& mutex,
                                              bool is_uber)
 {
-	//printf(__FUNCTION__ " compiling ps: %04X (total: %u)\n", flags, shaders.size() + 1);
-
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
@@ -3084,7 +3080,6 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 			break;
 
 		case D3DPT_TRIANGLEFAN:
-			//printf(__FUNCTION__ ": D3DPT_TRIANGLEFAN not implemented\n");
 			return false;
 
 		default:
@@ -3648,7 +3643,6 @@ void Direct3DDevice8::print_info_queue() const
 		if (hr == S_OK && pMessage->pDescription)
 		{
 			OutputDebugStringA(pMessage->pDescription);
-			//printf("%s\n", pMessage->pDescription);
 		}
 
 		delete[] pMessage;
@@ -3863,7 +3857,6 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (fvf != 0)
 	{
-		//printf("unsupported FVF\n");
 		return false;
 	}
 
@@ -3876,8 +3869,6 @@ bool Direct3DDevice8::update_input_layout()
 
 	if (FAILED(hr))
 	{
-		//throw std::runtime_error("CreateInputLayout failed");
-		//printf("CreateInputLayout failed\n");
 		return false;
 	}
 
@@ -4597,6 +4588,5 @@ void Direct3DDevice8::up_get(size_t target_size)
 		}
 	}
 
-	//printf(__FUNCTION__ " is allocating (%u rounded to %u bytes, %u total buffers)\n", target_size, rounded, up_buffers.size() + 1);
 	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, FVF.data(), D3DPOOL_MANAGED, &up_buffer);
 }
