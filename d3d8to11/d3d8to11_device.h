@@ -170,7 +170,7 @@ struct OitNode
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
 	uint  flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
-	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
+	uint  next;  // index of the next entry, or OIT_FRAGMENT_LIST_NULL
 };
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;

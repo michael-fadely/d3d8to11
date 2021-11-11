@@ -17,10 +17,9 @@
 	#define FVF_TEXCOUNT 0
 #endif
 
-#ifdef RS_LIGHTING
+#if defined(RS_LIGHTING) && RS_LIGHTING == 1
 	#ifdef FVF_RHW
-		#undef RS_LIGHTING
-		#define RS_LIGHTING 0
+		#error Lighting and RHW are both defined!
 	#endif
 #endif
 
@@ -100,7 +99,7 @@ struct VS_INPUT
 	float4 position : POSITION;
 
 #ifdef FVF_NORMAL
-	float3 normal   : NORMAL;
+	float3 normal : NORMAL;
 #endif
 
 #ifdef FVF_DIFFUSE
@@ -875,10 +874,10 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 		uint frag_count;
 		InterlockedAdd(frag_list_count[input.position.xy], 1, frag_count);
 
-		float f = (float)frag_count / (float)MAX_FRAGMENTS;
+		float f = (float)frag_count / (float)OIT_MAX_FRAGMENTS;
 		result = float4(f, f, f, 1);
 
-		if (frag_count >= MAX_FRAGMENTS)
+		if (frag_count >= OIT_MAX_FRAGMENTS)
 		{
 			clip(-1);
 		}

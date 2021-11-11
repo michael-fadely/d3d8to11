@@ -1,23 +1,26 @@
 #ifndef INCLUDE_HLSLI
 #define INCLUDE_HLSLI
 
-//#define DEMO_MODE
-
-// Maximum number of fragments to be sorted per pixel
-#ifndef MAX_FRAGMENTS
-#define MAX_FRAGMENTS 32
+// Maximum number of fragments to be sorted per pixel for OIT.
+#ifndef OIT_MAX_FRAGMENTS
+	#define OIT_MAX_FRAGMENTS 32
 #endif
 
-#ifndef TEXTURE_STAGE_COUNT
-#define TEXTURE_STAGE_COUNT 8
-#endif
-
+// The maximum number of texture stages supported.
 #ifndef TEXTURE_STAGE_MAX
-#define TEXTURE_STAGE_MAX 8
+	#define TEXTURE_STAGE_MAX 8
+#endif
+
+// The active number of texture stages.
+#ifndef TEXTURE_STAGE_COUNT
+	#define TEXTURE_STAGE_COUNT TEXTURE_STAGE_MAX
+#elif TEXTURE_STAGE_COUNT > TEXTURE_STAGE_MAX
+	#error Active texture stage count exceeds maximum supported!
 #endif
 
 #define M_PI 3.14159265358979323846
 
+// D3DCMPFUNC enum.
 #define CMP_NEVER        1
 #define CMP_LESS         2
 #define CMP_EQUAL        3
@@ -27,7 +30,7 @@
 #define CMP_GREATEREQUAL 7
 #define CMP_ALWAYS       8
 
-// D3DBLEND enum
+// D3DBLEND enum.
 #define BLEND_ZERO            1
 #define BLEND_ONE             2
 #define BLEND_SRCCOLOR        3
@@ -40,14 +43,14 @@
 #define BLEND_INVDESTCOLOR    10
 #define BLEND_SRCALPHASAT     11
 
-// D3DBLENDOP
+// D3DBLENDOP enum.
 #define BLENDOP_ADD         1
 #define BLENDOP_SUBTRACT    2
 #define BLENDOP_REVSUBTRACT 3
 #define BLENDOP_MIN         4
 #define BLENDOP_MAX         5
 
-// D3DMCS enum (color source)
+// D3DMCS enum (CS = Color Source).
 #define CS_MATERIAL 0 // Color from material is used
 #define CS_COLOR1   1 // Diffuse vertex color is used
 #define CS_COLOR2   2 // Specular vertex color is used
@@ -59,11 +62,14 @@
 #define FOGMODE_EXP2   2
 #define FOGMODE_LINEAR 3
 #define E              2.71828
+// End FixedFuncEMU.fx
 
+// D3DLIGHTTYPE enum.
 #define LIGHT_POINT       1
 #define LIGHT_SPOT        2
 #define LIGHT_DIRECTIONAL 3
 
+// D3DTA_ preprocessor definitions (TA = Texture Argument)
 #define TA_SELECTMASK        0x0000000f  // mask for arg selector
 #define TA_DIFFUSE           0x00000000  // select diffuse color (read only)
 #define TA_CURRENT           0x00000001  // select stage destination register (read/write)
@@ -74,6 +80,7 @@
 #define TA_COMPLEMENT        0x00000010  // take 1.0 - x (read modifier)
 #define TA_ALPHAREPLICATE    0x00000020  // replicate alpha to color components (read modifier)
 
+// D3DTEXTUREOP enum (TOP = Texture OP[eration]).
 #define TOP_DISABLE                    1
 #define TOP_SELECTARG1                 2
 #define TOP_SELECTARG2                 3
@@ -101,6 +108,7 @@
 #define TOP_MULTIPLYADD               25
 #define TOP_LERP                      26
 
+// D3DTSS_ preprocessor definitions (TSS = Texture Stage State).
 #define TSS_TCI_SELECT_MASK                          0x000F0000
 #define TSS_TCI_COORD_MASK                           0x0000FFFF
 #define TSS_TCI_PASSTHRU                             0x00000000
@@ -108,22 +116,21 @@
 #define TSS_TCI_CAMERASPACEPOSITION                  0x00020000
 #define TSS_TCI_CAMERASPACEREFLECTIONVECTOR          0x00030000
 
-// Magic number to consider a null-entry.
-static const uint FRAGMENT_LIST_NULL = 0xFFFFFFFF;
+// Magic number to consider a null-entry in the OIT buffer.
+static const uint OIT_FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 
-// Fragment list node.
+// OIT fragment linked list node.
 struct OitNode
 {
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
 	uint  flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
-	uint  next;  // index of the next entry, or FRAGMENT_LIST_NULL
+	uint  next;  // index of the next entry, or OIT_FRAGMENT_LIST_NULL
 };
 
-// TODO: per-pixel link count
-// TODO: test append buffer again, increase max fragments
+// TODO: Optional per-pixel link count (prevents over-saturating one pixel!)
 
-#ifdef NODE_WRITE
+#ifdef OIT_NODE_WRITE
 
 // Read/write mode.
 
@@ -143,13 +150,15 @@ Texture2D                 depth_buffer    : register(t4);
 
 #endif
 
-// from D3DX_DXGIFormatConvert.inl
+// From D3DX_DXGIFormatConvert.inl
 
-uint float_to_uint(float _V, float _Scale)
+// Originally D3DX_FLOAT_to_UINT
+uint float_to_uint(float f, float scale)
 {
-	return (uint)floor(_V * _Scale + 0.5f);
+	return (uint)floor(f * scale + 0.5f);
 }
 
+// Originally D3DX_R8G8B8A8_UNORM_to_FLOAT4
 float4 unorm_to_float4(uint packed)
 {
 	precise float4 unpacked;
@@ -160,6 +169,7 @@ float4 unorm_to_float4(uint packed)
 	return unpacked;
 }
 
+// Originally D3DX_FLOAT4_to_R8G8B8A8_UNORM
 uint float4_to_unorm(precise float4 unpacked)
 {
 	uint packed;
@@ -169,5 +179,7 @@ uint float4_to_unorm(precise float4 unpacked)
 	          (float_to_uint(saturate(unpacked.w), 255) << 24));
 	return packed;
 }
+
+// End D3DX_DXGIFormatConvert.inl
 
 #endif

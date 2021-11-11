@@ -192,7 +192,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 	std::vector<D3D_SHADER_MACRO> definitions
 	{
-		{ "MAX_FRAGMENTS", fragments_str.c_str() },
+		{ "OIT_MAX_FRAGMENTS", fragments_str.c_str() },
 		{ "TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX) }
 	};
 
@@ -4316,7 +4316,7 @@ void Direct3DDevice8::free_shaders()
 void Direct3DDevice8::oit_load_shaders()
 {
 	D3D_SHADER_MACRO preproc[] = {
-		{ "MAX_FRAGMENTS", fragments_str.c_str() },
+		{ "OIT_MAX_FRAGMENTS", fragments_str.c_str() },
 		{}
 	};
 
@@ -4414,7 +4414,7 @@ void Direct3DDevice8::oit_write()
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target_view.GetAddressOf(),
 	                                                   current_depth_stencil->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
 
-	// Resets the list head indices to FRAGMENT_LIST_NULL.
+	// Resets the list head indices to OIT_FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
 	// with 4 color channels, even though our list head only has one.
 	static const UINT clear_head[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };

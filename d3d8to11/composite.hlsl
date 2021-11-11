@@ -1,6 +1,17 @@
 #include "include.hlsli"
 
-// copy-pasted -- bad
+// When defined, only half of the screen is alpha sorted,
+// and a red line is drawn down the middle.
+//#define OIT_DEMO_MODE
+
+// When defined, sorting is completely disabled.
+//#define OIT_DISABLE_SORT
+
+// When defined, composition outputs a solid color which
+// is proportional to OIT_MAX_FRAGMENTS at each pixel.
+//#define OIT_SHOW_FRAGMENT_OVERDRAW
+
+// FIXME: PerSceneBuffer copy/pasted from d3d8to11.hlsl
 cbuffer PerSceneBuffer : register(b1)
 {
 	matrix view_matrix;
@@ -98,7 +109,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 {
 	int2 pos = int2(input.position.xy);
 
-#ifdef DEMO_MODE
+#ifdef OIT_DEMO_MODE
 	const int center = screen_dimensions.x / 2;
 	const bool should_sort = pos.x >= center;
 
@@ -111,18 +122,18 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 	float4 back_buffer_color = back_buffer[pos];
 	uint index = frag_list_head[pos];
 
-	// TODO: LotR: RotK is bailing here!
-	if (index == FRAGMENT_LIST_NULL)
+	// FIXME: LotR: RotK is bailing here!
+	if (index == OIT_FRAGMENT_LIST_NULL)
 	{
 		return back_buffer_color;
 	}
 
 	float opaque_depth = depth_buffer[pos].r;
 
-	uint indices[MAX_FRAGMENTS];
+	uint indices[OIT_MAX_FRAGMENTS];
 	uint count = 0;
 
-	while (index != FRAGMENT_LIST_NULL && count < MAX_FRAGMENTS)
+	while (index != OIT_FRAGMENT_LIST_NULL && count < OIT_MAX_FRAGMENTS)
 	{
 		const OitNode node_i = frag_list_nodes[index];
 
@@ -142,15 +153,14 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 		int j = count;
 
-	//#define DISABLE_SORT
-	#ifndef DISABLE_SORT
+	#ifndef OIT_DISABLE_SORT
 		OitNode node_j = frag_list_nodes[indices[j - 1]];
 
 		uint draw_call_i = (node_i.flags >> 16) & 0xFFFF;
 		uint draw_call_j = (node_j.flags >> 16) & 0xFFFF;
 
 		while (j > 0 &&
-		       #ifdef DEMO_MODE
+		       #ifdef OIT_DEMO_MODE
 		       ((should_sort && node_j.depth > node_i.depth) || ((!should_sort || node_j.depth == node_i.depth) && draw_call_j < draw_call_i))
 		       #else
 		       (node_j.depth > node_i.depth || (node_j.depth == node_i.depth && draw_call_j < draw_call_i))
@@ -175,8 +185,8 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		return back_buffer_color;
 	}
 
-#ifdef SHOW_FRAGMENT_OVERDRAW
-	return float4((float)count / MAX_FRAGMENTS, 0, 0, 0);
+#ifdef OIT_SHOW_FRAGMENT_OVERDRAW
+	return float4((float)count / OIT_MAX_FRAGMENTS, 0, 0, 0);
 #endif
 
 	float4 final = back_buffer_color;
