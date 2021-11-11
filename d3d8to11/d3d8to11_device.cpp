@@ -25,6 +25,8 @@
 #include "SimpleMath.h"
 #include "ShaderFlags.h"
 
+#pragma comment(lib, "dxguid.lib") // for D3DDebugObjectName
+
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
 #define SHADER_ASYNC_COMPILE
@@ -538,8 +540,6 @@ void Direct3DDevice8::create_depth_stencil()
 	depth_stencil->create_native();
 	depth_stencil->GetSurfaceLevel(0, &current_depth_stencil);
 }
-
-#pragma comment( lib, "dxguid.lib")
 
 void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 {
