@@ -7,7 +7,7 @@
 #include "Material.h"
 #include "defs.h"
 
-class UberShaderFlagsBuffer : public ICBuffer, dirty_impl
+class UberShaderFlagsBuffer final : public ICBuffer, dirty_impl
 {
 public:
 	dirty_t<bool> rs_lighting;
@@ -16,30 +16,30 @@ public:
 	dirty_t<bool> rs_fog;
 	dirty_t<bool> rs_oit;
 
-	void write(CBufferBase& cbuf) const override;
+	void write(CBufferBase& cbuff) const override;
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;
 	void mark() override;
 };
 
-class PerSceneBuffer : public ICBuffer, dirty_impl
+class PerSceneBuffer final : public ICBuffer, dirty_impl
 {
 public:
 	dirty_t<matrix, dirty_mode::on_assignment> view_matrix;
 	dirty_t<matrix, dirty_mode::on_assignment> projection_matrix;
 	dirty_t<float2> screen_dimensions;
 	dirty_t<float3> view_position;
-	dirty_t<uint> buffer_len;
+	dirty_t<uint> oit_buffer_length;
 
-	void write(CBufferBase& cbuf) const override;
+	void write(CBufferBase& cbuff) const override;
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;
 	void mark() override;
 };
 
-class MaterialSources : dirty_impl
+class MaterialSources final : dirty_impl
 {
 public:
 	dirty_t<uint> diffuse;
@@ -52,7 +52,7 @@ public:
 	void mark() override;
 };
 
-class PerModelBuffer : public ICBuffer, dirty_impl
+class PerModelBuffer final : public ICBuffer, dirty_impl
 {
 public:
 	dirty_t<uint> draw_call;
@@ -65,14 +65,14 @@ public:
 	dirty_t<float4>                            ambient;
 	dirty_t<bool>                              color_vertex;
 
-	void write(CBufferBase& cbuf) const override;
+	void write(CBufferBase& cbuff) const override;
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;
 	void mark() override;
 };
 
-class PerPixelBuffer : public ICBuffer, dirty_impl
+class PerPixelBuffer final : public ICBuffer, dirty_impl
 {
 public:
 	dirty_t<uint>   src_blend;
@@ -88,7 +88,7 @@ public:
 	dirty_t<float>  alpha_reject_threshold;
 	dirty_t<float4> texture_factor;
 
-	void write(CBufferBase& cbuf) const override;
+	void write(CBufferBase& cbuff) const override;
 
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;
@@ -96,7 +96,7 @@ public:
 };
 
 
-struct TextureStage : dirty_impl
+struct TextureStage final : dirty_impl
 {
 	dirty_t<bool>                            bound;
 	dirty_t<matrix, dirty_mode::until_dirty> transform;
@@ -123,11 +123,11 @@ struct TextureStage : dirty_impl
 	void mark() override;
 };
 
-class TextureStages : public ICBuffer, dirty_impl
+class TextureStages final : public ICBuffer, dirty_impl
 {
 public:
 	std::array<TextureStage, TEXTURE_STAGE_MAX> stages {};
-	void write(CBufferBase& cbuf) const override;
+	void write(CBufferBase& cbuff) const override;
 	[[nodiscard]] bool dirty() const override;
 	void clear() override;
 	void mark() override;

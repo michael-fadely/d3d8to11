@@ -171,9 +171,9 @@ cbuffer UberBuffer : register(b0)
 #else
 static const bool rs_lighting = (bool)RS_LIGHTING;
 static const bool rs_specular = (bool)RS_SPECULAR;
-static const bool rs_alpha = (bool)RS_ALPHA;
-static const bool rs_fog = (bool)RS_FOG;
-static const bool rs_oit = (bool)RS_OIT;
+static const bool rs_alpha    = (bool)RS_ALPHA;
+static const bool rs_fog      = (bool)RS_FOG;
+static const bool rs_oit      = (bool)RS_OIT;
 #endif
 
 cbuffer PerSceneBuffer : register(b1)
@@ -182,7 +182,7 @@ cbuffer PerSceneBuffer : register(b1)
 	matrix projection_matrix;
 	float2 screen_dimensions;
 	float3 view_position;
-	uint   buffer_len;
+	uint   oit_buffer_length;
 }
 
 cbuffer PerModelBuffer : register(b2)
@@ -272,9 +272,9 @@ float4 black_not_lit(float4 color)
 	}
 }
 
-void perform_lighting(in float4 in_ambient,     in float4 in_diffuse, in float4 in_specular,
-                      in float3 world_position, in float3 world_normal,
-                     out float4 out_diffuse,   out float4 out_specular)
+void perform_lighting(in  float4 in_ambient,     in  float4 in_diffuse, in float4 in_specular,
+                      in  float3 world_position, in  float3 world_normal,
+                      out float4 out_diffuse,    out float4 out_specular)
 {
 	float4 ambient  = float4(0, 0, 0, 0);
 	float4 diffuse  = float4(0, 0, 0, 0);
@@ -834,22 +834,13 @@ void do_alpha_reject(float4 result, bool standard_blending)
 			// if we're using OIT and the alpha is 0,
 			// don't bother sorting it, but also don't
 			// subject it to alpha rejection.
-			if (standard_blending)
-			{
-				if (floor(result.a * 255) < 1)
-				{
-					clip(-1);
-				}
-			}
+			clip((standard_blending && floor(result.a * 255) < 1) ? -1 : 1);
 		}
-		else
+		else if (alpha_reject)
 		{
-			if (alpha_reject == true)
-			{
-				uint alpha = floor(result.a * 255);
-				uint threshold = floor(alpha_reject_threshold * 255);
-				clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
-			}
+			uint alpha = floor(result.a * 255);
+			uint threshold = floor(alpha_reject_threshold * 255);
+			clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
 		}
 	}
 }
@@ -859,14 +850,11 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 	if (rs_oit && rs_alpha)
 	{
 	#if !defined(FVF_RHW)
-		// if the pixel is effectively opaque with actual blending,
-		// write it directly to the backbuffer as opaque
-		if (standard_blending)
+		// if the pixel is effectively opaque with alpha blending,
+		// write it directly to the backbuffer as opaque (by returning).
+		if (standard_blending && result.a > 254.0f / 255.0f)
 		{
-			if (result.a > 254.0f / 255.0f)
-			{
-				return;
-			}
+			return;
 		}
 	#endif
 
@@ -877,18 +865,13 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 		float f = (float)frag_count / (float)OIT_MAX_FRAGMENTS;
 		result = float4(f, f, f, 1);
 
-		if (frag_count >= OIT_MAX_FRAGMENTS)
-		{
-			clip(-1);
-		}
+		// If the maximum OIT fragment count has been reached, discard the fragment.
+		clip(frag_count >= OIT_MAX_FRAGMENTS ? -1 : 1);
 	#endif
 
 		uint new_index = frag_list_nodes.IncrementCounter();
 
-		if (new_index >= buffer_len)
-		{
-			clip(-1);
-		}
+		clip(new_index >= oit_buffer_length ? -1 : 1);
 
 		uint old_index;
 		InterlockedExchange(frag_list_head[input.position.xy], new_index, old_index);
@@ -898,16 +881,19 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 		n.depth = input.depth.x / input.depth.y;
 		n.color = float4_to_unorm(result);
 		n.flags = ((draw_call & 0xFFFF) << 16) | (blend_op << 8) | (src_blend << 4) | dst_blend;
-		n.next = old_index;
+		n.next  = old_index;
 
 		frag_list_nodes[new_index] = n;
+
+		// The fragment has been stored in the list, so discard it to prevent it
+		// from being written to the backbuffer.
 		clip(-1);
 	}
 }
 
 void get_colors(in VS_INPUT input, inout VS_OUTPUT result)
 {
-	if (color_vertex == true)
+	if (color_vertex)
 	{
 		if (!rs_lighting)
 		{

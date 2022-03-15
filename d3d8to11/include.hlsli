@@ -172,11 +172,10 @@ float4 unorm_to_float4(uint packed)
 // Originally D3DX_FLOAT4_to_R8G8B8A8_UNORM
 uint float4_to_unorm(precise float4 unpacked)
 {
-	uint packed;
-	packed = ((float_to_uint(saturate(unpacked.x), 255)) |
-	          (float_to_uint(saturate(unpacked.y), 255) << 8) |
-	          (float_to_uint(saturate(unpacked.z), 255) << 16) |
-	          (float_to_uint(saturate(unpacked.w), 255) << 24));
+	const uint packed = ((float_to_uint(saturate(unpacked.x), 255)) |
+	                     (float_to_uint(saturate(unpacked.y), 255) << 8) |
+	                     (float_to_uint(saturate(unpacked.z), 255) << 16) |
+	                     (float_to_uint(saturate(unpacked.w), 255) << 24));
 	return packed;
 }
 

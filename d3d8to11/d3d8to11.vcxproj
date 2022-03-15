@@ -385,7 +385,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ProjectReference Include="..\DirectXTK\DirectXTK_Desktop_2019.vcxproj">
       <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\libd3d8to11\libcbuffer.vcxproj">
+    <ProjectReference Include="..\libd3d8to11\libd3d8to11.vcxproj">
       <Project>{322c4a08-4b89-4ddf-95c1-e73949432507}</Project>
     </ProjectReference>
     <ProjectReference Include="..\simpleini\simpleini.vcxproj">

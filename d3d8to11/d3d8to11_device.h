@@ -317,7 +317,8 @@ public:
 	void print_info_queue() const;
 
 	[[nodiscard]] size_t count_texture_stages() const;
-	std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags, bool is_uber) const;
+	void shader_preprocess(ShaderFlags::type flags, bool is_uber, std::vector<D3D_SHADER_MACRO>& result) const;
+	[[nodiscard]] std::vector<D3D_SHADER_MACRO> shader_preprocess(ShaderFlags::type flags, bool is_uber) const;
 
 	void draw_call_increment();
 
@@ -357,13 +358,13 @@ public:
 	{
 		D3D11_BUFFER_DESC desc {};
 
-		const auto cbuffer_size = interface_.cbuffer_size();
+		const size_t cbuffer_size = interface_.cbuffer_size();
 
 		desc.ByteWidth           = align_up(cbuffer_size, 16);
 		desc.Usage               = D3D11_USAGE_DYNAMIC;
 		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
-		desc.StructureByteStride = cbuffer_size;
+		desc.StructureByteStride = static_cast<decltype(desc.StructureByteStride)>(cbuffer_size);
 
 		return device->CreateBuffer(&desc, nullptr, &cbuffer);
 	}
@@ -492,4 +493,6 @@ protected:
 
 	D3D11_VIEWPORT viewport {};
 	D3DMATERIAL8 material {};
+
+	std::vector<D3D_SHADER_MACRO> draw_prologue_epilogue_preproc;
 };

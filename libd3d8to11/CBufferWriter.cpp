@@ -40,7 +40,7 @@ void CBufferWriter::write(const void* data, size_t size)
 {
 	if (size % 4)
 	{
-		throw;
+		throw std::runtime_error("data size must be 4-byte aligned.");
 	}
 
 	align(size);
@@ -50,9 +50,9 @@ void CBufferWriter::write(const void* data, size_t size)
 
 size_t ICBuffer::cbuffer_size() const
 {
-	CBufferDummy cbuf;
-	write(cbuf);
-	return cbuf.offset();
+	CBufferDummy cbuff;
+	write(cbuff);
+	return cbuff.offset();
 }
 
 CBufferBase& CBufferBase::operator<<(const CBufferAlign& align_of)
@@ -62,56 +62,43 @@ CBufferBase& CBufferBase::operator<<(const CBufferAlign& align_of)
 }
 
 template <>
-CBufferBase& CBufferBase::operator<<(const int32_t& data)
-{
-	write(&data, sizeof(int32_t));
-	return *this;
-}
-
-template <>
 CBufferBase& CBufferBase::operator<<(const uint32_t& data)
 {
-	write(&data, sizeof(uint32_t));
+	write(data);
 	return *this;
 }
 
 template <>
 CBufferBase& CBufferBase::operator<<(const float& data)
 {
-	write(&data, sizeof(float));
+	write(data);
 	return *this;
 }
 
 template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Matrix& data)
 {
-	const float array[] = {
-		data._11, data._12, data._13, data._14,
-		data._21, data._22, data._23, data._24,
-		data._31, data._32, data._33, data._34,
-		data._41, data._42, data._43, data._44,
-	};
-
-	return *this << array;
+	write(data);
+	return *this;
 }
 
 template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector2& data)
 {
-	const float array[] = { data.x, data.y };
-	return *this << array;
+	write(data);
+	return *this;
 }
 
 template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector3& data)
 {
-	const float array[] = { data.x, data.y, data.z };
-	return *this << array;
+	write(data);
+	return *this;
 }
 
 template <>
 CBufferBase& CBufferBase::operator<<(const DirectX::SimpleMath::Vector4& data)
 {
-	const float array[] = { data.x, data.y, data.z, data.w };
-	return *this << array;
+	write(data);
+	return *this;
 }

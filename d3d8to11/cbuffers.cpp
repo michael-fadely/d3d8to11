@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "cbuffers.h"
 
-void UberShaderFlagsBuffer::write(CBufferBase& cbuf) const
+void UberShaderFlagsBuffer::write(CBufferBase& cbuff) const
 {
-	cbuf << rs_lighting
-	     << rs_specular
-	     << rs_alpha
-	     << rs_fog
-	     << rs_oit;
+	cbuff << rs_lighting
+	      << rs_specular
+	      << rs_alpha
+	      << rs_fog
+	      << rs_oit;
 }
 
 bool UberShaderFlagsBuffer::dirty() const
@@ -37,13 +37,13 @@ void UberShaderFlagsBuffer::mark()
 	rs_oit.mark();
 }
 
-void PerSceneBuffer::write(CBufferBase& cbuf) const
+void PerSceneBuffer::write(CBufferBase& cbuff) const
 {
-	cbuf << this->view_matrix
-	     << this->projection_matrix
-	     << this->screen_dimensions
-	     << this->view_position
-	     << this->buffer_len;
+	cbuff << this->view_matrix
+	      << this->projection_matrix
+	      << this->screen_dimensions
+	      << this->view_position
+	      << this->oit_buffer_length;
 }
 
 bool PerSceneBuffer::dirty() const
@@ -52,7 +52,7 @@ bool PerSceneBuffer::dirty() const
 	       projection_matrix.dirty() ||
 	       screen_dimensions.dirty() ||
 	       view_position.dirty() ||
-	       buffer_len.dirty();
+	       oit_buffer_length.dirty();
 }
 
 void PerSceneBuffer::clear()
@@ -61,7 +61,7 @@ void PerSceneBuffer::clear()
 	projection_matrix.clear();
 	screen_dimensions.clear();
 	view_position.clear();
-	buffer_len.clear();
+	oit_buffer_length.clear();
 }
 
 void PerSceneBuffer::mark()
@@ -70,7 +70,7 @@ void PerSceneBuffer::mark()
 	projection_matrix.mark();
 	screen_dimensions.mark();
 	view_position.mark();
-	buffer_len.mark();
+	oit_buffer_length.mark();
 }
 
 bool MaterialSources::dirty() const
@@ -106,17 +106,17 @@ inline CBufferBase& operator<<(CBufferBase& buffer, const MaterialSources& data)
 	       << data.emissive.data();
 }
 
-void PerModelBuffer::write(CBufferBase& cbuf) const
+void PerModelBuffer::write(CBufferBase& cbuff) const
 {
-	cbuf << draw_call << world_matrix << wv_matrix_inv_t
+	cbuff << draw_call << world_matrix << wv_matrix_inv_t
 		<< material_sources << ambient << color_vertex;
 
 	for (const auto& light : lights)
 	{
-		cbuf << CBufferAlign() << light;
+		cbuff << CBufferAlign() << light;
 	}
 
-	cbuf << CBufferAlign() << material;
+	cbuff << CBufferAlign() << material;
 }
 
 bool PerModelBuffer::dirty() const
@@ -170,11 +170,11 @@ void PerModelBuffer::mark()
 	color_vertex.mark();
 }
 
-void PerPixelBuffer::write(CBufferBase& cbuf) const
+void PerPixelBuffer::write(CBufferBase& cbuff) const
 {
-	cbuf << src_blend << dst_blend << blend_op
-	     << fog_mode << fog_start << fog_end << fog_density << fog_color
-	     << alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
+	cbuff << src_blend << dst_blend << blend_op
+	      << fog_mode << fog_start << fog_end << fog_density << fog_color
+	      << alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
 }
 
 bool PerPixelBuffer::dirty() const
@@ -294,11 +294,11 @@ void TextureStage::mark()
 	result_arg.mark();
 }
 
-void TextureStages::write(CBufferBase& cbuf) const
+void TextureStages::write(CBufferBase& cbuff) const
 {
 	for (auto& it : stages)
 	{
-		cbuf
+		cbuff
 			<< it.bound
 			<< it.transform
 			<< static_cast<uint>(it.color_op.data())

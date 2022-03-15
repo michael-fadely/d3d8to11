@@ -18,7 +18,7 @@ cbuffer PerSceneBuffer : register(b1)
 	matrix projection_matrix;
 	float2 screen_dimensions;
 	float3 view_position;
-	uint   buffer_len;
+	uint   oit_buffer_length;
 }
 
 /*

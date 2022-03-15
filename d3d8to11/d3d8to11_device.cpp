@@ -38,7 +38,7 @@ using namespace d3d8to11;
 
 static constexpr uint32_t BLEND_COLORMASK_SHIFT = 28;
 
-static std::unordered_map<uint32_t, std::string> rs_strings = {
+static const std::unordered_map<uint32_t, std::string> RS_STRINGS = {
 	{ D3DRS_ZENABLE,                  "D3DRS_ZENABLE" },
 	{ D3DRS_FILLMODE,                 "D3DRS_FILLMODE" },
 	{ D3DRS_SHADEMODE,                "D3DRS_SHADEMODE" },
@@ -117,7 +117,7 @@ static std::unordered_map<uint32_t, std::string> rs_strings = {
 	{ D3DRS_NORMALORDER,              "D3DRS_NORMALORDER" }
 };
 
-static const std::array<D3D_FEATURE_LEVEL, 4> FEATURE_LEVELS =
+static const std::array FEATURE_LEVELS =
 {
 	D3D_FEATURE_LEVEL_12_1,
 	D3D_FEATURE_LEVEL_12_0,
@@ -159,7 +159,7 @@ size_t Direct3DDevice8::count_texture_stages() const
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber) const
+void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, std::vector<D3D_SHADER_MACRO>& definitions) const
 {
 	static const std::array texcoord_size_strings = {
 		"FVF_TEXCOORD0_SIZE",
@@ -192,13 +192,11 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(flags);
 
-	std::vector<D3D_SHADER_MACRO> definitions
-	{
-		{ "OIT_MAX_FRAGMENTS", fragments_str.c_str() },
-		{ "TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX) }
-	};
+	definitions.clear();
+	definitions.emplace_back("OIT_MAX_FRAGMENTS", fragments_str.c_str());
+	definitions.emplace_back("TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX));
 
-	auto uv_format = sanitized_flags >> 16u;
+	auto uv_format = sanitized_flags >> 16u; // FIXME: magic number
 	const auto tex_count = static_cast<size_t>(((sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT) & 0xF);
 
 	for (size_t i = 0; i < tex_count; i++)
@@ -212,16 +210,16 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 				definitions.push_back({ texcoord_size_strings[i], "2" });
 				break;
 
-			case D3DFVF_TEXTUREFORMAT1:
-				definitions.push_back({ texcoord_size_strings[i], "1" });
-				break;
-
 			case D3DFVF_TEXTUREFORMAT3:
 				definitions.push_back({ texcoord_size_strings[i], "3" });
 				break;
 
 			case D3DFVF_TEXTUREFORMAT4:
 				definitions.push_back({ texcoord_size_strings[i], "4" });
+				break;
+
+			case D3DFVF_TEXTUREFORMAT1:
+				definitions.push_back({ texcoord_size_strings[i], "1" });
 				break;
 
 			default:
@@ -292,7 +290,12 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 		definitions.push_back({ "RS_FOG", one_or_zero(ShaderFlags::rs_fog) });
 		definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
 	}
+}
 
+std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber) const
+{
+	std::vector<D3D_SHADER_MACRO> definitions;
+	shader_preprocess(flags, is_uber, definitions);
 	return definitions;
 }
 
@@ -315,9 +318,6 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
                                               std::shared_mutex& mutex,
                                               bool is_uber)
 {
-	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
-	preproc.push_back({});
-
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
@@ -326,6 +326,9 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
 
 	constexpr auto path = "shader.hlsl";
 	const auto& src = includer.get_shader_source(path);
+
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
+	preproc.push_back({});
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
@@ -375,9 +378,6 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
                                              std::shared_mutex& mutex,
                                              bool is_uber)
 {
-	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
-	preproc.push_back({});
-
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
@@ -386,6 +386,9 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
 
 	constexpr auto path = "shader.hlsl";
 	const auto& src = includer.get_shader_source(path);
+
+	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
+	preproc.push_back({});
 
 	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
@@ -662,7 +665,7 @@ void Direct3DDevice8::get_back_buffer()
 	{
 		context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
 
-		// TODO: this doesn't make sense! If a program is expecting the render target with things in it, this has nothing until ::Present()!
+		// FIXME: this doesn't make sense! If a program is expecting the render target with things in it, this has nothing until ::Present()!
 		composite_wrapper->GetSurfaceLevel(0, &current_render_target);
 	}
 	else
@@ -2356,9 +2359,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			}
 
 			ref.clear();
-			auto it = rs_strings.find(State);
+			auto it = RS_STRINGS.find(State);
 
-			if (it == rs_strings.end())
+			if (it == RS_STRINGS.end())
 			{
 				break;
 			}
@@ -2714,8 +2717,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 	{
 		per_texture.stages[Stage].bound = false;
 
-		ID3D11ShaderResourceView* bullshit[1] = {};
-		context->PSSetShaderResources(Stage, 1, &bullshit[0]);
+		ID3D11ShaderResourceView* dummy[1] {};
+		context->PSSetShaderResources(Stage, 1, &dummy[0]);
 
 		if (it != textures.end())
 		{
@@ -3032,20 +3035,26 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 
 void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
-	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(shader_flags, false); // FIXME: assuming non-uber
+#ifndef _DEBUG
+	shader_preprocess(shader_flags, false, draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
+
 	for (auto& fn : draw_prologues[callback])
 	{
-		fn(preproc, shader_flags);
+		fn(draw_prologue_epilogue_preproc, shader_flags);
 	}
+#endif
 }
 
 void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
-	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(shader_flags, false); // FIXME: assuming non-uber
+#ifndef _DEBUG
+	shader_preprocess(shader_flags, false, draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
+
 	for (auto& fn : draw_epilogues[callback])
 	{
-		fn(preproc, shader_flags);
+		fn(draw_prologue_epilogue_preproc, shader_flags);
 	}
+#endif
 }
 
 bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE primitive_type) const
@@ -4427,7 +4436,7 @@ void Direct3DDevice8::oit_read() const
 	// Unbinds our UAVs.
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
 
-	std::array<ID3D11ShaderResourceView*, 5> srvs = {
+	const std::array srvs = {
 		frag_list_head_srv.Get(),
 		frag_list_count_srv.Get(),
 		frag_list_nodes_srv.Get(),
@@ -4542,7 +4551,7 @@ void Direct3DDevice8::frag_list_nodes_init()
 {
 	D3D11_BUFFER_DESC desc_buf = {};
 
-	per_scene.buffer_len = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	per_scene.oit_buffer_length = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
 
 	desc_buf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	desc_buf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
