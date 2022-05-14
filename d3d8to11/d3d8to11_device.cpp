@@ -287,8 +287,15 @@ void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, s
 		definitions.push_back({ "RS_LIGHTING", one_or_zero(ShaderFlags::rs_lighting) });
 		definitions.push_back({ "RS_SPECULAR", one_or_zero(ShaderFlags::rs_specular) });
 		definitions.push_back({ "RS_ALPHA", one_or_zero(ShaderFlags::rs_alpha) });
+		definitions.push_back({ "RS_ALPHA_TEST", one_or_zero(ShaderFlags::rs_alpha_test) });
 		definitions.push_back({ "RS_FOG", one_or_zero(ShaderFlags::rs_fog) });
 		definitions.push_back({ "RS_OIT", one_or_zero(ShaderFlags::rs_oit) });
+
+		const auto alpha_test_mode = static_cast<size_t>((sanitized_flags & ShaderFlags::rs_alpha_test_mode_mask) >> ShaderFlags::rs_alpha_test_mode_shift);
+		const auto fog_mode        = static_cast<size_t>((sanitized_flags & ShaderFlags::rs_fog_mode_mask) >> ShaderFlags::rs_fog_mode_shift);
+
+		definitions.push_back({ "RS_ALPHA_TEST_MODE", digit_strings.at(alpha_test_mode).c_str() });
+		definitions.push_back({ "RS_FOG_MODE", digit_strings.at(fog_mode).c_str() });
 	}
 }
 
@@ -2331,7 +2338,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	// store its value so the caller can retrieve it later in
 	// Direct3DDevice8::GetRenderState
 	auto& ref = render_state_values[State];
-	ref = Value;
 
 	auto set_stencil_flags = [&](auto shift)
 	{
@@ -2353,6 +2359,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	{
 		default:
 		{
+			ref = Value;
+
 			if (!ref.dirty())
 			{
 				break;
@@ -2377,31 +2385,40 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_COLORWRITEENABLE:
 		{
 			blend_flags = (blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
+			ref = Value;
 			break;
 		}
 
 		case D3DRS_TEXTUREFACTOR:
 			per_pixel.texture_factor = to_color4(Value);
+			ref = Value;
 			break;
 
 		case D3DRS_FOGSTART:
 			per_pixel.fog_start = *reinterpret_cast<float*>(&Value);
+			ref = Value;
 			break;
 
 		case D3DRS_FOGEND:
 			per_pixel.fog_end = *reinterpret_cast<float*>(&Value);
+			ref = Value;
 			break;
 
 		case D3DRS_FOGCOLOR:
 			per_pixel.fog_color = to_color4(Value);
+			ref = Value;
 			break;
 
 		case D3DRS_FOGTABLEMODE:
-			per_pixel.fog_mode = Value;
+			shader_flags &= ~ShaderFlags::rs_fog_mode_mask;
+			shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_fog_mode_shift) & ShaderFlags::rs_fog_mode_mask;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_FOGDENSITY:
 			per_pixel.fog_density = *reinterpret_cast<float*>(&Value);
+			ref = Value;
 			break;
 
 		case D3DRS_SPECULARENABLE:
@@ -2414,19 +2431,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				shader_flags &= ~ShaderFlags::rs_specular;
 			}
 
+			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_LIGHTING:
-			if (Value != 1)
-			{
-				shader_flags &= ~ShaderFlags::rs_lighting;
-			}
-			else
+			if (Value == 1)
 			{
 				shader_flags |= ShaderFlags::rs_lighting;
 			}
+			else
+			{
+				shader_flags &= ~ShaderFlags::rs_lighting;
+			}
 
+			ref = Value;
 			ref.clear();
 			break;
 
@@ -2440,36 +2459,62 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				shader_flags &= ~ShaderFlags::rs_fog;
 			}
 
+			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_ALPHATESTENABLE:
 		{
-			per_pixel.alpha_reject = Value != 0;
+			if (Value != 0)
+			{
+				shader_flags |= ShaderFlags::rs_alpha_test;
+			}
+			else
+			{
+				shader_flags &= ~ShaderFlags::rs_alpha_test;
+			}
+
+			ref = Value;
+			ref.clear();
 			break;
 		}
 
 		case D3DRS_ALPHAFUNC:
 		{
-			per_pixel.alpha_reject_mode = Value;
+			if (!Value)
+			{
+				return D3DERR_INVALIDCALL;
+			}
+
+			shader_flags &= ~ShaderFlags::rs_alpha_test_mode_mask;
+			shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_alpha_test_mode_shift) & ShaderFlags::rs_alpha_test_mode_mask;
+
+			ref = Value;
+			ref.clear();
 			break;
 		}
 
 		case D3DRS_ALPHAREF:
 		{
-			per_pixel.alpha_reject_threshold = static_cast<float>(Value) / 255.0f;
+			per_pixel.alpha_test_reference = static_cast<float>(Value) / 255.0f;
+			ref = Value;
+			ref.clear();
 			break;
 		}
 
 		case D3DRS_CULLMODE:
 		{
 			raster_flags = (raster_flags.data() & ~RasterFlags::cull_mask) | (Value & 3);
+			ref = Value;
+			ref.clear();
 			break;
 		}
 
 		case D3DRS_FILLMODE:
 		{
 			raster_flags = (raster_flags.data() & ~RasterFlags::fill_mask) | ((Value & 3) << 2);
+			ref = Value;
+			ref.clear();
 			break;
 		}
 
@@ -2484,6 +2529,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_test_enabled;
 			}
 
+			ref = Value;
 			ref.clear();
 			break;
 		}
@@ -2496,6 +2542,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			}
 
 			depthstencil_flags.depth_flags = (depthstencil_flags.depth_flags.data() & ~DepthFlags::comparison_mask) | Value;
+			ref = Value;
 			ref.clear();
 			break;
 		}
@@ -2510,6 +2557,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_write_enabled;
 			}
 
+			ref = Value;
 			ref.clear();
 			break;
 
@@ -2523,73 +2571,101 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::stencil_enabled;
 			}
 
+			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_STENCILFAIL:
 			set_stencil_flags(StencilFlags::fail_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_STENCILZFAIL:
 			set_stencil_flags(StencilFlags::zfail_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_STENCILPASS:
 			set_stencil_flags(StencilFlags::pass_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_STENCILFUNC:
 			set_stencil_flags(StencilFlags::func_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_STENCILREF:
-			// value already stored; accessed in draw call
+			ref = Value;
 			break;
 
 		case D3DRS_STENCILMASK:
 			set_stencil_rw(StencilFlags::read_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_STENCILWRITEMASK:
 			set_stencil_rw(StencilFlags::write_shift);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_AMBIENT:
 			per_model.ambient = to_color4(Value);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:
 			per_model.material_sources.diffuse = Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_SPECULARMATERIALSOURCE:
 			per_model.material_sources.specular = Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_AMBIENTMATERIALSOURCE:
 			per_model.material_sources.ambient = Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_EMISSIVEMATERIALSOURCE:
 			per_model.material_sources.emissive = Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_COLORVERTEX:
 			per_model.color_vertex = !!Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_SRCBLEND:
 			per_pixel.src_blend = Value;
 			blend_flags = (blend_flags.data() & ~0x0F) | Value;
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_DESTBLEND:
 			per_pixel.dst_blend = Value;
 			blend_flags = (blend_flags.data() & ~0xF0) | (Value << 4);
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_ALPHABLENDENABLE:
-			ref.clear();
 			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
 
 			if (Value != 1)
@@ -2601,12 +2677,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				shader_flags |= ShaderFlags::rs_alpha;
 			}
 
+			ref = Value;
+			ref.clear();
 			break;
 
 		case D3DRS_BLENDOP:
-			ref.clear();
 			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
 			per_pixel.blend_op = Value;
+
+			ref = Value;
+			ref.clear();
 			break;
 	}
 
@@ -4060,17 +4140,20 @@ void Direct3DDevice8::update_shaders()
 	shader_flags &= ~ShaderFlags::stage_count_mask;
 	shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
 
-	shader_flags = ShaderFlags::sanitize(shader_flags);
+	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(shader_flags);
 
-	uber_shader_flags.rs_lighting = (shader_flags & ShaderFlags::rs_lighting) != 0;
-	uber_shader_flags.rs_specular = (shader_flags & ShaderFlags::rs_specular) != 0;
-	uber_shader_flags.rs_alpha    = (shader_flags & ShaderFlags::rs_alpha) != 0;
-	uber_shader_flags.rs_fog      = (shader_flags & ShaderFlags::rs_fog) != 0;
-	uber_shader_flags.rs_oit      = (shader_flags & ShaderFlags::rs_oit) != 0;
+	uber_shader_flags.rs_lighting        = (sanitized_flags & ShaderFlags::rs_lighting) != 0;
+	uber_shader_flags.rs_specular        = (sanitized_flags & ShaderFlags::rs_specular) != 0;
+	uber_shader_flags.rs_alpha           = (sanitized_flags & ShaderFlags::rs_alpha) != 0;
+	uber_shader_flags.rs_alpha_test      = (sanitized_flags & ShaderFlags::rs_alpha_test) != 0;
+	uber_shader_flags.rs_fog             = (sanitized_flags & ShaderFlags::rs_fog) != 0;
+	uber_shader_flags.rs_oit             = (sanitized_flags & ShaderFlags::rs_oit) != 0;
+	uber_shader_flags.rs_alpha_test_mode = (sanitized_flags & ShaderFlags::rs_alpha_test_mode_mask) >> ShaderFlags::rs_alpha_test_mode_shift;
+	uber_shader_flags.rs_fog_mode        = (sanitized_flags & ShaderFlags::rs_fog_mode_mask) >> ShaderFlags::rs_fog_mode_shift;
 
 	commit_uber_shader_flags();
 
-	if (last_shader_flags == shader_flags)
+	if (ShaderFlags::sanitize(last_shader_flags) == sanitized_flags)
 	{
 		return;
 	}

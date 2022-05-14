@@ -25,7 +25,7 @@
 
 // Enhancements
 
-#define RADIAL_FOG
+//#define RADIAL_FOG
 
 #if 0
 	#define PIXEL_LIGHTING
@@ -165,15 +165,21 @@ cbuffer UberBuffer : register(b0)
 	bool rs_lighting;
 	bool rs_specular;
 	bool rs_alpha;
+	bool rs_alpha_test;
 	bool rs_fog;
 	bool rs_oit;
+	uint rs_alpha_test_mode;
+	uint rs_fog_mode;
 }
 #else
-static const bool rs_lighting = (bool)RS_LIGHTING;
-static const bool rs_specular = (bool)RS_SPECULAR;
-static const bool rs_alpha    = (bool)RS_ALPHA;
-static const bool rs_fog      = (bool)RS_FOG;
-static const bool rs_oit      = (bool)RS_OIT;
+static const bool rs_lighting        = (bool)RS_LIGHTING;
+static const bool rs_specular        = (bool)RS_SPECULAR;
+static const bool rs_alpha           = (bool)RS_ALPHA;
+static const bool rs_alpha_test      = (bool)RS_ALPHA_TEST;
+static const bool rs_fog             = (bool)RS_FOG;
+static const bool rs_oit             = (bool)RS_OIT;
+static const uint rs_alpha_test_mode = (uint)RS_ALPHA_TEST_MODE;
+static const uint rs_fog_mode        = (uint)RS_FOG_MODE;
 #endif
 
 cbuffer PerSceneBuffer : register(b1)
@@ -204,15 +210,12 @@ cbuffer PerPixelBuffer : register(b3)
 	uint   src_blend;
 	uint   dst_blend;
 	uint   blend_op;
-	uint   fog_mode;
 	float  fog_start;
 	float  fog_end;
 	float  fog_density;
 	float4 fog_color;
 
-	bool  alpha_reject;
-	uint  alpha_reject_mode;
-	float alpha_reject_threshold;
+	float alpha_test_reference;
 
 	float4 texture_factor;
 }
@@ -232,15 +235,15 @@ float calc_fog(float d)
 {
 	float fog_coeff = 1.0;
 
-	if (FOGMODE_LINEAR == fog_mode)
+	if (rs_fog_mode == FOGMODE_LINEAR)
 	{
 		fog_coeff = (fog_end - d) / (fog_end - fog_start);
 	}
-	else if (FOGMODE_EXP == fog_mode)
+	else if (rs_fog_mode == FOGMODE_EXP)
 	{
-		fog_coeff = 1.0 / pow(E, d*fog_density);
+		fog_coeff = 1.0 / pow(E, d * fog_density);
 	}
-	else if (FOGMODE_EXP2 == fog_mode)
+	else if (rs_fog_mode == FOGMODE_EXP2)
 	{
 		fog_coeff = 1.0 / pow(E, d * d * fog_density * fog_density);
 	}
@@ -812,8 +815,9 @@ float4 apply_fog(float4 result, float fog)
 {
 	if (rs_fog)
 	{
-		float factor = calc_fog(fog);
-		result.rgb = (factor * result + (1.0 - factor) * fog_color).rgb;
+		// HACK: abs fixes fog in Phantasy Star Online: Blue Burst
+		float factor = calc_fog(abs(fog));
+		result.rgb = lerp(fog_color, result, factor).rgb;
 	}
 
 	return result;
@@ -825,7 +829,7 @@ bool is_standard_blending()
 	       (dst_blend == BLEND_INVSRCALPHA || dst_blend == BLEND_ZERO);
 }
 
-void do_alpha_reject(float4 result, bool standard_blending)
+void do_alpha_test(float4 result, bool standard_blending)
 {
 	if (rs_alpha)
 	{
@@ -836,11 +840,11 @@ void do_alpha_reject(float4 result, bool standard_blending)
 			// subject it to alpha rejection.
 			clip((standard_blending && floor(result.a * 255) < 1) ? -1 : 1);
 		}
-		else if (alpha_reject)
+		else if (rs_alpha_test)
 		{
 			uint alpha = floor(result.a * 255);
-			uint threshold = floor(alpha_reject_threshold * 255);
-			clip(compare(alpha_reject_mode, alpha, threshold) ? 1 : -1);
+			uint threshold = floor(alpha_test_reference * 255);
+			clip(compare(rs_alpha_test_mode, alpha, threshold) ? 1 : -1);
 		}
 	}
 }

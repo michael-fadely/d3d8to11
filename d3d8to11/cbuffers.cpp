@@ -6,8 +6,11 @@ void UberShaderFlagsBuffer::write(CBufferBase& cbuff) const
 	cbuff << rs_lighting
 	      << rs_specular
 	      << rs_alpha
+	      << rs_alpha_test
 	      << rs_fog
-	      << rs_oit;
+	      << rs_oit
+	      << rs_alpha_test_mode
+	      << rs_fog_mode;
 }
 
 bool UberShaderFlagsBuffer::dirty() const
@@ -15,8 +18,11 @@ bool UberShaderFlagsBuffer::dirty() const
 	return rs_lighting.dirty() ||
 	       rs_specular.dirty() ||
 	       rs_alpha.dirty() ||
+	       rs_alpha_test.dirty() ||
 	       rs_fog.dirty() ||
-	       rs_oit.dirty();
+	       rs_oit.dirty() ||
+	       rs_alpha_test_mode.dirty() ||
+	       rs_fog_mode.dirty();
 }
 
 void UberShaderFlagsBuffer::clear()
@@ -24,8 +30,11 @@ void UberShaderFlagsBuffer::clear()
 	rs_lighting.clear();
 	rs_specular.clear();
 	rs_alpha.clear();
+	rs_alpha_test.clear();
 	rs_fog.clear();
 	rs_oit.clear();
+	rs_alpha_test_mode.clear();
+	rs_fog_mode.clear();
 }
 
 void UberShaderFlagsBuffer::mark()
@@ -33,8 +42,11 @@ void UberShaderFlagsBuffer::mark()
 	rs_lighting.mark();
 	rs_specular.mark();
 	rs_alpha.mark();
+	rs_alpha_test.mark();
 	rs_fog.mark();
 	rs_oit.mark();
+	rs_alpha_test_mode.mark();
+	rs_fog_mode.mark();
 }
 
 void PerSceneBuffer::write(CBufferBase& cbuff) const
@@ -173,8 +185,9 @@ void PerModelBuffer::mark()
 void PerPixelBuffer::write(CBufferBase& cbuff) const
 {
 	cbuff << src_blend << dst_blend << blend_op
-	      << fog_mode << fog_start << fog_end << fog_density << fog_color
-	      << alpha_reject << alpha_reject_mode << alpha_reject_threshold << texture_factor;
+	      << fog_start << fog_end << fog_density << fog_color
+	      << alpha_test_reference
+	      << texture_factor;
 }
 
 bool PerPixelBuffer::dirty() const
@@ -182,14 +195,11 @@ bool PerPixelBuffer::dirty() const
 	return src_blend.dirty() ||
 	       dst_blend.dirty() ||
 	       blend_op.dirty() ||
-	       fog_mode.dirty() ||
 	       fog_start.dirty() ||
 	       fog_end.dirty() ||
 	       fog_density.dirty() ||
 	       fog_color.dirty() ||
-	       alpha_reject.dirty() ||
-	       alpha_reject_mode.dirty() ||
-	       alpha_reject_threshold.dirty() ||
+	       alpha_test_reference.dirty() ||
 	       texture_factor.dirty();
 }
 
@@ -198,14 +208,11 @@ void PerPixelBuffer::clear()
 	src_blend.clear();
 	dst_blend.clear();
 	blend_op.clear();
-	fog_mode.clear();
 	fog_start.clear();
 	fog_end.clear();
 	fog_density.clear();
 	fog_color.clear();
-	alpha_reject.clear();
-	alpha_reject_mode.clear();
-	alpha_reject_threshold.clear();
+	alpha_test_reference.clear();
 	texture_factor.clear();
 }
 
@@ -214,14 +221,11 @@ void PerPixelBuffer::mark()
 	src_blend.mark();
 	dst_blend.mark();
 	blend_op.mark();
-	fog_mode.mark();
 	fog_start.mark();
 	fog_end.mark();
 	fog_density.mark();
 	fog_color.mark();
-	alpha_reject.mark();
-	alpha_reject_mode.mark();
-	alpha_reject_threshold.mark();
+	alpha_test_reference.mark();
 	texture_factor.mark();
 }
 

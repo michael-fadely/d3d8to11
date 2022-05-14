@@ -13,8 +13,11 @@ public:
 	dirty_t<bool> rs_lighting;
 	dirty_t<bool> rs_specular;
 	dirty_t<bool> rs_alpha;
+	dirty_t<bool> rs_alpha_test;
 	dirty_t<bool> rs_fog;
 	dirty_t<bool> rs_oit;
+	dirty_t<uint> rs_alpha_test_mode;
+	dirty_t<uint> rs_fog_mode;
 
 	void write(CBufferBase& cbuff) const override;
 
@@ -78,14 +81,11 @@ public:
 	dirty_t<uint>   src_blend;
 	dirty_t<uint>   dst_blend;
 	dirty_t<uint>   blend_op;
-	dirty_t<uint>   fog_mode;
 	dirty_t<float>  fog_start;
 	dirty_t<float>  fog_end;
 	dirty_t<float>  fog_density;
 	dirty_t<float4> fog_color;
-	dirty_t<bool>   alpha_reject;
-	dirty_t<uint>   alpha_reject_mode;
-	dirty_t<float>  alpha_reject_threshold;
+	dirty_t<float>  alpha_test_reference;
 	dirty_t<float4> texture_factor;
 
 	void write(CBufferBase& cbuff) const override;
@@ -94,7 +94,6 @@ public:
 	void clear() override;
 	void mark() override;
 };
-
 
 struct TextureStage final : dirty_impl
 {
