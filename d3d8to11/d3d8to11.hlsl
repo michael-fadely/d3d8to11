@@ -303,6 +303,7 @@ void perform_lighting(in  float4 in_ambient,     in  float4 in_diffuse, in float
 	{
 		if (lights[i].enabled == false)
 		{
+			// FIXME: is break correct here?
 			break;
 		}
 
