@@ -1058,6 +1058,14 @@ void Direct3DDevice8::create_native()
 		SetTextureStageState(i, D3DTSS_RESULTARG, D3DTA_CURRENT);
 	}
 
+	for (auto& light : per_model.lights)
+	{
+		Light actual_light = {};
+		actual_light.diffuse = float4(1.0f, 1.0f, 1.0f, 0.0f);
+		actual_light.direction = float3(0.0f, 0.0f, 1.0f);
+		light = actual_light;
+	}
+
 	D3DMATERIAL8 material {};
 	material.Diffuse = { 1.0f, 1.0f, 1.0f, 1.0f };
 	SetMaterial(&material);
@@ -2224,7 +2232,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetLight(DWORD Index, const D3DLIGHT8
 		return D3DERR_INVALIDCALL;
 	}
 
-	per_model.lights[Index] = Light(*pLight);
+	Light light = per_model.lights[Index].data();
+	light.copy(*pLight);
+	per_model.lights[Index] = light;
 	return D3D_OK;
 }
 
@@ -2269,6 +2279,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::LightEnable(DWORD Index, BOOL Enable)
 	Light light = per_model.lights[Index].data();
 	light.enabled = Enable == TRUE;
 	per_model.lights[Index] = light;
+
 	return D3D_OK;
 }
 

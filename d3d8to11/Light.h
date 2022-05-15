@@ -22,10 +22,9 @@ struct Light
 	float  theta        = 0.0f;  /* Inner angle of spotlight cone */
 	float  phi          = 0.0f;  /* Outer angle of spotlight cone */
 
-	         Light() = default;
-	explicit Light(const D3DLIGHT8& rhs);
+	Light() = default;
 
-	Light& operator=(const D3DLIGHT8& rhs);
+	void copy(const D3DLIGHT8& rhs);
 
 	bool operator==(const Light& rhs) const;
 	bool operator!=(const Light& rhs) const;

@@ -2,7 +2,7 @@
 #include "Light.h"
 #include "CBufferWriter.h"
 
-Light::Light(const D3DLIGHT8& rhs)
+void Light::copy(const D3DLIGHT8& rhs)
 {
 	this->type         = rhs.Type;
 	this->diffuse      = float4(rhs.Diffuse.r, rhs.Diffuse.g, rhs.Diffuse.b, rhs.Diffuse.a);
@@ -17,12 +17,6 @@ Light::Light(const D3DLIGHT8& rhs)
 	this->attenuation2 = rhs.Attenuation2;
 	this->theta        = rhs.Theta;
 	this->phi          = rhs.Phi;
-}
-
-Light& Light::operator=(const D3DLIGHT8& rhs)
-{
-	*this = Light(rhs);
-	return *this;
 }
 
 bool Light::operator==(const Light& rhs) const
