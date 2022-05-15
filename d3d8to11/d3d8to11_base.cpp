@@ -10,6 +10,8 @@
 
 #include "d3d8to11_base.h"
 
+#include "not_implemented.h"
+
 using namespace Microsoft::WRL;
 using namespace d3d8to11;
 
@@ -42,8 +44,6 @@ void Direct3D8::create_native()
 			continue;
 		}
 
-		++current_adapter_count;
-
 		ComPtr<IDXGIOutput> output;
 
 		if (FAILED(adapter->EnumOutputs(0, &output)))
@@ -51,12 +51,14 @@ void Direct3D8::create_native()
 			continue;
 		}
 
-		for (auto format : ADAPTER_FORMATS)
+		++current_adapter_count;
+
+		for (const D3DFORMAT format : ADAPTER_FORMATS)
 		{
-			const DXGI_FORMAT dxgi = d3d8to11::to_dxgi(format);
+			const DXGI_FORMAT dxgi_format = d3d8to11::to_dxgi(format);
 
 			UINT count = 0;
-			auto hr = output->GetDisplayModeList(dxgi, 0, &count, nullptr);
+			auto hr = output->GetDisplayModeList(dxgi_format, 0, &count, nullptr);
 
 			if (FAILED(hr))
 			{
@@ -70,7 +72,7 @@ void Direct3D8::create_native()
 
 			std::vector<DXGI_MODE_DESC> modes(count);
 
-			hr = output->GetDisplayModeList(dxgi, 0, &count, modes.data());
+			hr = output->GetDisplayModeList(dxgi_format, 0, &count, modes.data());
 
 			if (FAILED(hr))
 			{
@@ -125,7 +127,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::RegisterSoftwareDevice(void* pInitializeFun
 {
 	//return ProxyInterface->RegisterSoftwareDevice(pInitializeFunction);
 	// TODO
-	return D3DERR_INVALIDCALL;
+	NOT_IMPLEMENTED_RETURN;
 }
 
 UINT STDMETHODCALLTYPE Direct3D8::GetAdapterCount()
@@ -258,7 +260,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceFormat(UINT Adapter, D3DDEVTYPE 
 HRESULT STDMETHODCALLTYPE Direct3D8::CheckDeviceMultiSampleType(UINT Adapter, D3DDEVTYPE DeviceType, D3DFORMAT SurfaceFormat, BOOL Windowed, D3DMULTISAMPLE_TYPE MultiSampleType)
 {
 	// TODO
-	return D3DERR_INVALIDCALL;
+	NOT_IMPLEMENTED_RETURN;
 	//return ProxyInterface->CheckDeviceMultiSampleType(Adapter, DeviceType, SurfaceFormat, Windowed, MultiSampleType, nullptr);
 }
 
@@ -442,6 +444,7 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetDeviceCaps(UINT Adapter, D3DDEVTYPE Devi
 HMONITOR STDMETHODCALLTYPE Direct3D8::GetAdapterMonitor(UINT Adapter)
 {
 	// TODO
+	NOT_IMPLEMENTED;
 	return nullptr;
 	//return ProxyInterface->GetAdapterMonitor(Adapter);
 }
