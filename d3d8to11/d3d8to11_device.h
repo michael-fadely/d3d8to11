@@ -458,9 +458,8 @@ protected:
 	void frag_list_head_init();
 	void frag_list_count_init();
 	void frag_list_nodes_init();
-	void up_get(size_t target_size);
+	[[nodiscard]] ComPtr<Direct3DVertexBuffer8> get_user_primitive_buffer(size_t target_size);
 
-	ComPtr<Direct3DVertexBuffer8> up_buffer;
 	std::deque<ComPtr<Direct3DVertexBuffer8>> up_buffers;
 
 	dirty_t<DWORD> FVF;

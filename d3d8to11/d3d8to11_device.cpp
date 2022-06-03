@@ -3389,7 +3389,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 	const auto size = count * VertexStreamZeroStride;
 
-	up_get(size);
+	auto up_buffer = get_user_primitive_buffer(size);
 
 	if (up_buffer == nullptr)
 	{
@@ -3410,8 +3410,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 	run_draw_epilogues(__FUNCTION__);
 
 	SetStreamSource(0, nullptr, 0);
-	up_buffers.push_back(up_buffer);
-	up_buffer = nullptr;
+	up_buffers.emplace_back(std::move(up_buffer));
 
 	return result;
 }
@@ -4682,19 +4681,33 @@ void Direct3DDevice8::frag_list_nodes_init()
 	}
 }
 
-void Direct3DDevice8::up_get(size_t target_size)
+ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_buffer(size_t target_size)
 {
+	ComPtr<Direct3DVertexBuffer8> up_buffer;
 	const size_t rounded = round_pow2(target_size);
 
 	for (auto it = up_buffers.begin(); it != up_buffers.end(); ++it)
 	{
 		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
 		{
-			up_buffer = *it;
+			up_buffer = std::move(*it);
 			up_buffers.erase(it);
-			return;
+			return up_buffer;
 		}
 	}
 
+#if _DEBUG
+	{
+		std::stringstream ss;
+
+		ss << "creating new UP buffer. count: " << up_buffers.size() + 1
+			<< "; target size: " << target_size
+			<< "; rounded size: " << rounded << "\n";
+
+		OutputDebugStringA(ss.str().c_str());
+	}
+#endif
+
 	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
+	return up_buffer;
 }
