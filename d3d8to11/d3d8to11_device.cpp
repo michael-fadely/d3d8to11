@@ -4497,7 +4497,7 @@ void Direct3DDevice8::oit_write()
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {};
 	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
 
-	std::array<ID3D11UnorderedAccessView*, 3> uavs = {
+	std::array uavs = {
 		frag_list_head_uav.Get(),
 		frag_list_count_uav.Get(),
 		frag_list_nodes_uav.Get()
