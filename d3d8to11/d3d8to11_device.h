@@ -82,22 +82,19 @@ struct DepthStencilFlags : dirty_impl
 	bool operator==(const DepthStencilFlags& rhs) const;
 };
 
-namespace std
+template <>
+struct std::hash<DepthStencilFlags>
 {
-	template <>
-	struct hash<DepthStencilFlags>
+	std::size_t operator()(const DepthStencilFlags& s) const noexcept
 	{
-		std::size_t operator()(const DepthStencilFlags& s) const noexcept
-		{
-			size_t h = std::hash<size_t>()(s.flags.data());
+		size_t h = std::hash<size_t>()(s.flags.data());
 
-			hash_combine(h, static_cast<size_t>(s.depth_flags.data()));
-			hash_combine(h, static_cast<size_t>(s.stencil_flags.data()));
+		hash_combine(h, static_cast<size_t>(s.depth_flags.data()));
+		hash_combine(h, static_cast<size_t>(s.stencil_flags.data()));
 
-			return h;
-		}
-	};
-}
+		return h;
+	}
+};
 
 struct RasterFlags
 {
@@ -125,33 +122,30 @@ struct SamplerSettings : dirty_impl
 
 	bool operator==(const SamplerSettings& s) const;
 
-	bool dirty() const override;
+	[[nodiscard]] bool dirty() const override;
 	void clear() override;
 	void mark() override;
 };
 
-namespace std
+template <>
+struct std::hash<SamplerSettings>
 {
-	template <>
-	struct hash<SamplerSettings>
+	std::size_t operator()(const SamplerSettings& s) const noexcept
 	{
-		std::size_t operator()(const SamplerSettings& s) const noexcept
-		{
-			size_t h = std::hash<size_t>()(s.address_u.data());
+		size_t h = std::hash<size_t>()(s.address_u.data());
 
-			hash_combine(h, (size_t)s.address_v.data());
-			hash_combine(h, (size_t)s.address_w.data());
-			hash_combine(h, (size_t)s.filter_mag.data());
-			hash_combine(h, (size_t)s.filter_min.data());
-			hash_combine(h, (size_t)s.filter_mip.data());
-			hash_combine(h, s.mip_lod_bias.data());
-			hash_combine(h, (size_t)s.max_mip_level.data());
-			hash_combine(h, (size_t)s.max_anisotropy.data());
+		hash_combine(h, (size_t)s.address_v.data());
+		hash_combine(h, (size_t)s.address_w.data());
+		hash_combine(h, (size_t)s.filter_mag.data());
+		hash_combine(h, (size_t)s.filter_min.data());
+		hash_combine(h, (size_t)s.filter_mip.data());
+		hash_combine(h, s.mip_lod_bias.data());
+		hash_combine(h, (size_t)s.max_mip_level.data());
+		hash_combine(h, (size_t)s.max_anisotropy.data());
 
-			return h;
-		}
-	};
-}
+		return h;
+	}
+};
 
 struct StreamPair
 {
