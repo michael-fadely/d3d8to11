@@ -1,0 +1,31 @@
+version: 1.0.{build}-{branch}
+
+pull_requests:
+  do_not_increment_build_number: true
+
+image: Visual Studio 2019
+platform:
+  - x86
+  - x64
+configuration: Release
+
+install:
+- cmd: git submodule update --init --recursive
+
+build:
+  project: d3d8to11.sln
+
+after_build:
+- ps: >-
+    Write-Host "Creating artifact..."
+    
+    & 7z a d3d8to11.7z bin\*
+
+artifacts:
+- path: d3d8to11.7z
+
+skip_commits:
+  files:
+    - '*.DotSettings'
+    - LICENSE
+    - README.md
