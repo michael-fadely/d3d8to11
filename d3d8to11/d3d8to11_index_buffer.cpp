@@ -160,11 +160,6 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 	this->lock_size   = SizeToLock ? SizeToLock : buffer.size();
 	this->lock_flags  = Flags;
 
-	if (Flags & D3DLOCK_DISCARD)
-	{
-		//memset(*ppbData, 0, lock_size);
-	}
-
 	return D3D_OK;
 }
 
