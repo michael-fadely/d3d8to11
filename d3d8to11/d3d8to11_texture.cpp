@@ -16,8 +16,7 @@ using namespace d3d8to11;
 
 void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 {
-	auto device  = device8->device;
-	auto context = device8->context;
+	const auto& device  = device8->device;
 
 	block_compressed = is_block_compressed(to_dxgi(format_));
 
@@ -154,6 +153,7 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	texture_buffer.resize(total_size);
 	texture_buffer.shrink_to_fit();
 }
+
 // IDirect3DTexture8
 Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
 	: device8(device_)
@@ -195,7 +195,7 @@ ULONG STDMETHODCALLTYPE Direct3DTexture8::AddRef()
 
 ULONG STDMETHODCALLTYPE Direct3DTexture8::Release()
 {
-	auto result = Direct3DBaseTexture8::Release();
+	const auto result = Direct3DBaseTexture8::Release();
 
 	if (!result)
 	{
@@ -348,7 +348,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 {
-	auto it = locked_rects.find(Level);
+	const auto it = locked_rects.find(Level);
 
 	if (it == locked_rects.end())
 	{
@@ -359,7 +359,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 	// TODO: instead of this, make sure render target data is accessible by the CPU, even if that means we need a staging texture
 	if (!is_render_target && !is_depth_stencil)
 	{
-		auto context = device8->context;
+		const auto& context = device8->context;
 
 		// TODO: make this behavior configurable [safe mipmaps]
 		if (!Level)
@@ -392,7 +392,7 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 		}
 		else if (!convert(Level))
 		{
-			auto& rect = it->second;
+			const auto& rect = it->second;
 			context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 		}
 	}

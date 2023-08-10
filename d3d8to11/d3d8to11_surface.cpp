@@ -74,7 +74,7 @@ ULONG STDMETHODCALLTYPE Direct3DSurface8::AddRef()
 
 ULONG STDMETHODCALLTYPE Direct3DSurface8::Release()
 {
-	auto result = Unknown::Release();
+	const auto result = Unknown::Release();
 
 	if (!result)
 	{
@@ -141,7 +141,7 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::UnlockRect()
 
 void Direct3DSurface8::create_native()
 {
-	auto device = device8->device;
+	const auto& device = device8->device;
 
 	if (parent)
 	{

@@ -13,7 +13,7 @@
 
 void Direct3DVertexBuffer8::create_native()
 {
-	auto device = device8->device;
+	const auto& device = device8->device;
 
 	D3D11_BUFFER_DESC desc = {};
 
@@ -35,6 +35,7 @@ void Direct3DVertexBuffer8::create_native()
 	buffer.resize(desc8.Size);
 	buffer.shrink_to_fit();
 }
+
 // IDirect3DVertexBuffer8
 Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool)
 	: device8(Device)
@@ -74,7 +75,7 @@ ULONG STDMETHODCALLTYPE Direct3DVertexBuffer8::AddRef()
 
 ULONG STDMETHODCALLTYPE Direct3DVertexBuffer8::Release()
 {
-	auto result = Direct3DResource8::Release();
+	const auto result = Direct3DResource8::Release();
 
 	if (!result)
 	{
@@ -175,7 +176,7 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 	}
 
 	locked = false;
-	auto context = device8->context;
+	const auto& context = device8->context;
 
 #ifdef USE_SUBRESOURCE
 	D3D11_BOX box {};
