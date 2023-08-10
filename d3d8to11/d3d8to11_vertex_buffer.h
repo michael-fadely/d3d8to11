@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "d3d8to11_resource.h"
 
 class Direct3DDevice8;
@@ -40,7 +42,7 @@ public:
 	void get_buffer(size_t offset, size_t size, uint8_t** ptr);
 
 	ComPtr<ID3D11Buffer> buffer_resource;
-	dynarray<uint8_t> buffer;
+	std::vector<uint8_t> buffer;
 	D3DVERTEXBUFFER_DESC desc8 {};
 
 private:

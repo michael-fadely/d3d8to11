@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "d3d8to11_resource.h"
 
 class Direct3DDevice8;
@@ -43,6 +45,6 @@ private:
 	UINT lock_offset = 0;
 	UINT lock_size   = 0;
 	DWORD lock_flags = 0;
-	dynarray<uint8_t> buffer;
+	std::vector<uint8_t> buffer;
 	Direct3DDevice8* const device8;
 };

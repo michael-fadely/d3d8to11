@@ -8,7 +8,6 @@
 #include <iomanip>
 
 #include "d3d8to11.hpp"
-#include "dynarray.h"
 #include "not_implemented.h"
 
 using namespace d3d8to11;
@@ -138,7 +137,9 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 		}
 	}
 
+	surfaces.clear();
 	surfaces.resize(levels_);
+	surfaces.shrink_to_fit();
 
 	size_t level = 0;
 	size_t total_size = 0;
@@ -151,6 +152,7 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	}
 
 	texture_buffer.resize(total_size);
+	texture_buffer.shrink_to_fit();
 }
 // IDirect3DTexture8
 Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)

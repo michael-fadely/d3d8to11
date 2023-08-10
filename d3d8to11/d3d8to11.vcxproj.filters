@@ -90,9 +90,6 @@
     <ClInclude Include="d3d8types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dynarray.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>

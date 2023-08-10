@@ -33,6 +33,7 @@ void Direct3DIndexBuffer8::create_native()
 	}
 
 	buffer.resize(desc8.Size);
+	buffer.shrink_to_fit();
 }
 // IDirect3DIndexBuffer8
 Direct3DIndexBuffer8::Direct3DIndexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)

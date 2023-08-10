@@ -4,7 +4,6 @@
 #include <vector>
 #include "d3d8types.hpp"
 #include "d3d8to11_resource.h"
-#include "dynarray.h"
 
 class Direct3DDevice8;
 class Direct3DSurface8;
@@ -86,7 +85,7 @@ public:
 	bool block_compressed = false;
 
 private:
-	dynarray<ComPtr<Direct3DSurface8>> surfaces;
+	std::vector<ComPtr<Direct3DSurface8>> surfaces;
 
 	void get_level_offset(UINT level, size_t& offset, size_t& size) const;
 
@@ -96,5 +95,5 @@ private:
 	Direct3DDevice8* const device8;
 
 	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
-	dynarray<uint8_t> texture_buffer;
+	std::vector<uint8_t> texture_buffer;
 };
