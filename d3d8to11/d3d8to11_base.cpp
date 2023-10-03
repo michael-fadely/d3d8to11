@@ -62,7 +62,7 @@ void Direct3D8::create_native()
 
 			if (FAILED(hr))
 			{
-				throw std::runtime_error("GetDisplayModeList falied");
+				throw std::runtime_error("GetDisplayModeList failed");
 			}
 
 			if (!count)
