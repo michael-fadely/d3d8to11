@@ -26,14 +26,35 @@ T constexpr align_down(T value, size_t alignment)
 }
 
 template <typename T>
-T round_pow2(T value)
+constexpr T round_pow2(T value)
 {
+	static_assert(sizeof(T) <= sizeof(uint64_t), "Integer size is too large!");
+
 	--value;
-	value |= value >> 1;
-	value |= value >> 2;
-	value |= value >> 4;
-	value |= value >> 8;
-	value |= value >> 16;
+
+	if constexpr (sizeof(T) >= 1)
+	{
+		value |= value >> 1;
+		value |= value >> 2;
+		value |= value >> 4;
+	}
+
+	if constexpr (sizeof(T) >= 2)
+	{
+		value |= value >> 8;
+	}
+
+	if constexpr (sizeof(T) >= 4)
+	{
+		value |= value >> 16;
+	}
+
+	if constexpr (sizeof(T) >= 8)
+	{
+		value |= value >> 32;
+	}
+
 	++value;
+
 	return value;
 }
