@@ -1,5 +1,7 @@
 #include "CBufferWriter.h"
 
+#include <stdexcept>
+
 CBufferWriter::CBufferWriter(uint8_t* ptr_)
 	: ptr(ptr_)
 {

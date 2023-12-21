@@ -12,6 +12,9 @@
 #include <exception>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
+#include <shared_mutex>
+#include <span>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
@@ -19,8 +22,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <shared_mutex>
-#include <mutex>
 
 // Windows
 #include <Windows.h>
@@ -33,9 +34,6 @@
 #include "d3d8types.h"
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
-
-// GSL
-#include <gsl/span>
 
 // DirectXTK
 #include <SimpleMath.h>

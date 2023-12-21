@@ -3,7 +3,7 @@
 #include <d3d11.h>
 
 #include <SimpleMath.h>
-#include <gsl/span>
+#include <span>
 #include <cstdint>
 #include "dirty_t.h"
 
@@ -56,10 +56,10 @@ public:
 	CBufferBase& operator<<(const T& data) = delete;
 
 	template <typename T>
-	CBufferBase& operator<<(const gsl::span<T>& data) = delete;
+	CBufferBase& operator<<(const std::span<T>& data) = delete;
 
 	template <typename T>
-	CBufferBase& operator<<(const gsl::span<const T>& data) = delete;
+	CBufferBase& operator<<(const std::span<const T>& data) = delete;
 
 	CBufferBase& operator<<(const CBufferAlign& align_of);
 
