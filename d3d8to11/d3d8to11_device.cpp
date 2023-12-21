@@ -1774,6 +1774,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 		return D3DERR_INVALIDCALL;
 	}
 
+	if (Usage & D3DUSAGE_DYNAMIC)
+	{
+		if (Pool != D3DPOOL_DEFAULT)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+	}
+
 	*ppVertexBuffer = nullptr;
 	auto result = new Direct3DVertexBuffer8(this, Length, Usage, FVF, Pool);
 	result->AddRef();
@@ -1802,6 +1810,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	if (ppIndexBuffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
+	}
+
+	if (Usage & D3DUSAGE_DYNAMIC)
+	{
+		if (Pool != D3DPOOL_DEFAULT)
+		{
+			return D3DERR_INVALIDCALL;
+		}
 	}
 
 	*ppIndexBuffer = nullptr;
@@ -3181,6 +3197,7 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 			break;
 
 		case D3DPT_TRIANGLESTRIP:
+		case D3DPT_TRIANGLEFAN:
 			count += 2;
 			break;
 
@@ -3194,9 +3211,6 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 		case D3DPT_LINESTRIP:
 			++count;
 			break;
-
-		case D3DPT_TRIANGLEFAN:
-			return false;
 
 		default:
 			return false;
@@ -3232,29 +3246,10 @@ void Direct3DDevice8::oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE)
 // the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
+	// TODO: triangle fan
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		auto stream = stream_sources[0]; // HACK: shouldn't only be handling 0!
-
-		if (!stream.buffer)
-		{
-			return D3DERR_INVALIDCALL;
-		}
-
-		const auto buffer = stream.buffer;
-		const auto stride = stream.stride;
-		const auto offset = StartVertex * stride;
-		const auto size   = (2 + PrimitiveCount) * stride;
-
-		uint8_t* data = nullptr;
-		buffer->get_buffer(offset, size, &data);
-
-		ComPtr<Direct3DVertexBuffer8> temp;
-		UINT temp_stride;
-		GetStreamSource(0, &temp, &temp_stride);
-		const auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
-		SetStreamSource(0, temp.Get(), temp_stride);
-		return result;
+		return D3DERR_INVALIDCALL;
 	}
 
 	if (!set_primitive_type(PrimitiveType))
@@ -4733,6 +4728,6 @@ ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_buffer(size_t 
 	}
 #endif
 
-	CreateVertexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
+	CreateVertexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &up_buffer);
 	return up_buffer;
 }
