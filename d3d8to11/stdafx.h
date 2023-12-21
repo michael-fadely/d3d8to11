@@ -26,6 +26,7 @@
 #include <Windows.h>
 #include <VersionHelpers.h>
 #include <WTypes.h>
+#include <wrl/client.h>
 
 // DirectX 11
 #include <d3d11_1.h>
@@ -37,7 +38,6 @@
 #include <gsl/span>
 
 // DirectXTK
-#include <wrl/client.h>
 #include <SimpleMath.h>
 
 // Local
@@ -61,6 +61,5 @@
 #include "Material.h"
 #include "Shader.h"
 #include "simple_math.h"
-#include "SimpleMath.h"
 #include "typedefs.h"
 #include "Unknown.h"
