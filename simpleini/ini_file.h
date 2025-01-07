@@ -8,9 +8,9 @@
 
 class ini_section
 {
-public:
-	std::map<std::string, std::string> pairs;
+	std::map<std::string, std::string> m_pairs;
 
+public:
 	[[nodiscard]] bool contains(const std::string& key) const;
 
 	template <typename T>
@@ -19,7 +19,7 @@ public:
 	template <typename T>
 	[[nodiscard]] T get_or(const std::string& key, const T& default_value) const
 	{
-		if (!pairs.contains(key))
+		if (!m_pairs.contains(key))
 		{
 			return default_value;
 		}
@@ -50,7 +50,30 @@ public:
 
 	void set(const std::string& key, const std::string& value);
 
+	/**
+	 * Erases (removes) a key/value pair from this section.
+	 * @param key The key to erase.
+	 * @return \c true if the key was present and successfully erased.
+	 */
 	bool erase(const std::string& key);
+
+	/**
+	 * Get the number of key/value pairs in this section.
+	 * @return The number of key/value pairs in this section.
+	 */
+	[[nodiscard]] decltype(m_pairs)::size_type size() const;
+
+	/**
+	 * Check if this section is empty, i.e. contains no key/value pairs.
+	 * @return \c true if there are no key/value pairs in this section.
+	 */
+	[[nodiscard]] bool empty() const;
+
+	// FIXME: honestly I'm just too lazy to fix the ini_file code that needs m_pairs access
+	[[nodiscard]] const auto& get_pairs() const
+	{
+		return m_pairs;
+	}
 };
 
 template <>
@@ -85,16 +108,51 @@ template <>
 
 class ini_file
 {
-public:
-	std::map<std::string, std::shared_ptr<ini_section>> sections;
+	// FIXME: this shared_ptr stuff is gross
+	std::map<std::string, std::shared_ptr<ini_section>> m_sections;
 
+public:
 	ini_file() = default;
+	~ini_file() = default;
+
+	ini_file(ini_file&&) noexcept = default;
+	ini_file(const ini_file& other);
+
+	ini_file& operator=(ini_file&&) noexcept = default;
+	ini_file& operator=(const ini_file& rhs);
 
 	void read(std::fstream& stream);
 	void write(std::fstream& stream);
 
 	[[nodiscard]] bool contains_section(const std::string& section_name) const;
 
+	/**
+	 * Gets a section by name.
+	 * @param section_name The name of the section to retrieve.
+	 * @return A pointer to the section associated with the given name, or \c nullptr if not found.
+	 */
 	[[nodiscard]] std::shared_ptr<ini_section> get_section(const std::string& section_name) const;
+
+	/**
+	 * Sets or erases a section's contents.
+	 * @param section_name The name of the section to set.
+	 * @param section_ptr A pointer to the section contents, or \c nullptr to erase the section.
+	 * \sa ini_section
+	 */
 	void set_section(const std::string& section_name, std::shared_ptr<ini_section> section_ptr);
+
+	/**
+	 * Get the number of sections in this file.
+	 * @return The number of sections in this file.
+	 * \sa ini_section
+	 */
+	[[nodiscard]] decltype(m_sections)::size_type size() const;
+
+	/**
+	 * Check if this file is empty, i.e. contains no sections.
+	 * @return \c true if there are no sections in the file.
+	 */
+	[[nodiscard]] bool empty() const;
+
+	void clear();
 };
