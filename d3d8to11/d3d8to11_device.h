@@ -176,7 +176,7 @@ class Direct3DDevice8 : public Unknown
 	std::fstream permutation_cache;
 	std::unordered_set<ShaderFlags::type> permutation_flags;
 
-	std::vector<uint8_t> trifan_buffer;
+	std::vector<uint32_t> trifan_index_buffer;
 
 	std::unordered_map<size_t, std::string> digit_strings;
 
@@ -451,9 +451,12 @@ protected:
 	void frag_list_head_init();
 	void frag_list_count_init();
 	void frag_list_nodes_init();
-	[[nodiscard]] ComPtr<Direct3DVertexBuffer8> get_user_primitive_buffer(size_t target_size);
 
-	std::deque<ComPtr<Direct3DVertexBuffer8>> up_buffers;
+	std::deque<ComPtr<Direct3DVertexBuffer8>> up_vertex_buffers;
+	[[nodiscard]] ComPtr<Direct3DVertexBuffer8> get_user_primitive_vertex_buffer(size_t target_size);
+
+	std::deque<ComPtr<Direct3DIndexBuffer8>> up_index_buffers;
+	[[nodiscard]] ComPtr<Direct3DIndexBuffer8> get_user_primitive_index_buffer(size_t target_size, D3DFORMAT format);
 
 	dirty_t<DWORD> FVF;
 	ComPtr<Direct3DTexture8> depth_stencil;
