@@ -355,7 +355,7 @@ public:
 
 		const size_t cbuffer_size = interface_.cbuffer_size();
 
-		desc.ByteWidth           = align_up(cbuffer_size, 16); // FIXME: magic number for buffer alignment
+		desc.ByteWidth           = static_cast<decltype(desc.ByteWidth)>(align_up(cbuffer_size, 16)); // FIXME: magic number for buffer alignment
 		desc.Usage               = D3D11_USAGE_DYNAMIC;
 		desc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
 		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;

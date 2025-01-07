@@ -34,7 +34,7 @@ void Direct3D8::create_native()
 
 	HRESULT result = S_OK;
 
-	for (size_t adapter_index = 0; adapter_index < max_adapters && result == S_OK; adapter_index++)
+	for (UINT adapter_index = 0; adapter_index < max_adapters && result == S_OK; adapter_index++)
 	{
 		ComPtr<IDXGIAdapter> adapter;
 		result = factory->EnumAdapters(adapter_index, &adapter);
@@ -81,7 +81,7 @@ void Direct3D8::create_native()
 
 			auto& stored_modes = current_adapter_modes[adapter_index];
 			stored_modes.insert(stored_modes.end(), modes.begin(), modes.end());
-			current_adapter_mode_count[adapter_index] += modes.size();
+			current_adapter_mode_count[adapter_index] += static_cast<UINT>(modes.size());
 		}
 	}
 }

@@ -140,7 +140,7 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 	surfaces.resize(levels_);
 	surfaces.shrink_to_fit();
 
-	size_t level = 0;
+	UINT level = 0;
 	size_t total_size = 0;
 
 	for (auto& it : surfaces)

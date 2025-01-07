@@ -575,7 +575,7 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	}
 
 	std::string composite_view_name = "composite_view";
-	composite_view->SetPrivateData(WKPDID_D3DDebugObjectName, composite_view_name.size(), composite_view_name.data());
+	composite_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_view_name.size()), composite_view_name.data());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
@@ -592,7 +592,7 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	}
 
 	std::string composite_srv_name = "composite_srv";
-	composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, composite_srv_name.size(), composite_srv_name.data());
+	composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_srv_name.size()), composite_srv_name.data());
 
 	composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	composite_wrapper->create_native(composite_texture.Get());
@@ -624,7 +624,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	}
 
 	std::string view_name = "render_target_view";
-	render_target_view->SetPrivateData(WKPDID_D3DDebugObjectName, view_name.size(), view_name.data());
+	render_target_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(view_name.size()), view_name.data());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
@@ -641,7 +641,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	}
 
 	std::string render_target_srv_name = "render_target_srv";
-	render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, render_target_srv_name.size(), render_target_srv_name.data());
+	render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(render_target_srv_name.size()), render_target_srv_name.data());
 
 	render_target_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	render_target_wrapper->create_native(render_target_texture.Get());
@@ -1029,7 +1029,7 @@ void Direct3DDevice8::create_native()
 
 	// set all the texture stage states to their defaults
 
-	for (size_t i = 0; i < TEXTURE_STAGE_MAX; i++)
+	for (DWORD i = 0; i < TEXTURE_STAGE_MAX; i++)
 	{
 		SetTextureStageState(i, D3DTSS_COLOROP, !i ? D3DTOP_MODULATE : D3DTOP_DISABLE);
 		SetTextureStageState(i, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -3970,7 +3970,7 @@ bool Direct3DDevice8::update_input_layout()
 
 	ComPtr<ID3D11InputLayout> layout;
 
-	HRESULT hr = device->CreateInputLayout(elements, i,
+	HRESULT hr = device->CreateInputLayout(elements, static_cast<UINT>(i),
 	                                       vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
 
 	if (FAILED(hr))
@@ -4479,7 +4479,7 @@ void Direct3DDevice8::oit_release()
 	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
 
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr,
-	                                                   1, null.size(), &null[0], nullptr);
+	                                                   1, static_cast<UINT>(null.size()), &null[0], nullptr);
 
 	frag_list_head      = nullptr;
 	frag_list_head_srv  = nullptr;
@@ -4497,7 +4497,7 @@ void Direct3DDevice8::oit_write()
 	// Unbinds the shader resource views for our fragment list and list head.
 	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
 	std::array<ID3D11ShaderResourceView*, 5> srvs = {};
-	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
+	context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
 
 	std::array uavs = {
 		frag_list_head_uav.Get(),
@@ -4512,7 +4512,7 @@ void Direct3DDevice8::oit_write()
 
 	// Binds our fragment list & list head UAVs for read/write operations.
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target_view.GetAddressOf(),
-	                                                   current_depth_stencil->depth_stencil.Get(), 1, uavs.size(), &uavs[0], &zero[0]);
+	                                                   current_depth_stencil->depth_stencil.Get(), 1, static_cast<UINT>(uavs.size()), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to OIT_FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
@@ -4540,7 +4540,7 @@ void Direct3DDevice8::oit_read() const
 	};
 
 	// Binds the shader resource views of our UAV buffers as read-only.
-	context->PSSetShaderResources(0, srvs.size(), &srvs[0]);
+	context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
 }
 
 void Direct3DDevice8::oit_init()
@@ -4710,6 +4710,6 @@ ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_buffer(size_t 
 	}
 #endif
 
-	CreateVertexBuffer(rounded, D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
+	CreateVertexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
 	return up_buffer;
 }

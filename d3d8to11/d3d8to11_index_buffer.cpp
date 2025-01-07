@@ -157,7 +157,7 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 	*ppbData = reinterpret_cast<BYTE*>(&buffer[OffsetToLock]);
 
 	this->lock_offset = OffsetToLock;
-	this->lock_size   = SizeToLock ? SizeToLock : buffer.size();
+	this->lock_size   = SizeToLock ? SizeToLock : static_cast<UINT>(buffer.size());
 	this->lock_flags  = Flags;
 
 	return D3D_OK;
