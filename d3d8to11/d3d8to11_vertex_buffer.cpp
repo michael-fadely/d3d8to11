@@ -6,6 +6,7 @@
 #include "pch.h"
 #include "d3d8to11.hpp"
 #include "not_implemented.h"
+#include "resource_helper.h"
 
 void Direct3DVertexBuffer8::create_native()
 {
@@ -141,44 +142,16 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (desc8.Usage & D3DUSAGE_DYNAMIC)
-	{
-		const auto masked = Flags & (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE);
-
-		if (masked != D3DLOCK_DISCARD && masked != D3DLOCK_NOOVERWRITE)
-		{
-			return D3DERR_INVALIDCALL;
-		}
-	}
-
-	if ((Flags & (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE)) == (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE))
+	if (!are_lock_flags_valid(desc8.Usage, Flags))
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	uint32_t map = D3D11_MAP_WRITE_DISCARD;
-
-	if (Flags & D3DLOCK_READONLY)
-	{
-		if ((Flags & D3DLOCK_DISCARD) || (desc8.Usage & D3DUSAGE_WRITEONLY))
-		{
-			return D3DERR_INVALIDCALL;
-		}
-
-		map = D3D11_MAP_READ;
-	}
-	else if (Flags & D3DLOCK_DISCARD)
-	{
-		map = D3D11_MAP_WRITE_DISCARD;
-	}
-	else if (Flags & D3DLOCK_NOOVERWRITE)
-	{
-		map = D3D11_MAP_WRITE_NO_OVERWRITE;
-	}
+	const auto map_type = d3dlock_to_map_type(Flags);
 
 	const auto& context = device8->context;
 	D3D11_MAPPED_SUBRESOURCE mapped_resource {};
-	const HRESULT result = context->Map(buffer_resource.Get(), 0, static_cast<D3D11_MAP>(map), 0, &mapped_resource);
+	const HRESULT result = context->Map(buffer_resource.Get(), 0, map_type, 0, &mapped_resource);
 
 	if (result != S_OK)
 	{
