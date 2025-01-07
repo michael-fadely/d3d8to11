@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "ShaderFlags.h"
 
 ShaderFlags::type ShaderFlags::sanitize(type flags)

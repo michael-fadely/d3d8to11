@@ -3,7 +3,7 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
-#include "stdafx.h"
+#include "pch.h"
 
 #include <d3d11_1.h> // TODO: switch to newer header (11.3, 11.4)
 #include <DirectXMath.h>

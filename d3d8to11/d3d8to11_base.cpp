@@ -3,7 +3,7 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
-#include "stdafx.h"
+#include "pch.h"
 
 #include <d3d11_1.h>
 #include <wrl/client.h>

@@ -3,7 +3,7 @@
  * License: https://github.com/crosire/d3d8to9#license
  */
 
-#include "stdafx.h"
+#include "pch.h"
 #include "d3d8to11.hpp"
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)

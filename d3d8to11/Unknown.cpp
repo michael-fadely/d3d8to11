@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "Unknown.h"
 
 HRESULT Unknown::QueryInterface(const IID& riid, void** ppvObject)

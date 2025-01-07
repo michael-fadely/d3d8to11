@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "simple_math.h"
 
 float4 to_color4(uint color)

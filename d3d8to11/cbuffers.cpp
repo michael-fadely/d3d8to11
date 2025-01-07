@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "cbuffers.h"
 
 void UberShaderFlagsBuffer::write(CBufferBase& cbuff) const

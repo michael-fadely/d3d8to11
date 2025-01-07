@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "Material.h"
 #include "CBufferWriter.h"
 
