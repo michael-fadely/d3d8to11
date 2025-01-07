@@ -3272,12 +3272,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		}
 
 		BYTE* raw_output_indices_ptr = nullptr;
-		up_index_buffer->Lock(0, tri_list_index_buffer_size, &raw_output_indices_ptr, D3DLOCK_DISCARD);
+		up_index_buffer->Lock(0, static_cast<UINT>(tri_list_index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
 
 		auto tri_list_indices = std::span(reinterpret_cast<uint32_t*>(raw_output_indices_ptr), tri_list_index_count);
 
 		{
-			size_t n = 1;
+			UINT n = 1;
 			for (size_t i = 0; i < PrimitiveCount; ++i)
 			{
 				const size_t o = 3 * i;
@@ -3293,7 +3293,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 		const auto result = DrawIndexedPrimitive(D3DPT_TRIANGLELIST,
 		                                         0,
-		                                         tri_list_index_count,
+		                                         static_cast<UINT>(tri_list_index_count),
 		                                         0,
 		                                         PrimitiveCount);
 
@@ -3516,7 +3516,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		}
 
 		BYTE* raw_output_indices_ptr = nullptr;
-		up_index_buffer->Lock(0, tri_list_index_buffer_size, &raw_output_indices_ptr, D3DLOCK_DISCARD);
+		up_index_buffer->Lock(0, static_cast<UINT>(tri_list_index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
 
 		const auto* index_0 = static_cast<const uint32_t*>(pIndexData);
 		const auto* input_indices = index_0 + 1;
@@ -3548,7 +3548,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		up_index_buffer = get_user_primitive_index_buffer(index_buffer_size, IndexDataFormat);
 
 		BYTE* raw_output_indices_ptr = nullptr;
-		up_index_buffer->Lock(0, index_buffer_size, &raw_output_indices_ptr, D3DLOCK_DISCARD);
+		up_index_buffer->Lock(0, static_cast<UINT>(index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
 
 		memcpy(raw_output_indices_ptr, pIndexData, index_buffer_size);
 
@@ -4945,6 +4945,6 @@ ComPtr<Direct3DIndexBuffer8> Direct3DDevice8::get_user_primitive_index_buffer(si
 	}
 #endif
 
-	CreateIndexBuffer(rounded, D3DUSAGE_DYNAMIC, format, D3DPOOL_DEFAULT, &up_buffer);
+	CreateIndexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, format, D3DPOOL_DEFAULT, &up_buffer);
 	return up_buffer;
 }
