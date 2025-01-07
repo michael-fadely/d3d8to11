@@ -3542,7 +3542,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		uint32_t vertex_count = PrimitiveCount;
 		primitive_vertex_count(PrimitiveType, vertex_count);
 
-		const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16) : sizeof(uint32);
+		const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16_t) : sizeof(uint32_t);
 		const size_t index_buffer_size = index_size * vertex_count;
 
 		up_index_buffer = get_user_primitive_index_buffer(index_buffer_size, IndexDataFormat);

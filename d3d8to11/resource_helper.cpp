@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "resource_helper.h"
 
 bool are_lock_flags_valid(DWORD Usage, DWORD Flags)
