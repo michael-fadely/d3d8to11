@@ -337,7 +337,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="ShaderFlags.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="typedefs.h" />
     <ClInclude Include="Unknown.h" />
   </ItemGroup>
   <ItemGroup>

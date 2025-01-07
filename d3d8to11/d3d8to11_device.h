@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <deque>
 #include <unordered_map>
 #include <fstream>
@@ -161,10 +162,10 @@ struct StreamPair
 
 struct OitNode
 {
-	float depth; // fragment depth
-	uint  color; // 32-bit packed fragment color
-	uint  flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
-	uint  next;  // index of the next entry, or OIT_FRAGMENT_LIST_NULL
+	float    depth; // fragment depth
+	uint32_t color; // 32-bit packed fragment color
+	uint32_t flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
+	uint32_t next;  // index of the next entry, or OIT_FRAGMENT_LIST_NULL
 };
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;

@@ -7,11 +7,13 @@
 
 #include <d3d11_1.h> // TODO: switch to newer header (11.3, 11.4)
 #include <DirectXMath.h>
+
 #include <cassert>
-#include <fstream>
-#include <sstream>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <shared_mutex>
+#include <sstream>
 
 #include "alignment.h"
 #include "CBufferWriter.h"
@@ -1851,8 +1853,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 			return D3DERR_INVALIDCALL;
 		}
 
-		if (pSourceSurface->desc8.Width  != static_cast<uint>(pSourceRectsArray->right) ||
-		    pSourceSurface->desc8.Height != static_cast<uint>(pSourceRectsArray->bottom))
+		if (pSourceSurface->desc8.Width  != static_cast<uint32_t>(pSourceRectsArray->right) ||
+		    pSourceSurface->desc8.Height != static_cast<uint32_t>(pSourceRectsArray->bottom))
 		{
 			return D3DERR_INVALIDCALL;
 		}
@@ -4506,7 +4508,7 @@ void Direct3DDevice8::oit_write()
 	// This is used to set the hidden counter of frag_list_nodes to 0.
 	// It only works on frag_list_nodes, but the number of elements here
 	// must match the number of UAVs given.
-	static const uint zero[3] = { 0, 0, 0 };
+	static const uint32_t zero[3] = { 0, 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target_view.GetAddressOf(),

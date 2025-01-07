@@ -305,10 +305,10 @@ void TextureStages::write(CBufferBase& cbuff) const
 		cbuff
 			<< it.bound
 			<< it.transform
-			<< static_cast<uint>(it.color_op.data())
+			<< static_cast<uint32_t>(it.color_op.data())
 			<< it.color_arg1
 			<< it.color_arg2
-			<< static_cast<uint>(it.alpha_op.data())
+			<< static_cast<uint32_t>(it.alpha_op.data())
 			<< it.alpha_arg1
 			<< it.alpha_arg2
 			<< it.bump_env_mat00
@@ -318,7 +318,7 @@ void TextureStages::write(CBufferBase& cbuff) const
 			<< it.tex_coord_index
 			<< it.bump_env_lscale
 			<< it.bump_env_loffset
-			<< static_cast<uint>(it.texture_transform_flags.data())
+			<< static_cast<uint32_t>(it.texture_transform_flags.data())
 			<< it.color_arg0
 			<< it.alpha_arg0
 			<< it.result_arg

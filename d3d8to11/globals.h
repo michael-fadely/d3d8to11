@@ -1,8 +1,8 @@
 #pragma once
 
-#include "simple_math.h"
+#include <cstdint>
 
 namespace globals
 {
-	extern uint max_fragments;
+	extern uint32_t max_fragments;
 }

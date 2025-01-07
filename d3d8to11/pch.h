@@ -59,5 +59,4 @@
 #include "Material.h"
 #include "Shader.h"
 #include "simple_math.h"
-#include "typedefs.h"
 #include "Unknown.h"

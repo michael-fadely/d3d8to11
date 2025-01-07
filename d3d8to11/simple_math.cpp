@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "simple_math.h"
 
-float4 to_color4(uint color)
+float4 to_color4(uint32_t color)
 {
 	float4 color4;
 
