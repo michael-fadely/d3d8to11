@@ -325,6 +325,8 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="dirty_t.h" />
+    <ClInclude Include="filesystem.h" />
+    <ClInclude Include="GlobalConfig.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="hash_combine.h" />
     <ClInclude Include="alignment.h" />
@@ -335,8 +337,10 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderCompilationQueue.h" />
     <ClInclude Include="ShaderFlags.h" />
+    <ClInclude Include="ShaderIncluder.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="tstring.h" />
     <ClInclude Include="Unknown.h" />
   </ItemGroup>
   <ItemGroup>
@@ -351,11 +355,14 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="d3d8to11_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to11_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
+    <ClCompile Include="filesystem.cpp" />
+    <ClCompile Include="GlobalConfig.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="ShaderCompilationQueue.cpp" />
     <ClCompile Include="ShaderFlags.cpp" />
+    <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="simple_math.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

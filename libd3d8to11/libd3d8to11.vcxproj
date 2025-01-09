@@ -21,11 +21,9 @@
   <ItemGroup>
     <ClInclude Include="CBufferWriter.h" />
     <ClInclude Include="dirty_t.h" />
-    <ClInclude Include="ShaderIncluder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CBufferWriter.cpp" />
-    <ClCompile Include="ShaderIncluder.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

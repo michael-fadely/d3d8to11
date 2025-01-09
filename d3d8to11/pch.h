@@ -54,9 +54,12 @@
 #include "d3d8types.hpp"
 #include "defs.h"
 #include <dirty_t.h>
+#include "filesystem.h"
+#include "GlobalConfig.h"
 #include "hash_combine.h"
 #include "Light.h"
 #include "Material.h"
 #include "Shader.h"
 #include "simple_math.h"
+#include "tstring.h"
 #include "Unknown.h"

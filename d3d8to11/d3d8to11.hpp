@@ -21,15 +21,15 @@
 #include "d3d8to11_index_buffer.h"
 #include "d3d8to11_vertex_buffer.h"
 
-#include <filesystem>
+#include "GlobalConfig.h"
+
+#include <memory>
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion);
 
 namespace d3d8to11
 {
-	extern const std::filesystem::path storage_directory;
-	extern const std::filesystem::path config_file_path;
-	extern const std::filesystem::path permutation_file_path;
+	extern std::unique_ptr<GlobalConfig> config;
 
 	DXGI_FORMAT to_dxgi(D3DFORMAT value);
 	D3DFORMAT to_d3d8(DXGI_FORMAT value);
