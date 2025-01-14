@@ -4373,7 +4373,6 @@ void Direct3DDevice8::free_shaders()
 
 	last_shader_flags = ShaderFlags::mask;
 
-	_LOCK(shader_sources_mutex);
 	std::unique_lock vs_lock(vs_mutex);
 	std::unique_lock ps_lock(ps_mutex);
 	std::unique_lock uber_vs_lock(uber_vs_mutex);
@@ -4382,7 +4381,6 @@ void Direct3DDevice8::free_shaders()
 	current_vs = {};
 	current_ps = {};
 
-	shader_sources.clear();
 	vertex_shaders.clear();
 	pixel_shaders.clear();
 	uber_vertex_shaders.clear();

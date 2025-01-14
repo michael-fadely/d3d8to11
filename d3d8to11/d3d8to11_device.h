@@ -177,8 +177,6 @@ class Direct3DDevice8 : public Unknown
 	std::recursive_mutex permutation_mutex;
 	std::unordered_set<ShaderFlags::type> permutation_flags;
 
-	std::recursive_mutex shader_sources_mutex;
-	std::unordered_map<std::string, std::vector<uint8_t>> shader_sources;
 	std::vector<uint8_t> trifan_buffer;
 
 	std::unordered_map<size_t, std::string> digit_strings;
