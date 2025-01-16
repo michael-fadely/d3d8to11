@@ -15,37 +15,42 @@ struct Shader
 	~Shader() = default;
 
 	Shader(Shader&& other) noexcept
+		: shader(std::move(other.shader)),
+		  blob(std::move(other.blob))
 	{
-		*this = std::move(other);
 	}
 
 	Shader(const Shader& other)
+		: shader(other.shader),
+		  blob(other.blob)
 	{
-		*this = other;
 	}
 
 	Shader(ComPtr<T> shader, ComPtr<ID3DBlob> blob)
 	{
-		this->shader = shader;
-		this->blob   = blob;
+		this->shader = std::move(shader);
+		this->blob   = std::move(blob);
 	}
 
 	Shader& operator=(Shader&& other) noexcept
 	{
-		shader = std::move(other.shader);
-		blob   = std::move(other.blob);
+		if (this != &other)
+		{
+			shader = std::move(other.shader);
+			blob   = std::move(other.blob);
+		}
+
 		return *this;
 	}
 
 	Shader& operator=(const Shader& other)
 	{
-		if (this == &other)
+		if (this != &other)
 		{
-			return *this;
+			shader = other.shader;
+			blob   = other.blob;
 		}
 
-		shader = other.shader;
-		blob   = other.blob;
 		return *this;
 	}
 
