@@ -3,13 +3,11 @@
 #include <d3d11_1.h>
 #include <wrl/client.h>
 
-using Microsoft::WRL::ComPtr;
-
 template <typename T>
 struct Shader
 {
-	ComPtr<T>        shader;
-	ComPtr<ID3DBlob> blob;
+	Microsoft::WRL::ComPtr<T>        shader;
+	Microsoft::WRL::ComPtr<ID3DBlob> blob;
 
 	Shader() = default;
 	~Shader() = default;
@@ -26,7 +24,7 @@ struct Shader
 	{
 	}
 
-	Shader(ComPtr<T> shader, ComPtr<ID3DBlob> blob)
+	Shader(Microsoft::WRL::ComPtr<T> shader, Microsoft::WRL::ComPtr<ID3DBlob> blob)
 	{
 		this->shader = std::move(shader);
 		this->blob   = std::move(blob);
