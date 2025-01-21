@@ -819,11 +819,8 @@ void Direct3DDevice8::create_native()
 
 		if (permutation_file_path.empty())
 		{
-			std::stringstream ss;
-			ss << "The file path for the shader permutation cache was too long and extended-length paths are not enabled."
-				" Shaders will not be cached.";
-
-			OutputDebugStringA(ss.str().c_str());
+			OutputDebugStringA("The file path for the shader permutation cache was too long and extended-length paths are not enabled."
+			                   " Shaders will not be cached.\n");
 		}
 		else
 		{
@@ -840,7 +837,7 @@ void Direct3DDevice8::create_native()
 			{
 				std::stringstream ss;
 				ss << "Unable to open or create shader permutation cache file: \"" << permutation_file_path.string()
-					<< "\"\nShaders will not be cached.";
+					<< "\"\nShaders will not be cached.\n";
 
 				OutputDebugStringA(ss.str().c_str());
 			}
