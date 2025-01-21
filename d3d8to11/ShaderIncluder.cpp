@@ -120,6 +120,11 @@ void ShaderIncluder::set_base_directory(std::filesystem::path dir)
 
 void ShaderIncluder::add_include_directory(std::filesystem::path dir)
 {
+	if (dir.empty())
+	{
+		return;
+	}
+
 	if (fs::is_extended_length(dir))
 	{
 		dir = fs::without_extended_length_prefix(dir);

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "filesystem.h"
 #include "ini_file.h"
 #include "tstring.h"
 
@@ -54,6 +55,11 @@ void GlobalConfig::read_config()
 {
 	set_paths();
 
+	if (m_config_file_path.empty())
+	{
+		return;
+	}
+
 	if (std::filesystem::exists(m_config_file_path))
 	{
 		std::fstream file(m_config_file_path.string(), std::fstream::in);
@@ -76,6 +82,11 @@ void GlobalConfig::read_config()
 
 void GlobalConfig::save_config() const
 {
+	if (m_config_file_path.empty())
+	{
+		return;
+	}
+
 	// this is the same as the old implementation from Direct3DDevice8.
 	// it's good enough for now.
 
@@ -113,8 +124,24 @@ OITConfig& GlobalConfig::get_oit_config()
 
 void GlobalConfig::set_paths()
 {
+	auto maybe_extended_length_or_empty = [](const std::filesystem::path& path) -> std::filesystem::path
 	{
-		std::filesystem::path env_config_dir = read_environment_variable(config_dir_env_name);
+		if (!d3d8to11::filesystem::should_extend_length(path))
+		{
+			return path;
+		}
+
+		if (!d3d8to11::filesystem::extended_length_paths_supported())
+		{
+			// TODO: logging: note that the path was too long
+			return TEXT("");
+		}
+
+		return d3d8to11::filesystem::as_extended_length(path);
+	};
+
+	{
+		std::filesystem::path env_config_dir = maybe_extended_length_or_empty(read_environment_variable(config_dir_env_name));
 
 		if (!env_config_dir.empty() && std::filesystem::exists(env_config_dir))
 		{
@@ -135,7 +162,7 @@ void GlobalConfig::set_paths()
 	}
 
 	{
-		std::filesystem::path env_config_file_path = read_environment_variable(config_file_path_env_name);
+		std::filesystem::path env_config_file_path = maybe_extended_length_or_empty(read_environment_variable(config_file_path_env_name));
 
 		if (!env_config_file_path.empty() && std::filesystem::exists(env_config_file_path.parent_path()))
 		{
@@ -145,12 +172,12 @@ void GlobalConfig::set_paths()
 		else
 		{
 			// TODO: logging: say we're using the default path (config_dir/config.ini)
-			m_config_file_path = m_config_dir / "config.ini";
+			m_config_file_path = maybe_extended_length_or_empty(m_config_dir / "config.ini");
 		}
 	}
 
 	{
-		std::filesystem::path env_shader_cache_dir = read_environment_variable(shader_cache_dir_env_name);
+		std::filesystem::path env_shader_cache_dir = maybe_extended_length_or_empty(read_environment_variable(shader_cache_dir_env_name));
 
 		if (!env_shader_cache_dir.empty() && std::filesystem::exists(env_shader_cache_dir))
 		{
@@ -160,19 +187,20 @@ void GlobalConfig::set_paths()
 		else
 		{
 			// TODO: logging: say we're using the default path (config_dir/shader cache)
-			m_shader_cache_dir = m_config_dir / "shader cache";
+			m_shader_cache_dir = maybe_extended_length_or_empty(m_config_dir / "shader cache");
 
-			if (!std::filesystem::exists(m_shader_cache_dir))
+			if (!m_shader_cache_dir.empty() && !std::filesystem::exists(m_shader_cache_dir))
 			{
 				std::filesystem::create_directory(m_shader_cache_dir);
 			}
 		}
 	}
 
-	m_shader_cache_variants_file_path = m_shader_cache_dir / "permutations.bin";
+	// TODO: if m_shader_cache_variants_file_path ends up empty, report some kind of error
+	m_shader_cache_variants_file_path = maybe_extended_length_or_empty(m_shader_cache_dir / "permutations.bin");
 
 	{
-		std::filesystem::path env_shader_source_dir = read_environment_variable(shader_source_dir_env_name);
+		std::filesystem::path env_shader_source_dir = maybe_extended_length_or_empty(read_environment_variable(shader_source_dir_env_name));
 
 		if (!env_shader_source_dir.empty() && std::filesystem::exists(env_shader_source_dir))
 		{

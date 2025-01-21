@@ -830,15 +830,33 @@ void Direct3DDevice8::create_native()
 		const bool exists = std::filesystem::exists(permutation_file_path);
 
 		std::fstream file;
-		file.open(permutation_file_path, std::ios::binary | std::ios::in | std::ios::out);
 
-		if (!file.is_open())
+		if (permutation_file_path.empty())
 		{
-			file.open(permutation_file_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+			std::stringstream ss;
+			ss << "The file path for the shader permutation cache was too long and extended-length paths are not enabled."
+				" Shaders will not be cached.";
+
+			OutputDebugStringA(ss.str().c_str());
+		}
+		else
+		{
+			auto file_flags = std::ios::binary | std::ios::in | std::ios::out;
+
+			if (!exists)
+			{
+				file_flags |= std::ios::trunc;
+			}
+
+			file.open(permutation_file_path, file_flags);
 
 			if (!file.is_open())
 			{
-				OutputDebugStringA("fuck\n");
+				std::stringstream ss;
+				ss << "Unable to open or create shader permutation cache file: \"" << permutation_file_path.string()
+					<< "\"\nShaders will not be cached.";
+
+				OutputDebugStringA(ss.str().c_str());
 			}
 		}
 
@@ -871,7 +889,7 @@ void Direct3DDevice8::create_native()
 			{
 				_LOCK(permutation_mutex);
 
-				while (!file.eof())
+				while (file.is_open() && !file.eof())
 				{
 					ShaderFlags::type flags = 0;
 
