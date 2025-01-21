@@ -1538,7 +1538,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		{
 			oit_enabled = !oit_enabled;
 			OutputDebugStringA(oit_enabled ? "OIT enabled\n" : "OIT disabled\n");
-			d3d8to11::config->get_oit_config().enabled = oit_enabled; // WIP
+			d3d8to11::config->get_oit_config().enabled = oit_enabled; // this is ugly :(
 		}
 	}
 
