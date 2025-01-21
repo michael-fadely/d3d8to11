@@ -128,11 +128,8 @@ std::span<const uint8_t> ShaderIncluder::get_shader_source(const std::filesystem
 
 	if (it != m_shader_sources.end())
 	{
-		OutputDebugStringA("cache hit!\n");
 		return it->second;
 	}
-
-	OutputDebugStringA("cache miss...\n");
 
 	std::ifstream file(file_path, std::ios::binary | std::ios::ate);
 	const auto size = static_cast<size_t>(file.tellg());
