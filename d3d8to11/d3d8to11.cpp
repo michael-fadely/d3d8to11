@@ -8,6 +8,15 @@
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {
+	d3d8to11::filesystem::initialize();
+
+	if (d3d8to11::config == nullptr)
+	{
+		d3d8to11::config = std::make_unique<d3d8to11::GlobalConfig>();
+	}
+
+	d3d8to11::config->read_config();
+
 	auto result = new Direct3D8();
 	result->AddRef();
 
@@ -26,10 +35,7 @@ extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 
 namespace d3d8to11
 {
-	const std::filesystem::path storage_directory(".d3d8to11");
-
-	const std::filesystem::path config_file_path      = storage_directory / "config.ini";
-	const std::filesystem::path permutation_file_path = storage_directory / "permutations.bin";
+	std::unique_ptr<GlobalConfig> config;
 
 	DXGI_FORMAT to_dxgi(D3DFORMAT value)
 	{

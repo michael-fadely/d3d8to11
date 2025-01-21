@@ -21,15 +21,9 @@
     <ClInclude Include="dirty_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShaderIncluder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CBufferWriter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShaderIncluder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

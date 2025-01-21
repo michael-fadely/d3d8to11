@@ -21,6 +21,7 @@
 #include "alignment.h"
 #include "ShaderCompilationQueue.h"
 #include "ShaderFlags.h"
+#include "ShaderIncluder.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -373,6 +374,7 @@ public:
 	VertexShader current_vs;
 	PixelShader current_ps;
 
+	ShaderIncluder shader_includer;
 	ShaderCompilationQueue shader_compilation_queue;
 
 	std::shared_mutex ps_mutex, vs_mutex;

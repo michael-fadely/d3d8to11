@@ -331,15 +331,13 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
 
-	ShaderIncluder includer;
-
-	constexpr auto path = "shader.hlsl";
-	const auto& src = includer.get_shader_source(path);
+	const auto path = (d3d8to11::config->get_shader_source_dir() / "shader.hlsl").string();
+	const auto src = shader_includer.get_shader_source(path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &shader_includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
 	if (errors != nullptr)
 	{
@@ -391,15 +389,13 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
 
-	ShaderIncluder includer;
-
-	constexpr auto path = "shader.hlsl";
-	const auto& src = includer.get_shader_source(path);
+	const auto path = (d3d8to11::config->get_shader_source_dir() / "shader.hlsl").string();
+	const auto src = shader_includer.get_shader_source(path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path, preproc.data(), &includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &shader_includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 
 	if (errors != nullptr)
 	{
@@ -687,38 +683,10 @@ void Direct3DDevice8::get_back_buffer()
 
 void Direct3DDevice8::create_native()
 {
-	if (!std::filesystem::exists(d3d8to11::storage_directory))
-	{
-		std::filesystem::create_directory(d3d8to11::storage_directory);
-	}
+	shader_includer.set_base_directory(d3d8to11::config->get_shader_source_dir());
+	shader_includer.add_include_directory(d3d8to11::config->get_shader_source_dir());
 
-	if (std::filesystem::exists(d3d8to11::config_file_path))
-	{
-		std::fstream file(d3d8to11::config_file_path.string(), std::fstream::in);
-
-		ini_file ini;
-		ini.read(file);
-
-		auto section = ini.get_section("OIT");
-
-		if (section)
-		{
-			oit_enabled = section->get_or("enabled", false);
-		}
-	}
-	else
-	{
-		std::fstream file(d3d8to11::config_file_path.string(), std::fstream::out);
-
-		ini_file ini;
-
-		auto section = std::make_shared<ini_section>();
-
-		ini.set_section("OIT", section);
-		section->set("enabled", oit_enabled);
-
-		ini.write(file);
-	}
+	oit_enabled = d3d8to11::config->get_oit_config().enabled;
 
 	if (!present_params.EnableAutoDepthStencil)
 	{
@@ -858,18 +826,37 @@ void Direct3DDevice8::create_native()
 	context->PSSetConstantBuffers(4, 1, per_texture_cbuffer.GetAddressOf());
 
 	{
-		bool exists = std::filesystem::exists(d3d8to11::permutation_file_path);
+		const auto& permutation_file_path = d3d8to11::config->get_shader_cache_variants_file_path();
+		const bool exists = std::filesystem::exists(permutation_file_path);
 
 		std::fstream file;
-		file.open(d3d8to11::permutation_file_path, std::ios::binary | std::ios::in | std::ios::out);
 
-		if (!file.is_open())
+		if (permutation_file_path.empty())
 		{
-			file.open(d3d8to11::permutation_file_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+			std::stringstream ss;
+			ss << "The file path for the shader permutation cache was too long and extended-length paths are not enabled."
+				" Shaders will not be cached.";
+
+			OutputDebugStringA(ss.str().c_str());
+		}
+		else
+		{
+			auto file_flags = std::ios::binary | std::ios::in | std::ios::out;
+
+			if (!exists)
+			{
+				file_flags |= std::ios::trunc;
+			}
+
+			file.open(permutation_file_path, file_flags);
 
 			if (!file.is_open())
 			{
-				OutputDebugStringA("fuck\n");
+				std::stringstream ss;
+				ss << "Unable to open or create shader permutation cache file: \"" << permutation_file_path.string()
+					<< "\"\nShaders will not be cached.";
+
+				OutputDebugStringA(ss.str().c_str());
 			}
 		}
 
@@ -902,7 +889,7 @@ void Direct3DDevice8::create_native()
 			{
 				_LOCK(permutation_mutex);
 
-				while (!file.eof())
+				while (file.is_open() && !file.eof())
 				{
 					ShaderFlags::type flags = 0;
 
@@ -1569,6 +1556,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 		{
 			oit_enabled = !oit_enabled;
 			OutputDebugStringA(oit_enabled ? "OIT enabled\n" : "OIT disabled\n");
+			d3d8to11::config->get_oit_config().enabled = oit_enabled; // this is ugly :(
 		}
 	}
 
@@ -4386,6 +4374,8 @@ void Direct3DDevice8::free_shaders()
 	uber_vertex_shaders.clear();
 	uber_pixel_shaders.clear();
 
+	shader_includer.clear_shader_source_cache();
+
 	fvf_layouts.clear();
 
 	for (auto& value : render_state_values)
@@ -4427,12 +4417,10 @@ void Direct3DDevice8::oit_load_shaders()
 			ComPtr<ID3DBlob> errors;
 			ComPtr<ID3DBlob> blob;
 
-			ShaderIncluder includer;
+			const auto path = (d3d8to11::config->get_shader_source_dir() / "composite.hlsl").string();
+			const auto src = shader_includer.get_shader_source(path);
 
-			constexpr auto path = "composite.hlsl";
-			const auto& src = includer.get_shader_source(path);
-
-			HRESULT hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), &preproc[0], &shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -4447,7 +4435,7 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			hr = D3DCompile(src.data(), src.size(), path, &preproc[0], &includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = D3DCompile(src.data(), src.size(), path.c_str(), &preproc[0], &shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{

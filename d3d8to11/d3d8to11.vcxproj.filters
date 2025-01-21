@@ -99,6 +99,18 @@
     <ClInclude Include="ShaderFlags.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GlobalConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="filesystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tstring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderIncluder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -156,6 +168,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ShaderFlags.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GlobalConfig.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="filesystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderIncluder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
