@@ -929,8 +929,8 @@ void Direct3DDevice8::create_native()
 					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-					const std::string str = std::format("enqueueing uber shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
-						flags, sanitized_vs, sanitized_ps);
+					const std::string str = std::format("enqueueing standard shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
+					                                    flags, sanitized_vs, sanitized_ps);
 
 					OutputDebugStringA(str.c_str());
 
