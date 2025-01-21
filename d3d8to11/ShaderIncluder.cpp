@@ -156,11 +156,11 @@ std::span<const uint8_t> ShaderIncluder::get_shader_source(const std::filesystem
 			return {};
 		}
 
-		file = std::ifstream(fs::as_extended_length(file_path), std::ios::binary | std::ios::ate);
+		file.open(fs::as_extended_length(file_path), std::ios::binary | std::ios::ate);
 	}
 	else
 	{
-		file = std::ifstream(file_path, std::ios::binary | std::ios::ate);
+		file.open(file_path, std::ios::binary | std::ios::ate);
 	}
 
 	// TODO: return some kind of error if the file couldn't be opened
