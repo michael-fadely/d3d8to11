@@ -44,6 +44,7 @@ namespace d3d8to11
 	size_t dxgi_stride(DXGI_FORMAT format);
 	D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
 	bool is_block_compressed(DXGI_FORMAT value);
+	uint32_t fvf_sanitize(uint32_t value);
 }
 
 // TODO: Direct3DSwapChain8

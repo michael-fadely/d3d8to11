@@ -127,20 +127,6 @@ static const std::array FEATURE_LEVELS =
 	D3D_FEATURE_LEVEL_11_0
 };
 
-inline uint32_t fvf_sanitize(uint32_t value)
-{
-	if ((value & D3DFVF_XYZ) == D3DFVF_XYZ)
-	{
-		value &= ~D3DFVF_XYZRHW;
-	}
-	else if ((value & D3DFVF_XYZRHW) == D3DFVF_XYZRHW)
-	{
-		value &= ~D3DFVF_NORMAL;
-	}
-
-	return value;
-}
-
 size_t Direct3DDevice8::count_texture_stages() const
 {
 	size_t n = 0;

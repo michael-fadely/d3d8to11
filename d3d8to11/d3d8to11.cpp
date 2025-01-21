@@ -958,4 +958,18 @@ namespace d3d8to11
 				return false;
 		}
 	}
+
+	uint32_t fvf_sanitize(uint32_t value)
+	{
+		if ((value & D3DFVF_XYZ) == D3DFVF_XYZ)
+		{
+			value &= ~D3DFVF_XYZRHW;
+		}
+		else if ((value & D3DFVF_XYZRHW) == D3DFVF_XYZRHW)
+		{
+			value &= ~D3DFVF_NORMAL;
+		}
+
+		return value;
+	}
 }
