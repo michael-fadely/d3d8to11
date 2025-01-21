@@ -11,9 +11,9 @@
 #include <cassert>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <shared_mutex>
-#include <sstream>
 
 #include "alignment.h"
 #include "CBufferWriter.h"
@@ -328,10 +328,8 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
 	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-
-		OutputDebugStringA("\n" __FUNCTION__ "\n");
-		OutputDebugStringA(str.c_str());
-		OutputDebugStringA("\n");
+		const std::string message = std::format("\n" __FUNCTION__ "\n{}\n", str);
+		OutputDebugStringA(message.c_str());
 
 		if (FAILED(hr))
 		{
@@ -386,10 +384,8 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
 	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-
-		OutputDebugStringA("\n" __FUNCTION__ "\n");
-		OutputDebugStringA(str.c_str());
-		OutputDebugStringA("\n");
+		const std::string message = std::format("\n" __FUNCTION__ "\n{}\n", str);
+		OutputDebugStringA(message.c_str());
 
 		if (FAILED(hr))
 		{
@@ -835,11 +831,11 @@ void Direct3DDevice8::create_native()
 
 			if (!file.is_open())
 			{
-				std::stringstream ss;
-				ss << "Unable to open or create shader permutation cache file: \"" << permutation_file_path.string()
-					<< "\"\nShaders will not be cached.\n";
+				const std::string str =
+					std::format("Unable to open or create shader permutation cache file: \"{}\"\nShaders will not be cached.\n",
+					            permutation_file_path.string());
 
-				OutputDebugStringA(ss.str().c_str());
+				OutputDebugStringA(str.c_str());
 			}
 		}
 
@@ -890,12 +886,14 @@ void Direct3DDevice8::create_native()
 
 				for (ShaderFlags::type flags : permutation_flags)
 				{
-					std::stringstream ss;
-					ss << "enqueueing uber shader: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
-					OutputDebugStringA(ss.str().c_str());
-
 					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::uber_vs_mask);
 					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::uber_ps_mask);
+
+					const std::string str = std::format("enqueueing uber shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
+					                                    flags, sanitized_vs, sanitized_ps);
+
+					OutputDebugStringA(str.c_str());
+
 					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, uber_enqueue_vs);
 					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, uber_enqueue_ps);
 				}
@@ -912,21 +910,15 @@ void Direct3DDevice8::create_native()
 			const auto uber_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(uber_end - uber_start);
 
 			{
-				std::stringstream ss;
-
 				const size_t uber_vs_count = uber_vertex_shaders.size();
 				const size_t uber_ps_count = uber_pixel_shaders.size();
 
-				ss << "done ("
-					<< uber_vs_count
-					<< " vertex shader(s) and "
-					<< uber_ps_count
-					<< " pixel shader(s) ("
-					<< uber_vs_count + uber_ps_count
-					<< " total) in "
-					<< uber_elapsed.count() << " ms)\nenqueueing standard shaders now...\n";
+				const std::string str =
+					std::format("done ({} vertex shader(s) and {} pixel shader(s) ({} total) in {} ms)\n"
+					            "\nenqueueing standard shaders now...\n",
+					            uber_vs_count, uber_ps_count, uber_vs_count + uber_ps_count, uber_elapsed.count());
 
-				OutputDebugStringA(ss.str().c_str());
+				OutputDebugStringA(str.c_str());
 			}
 
 			{
@@ -934,12 +926,14 @@ void Direct3DDevice8::create_native()
 
 				for (ShaderFlags::type flags : permutation_flags)
 				{
-					std::stringstream ss;
-					ss << "enqueueing standard shader: " << flags << "\n"; // because OutputDebugStringA doesn't like std::endl
-					OutputDebugStringA(ss.str().c_str());
-
 					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
+
+					const std::string str = std::format("enqueueing uber shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
+						flags, sanitized_vs, sanitized_ps);
+
+					OutputDebugStringA(str.c_str());
+
 					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, standard_enqueue_vs);
 					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, standard_enqueue_ps);
 				}
@@ -1648,10 +1642,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateTexture(UINT Width, UINT Height
 	{
 		delete result;
 
-		std::string str = __FUNCTION__;
-		str.append(" ");
-		str.append(ex.what());
-
+		const std::string str = std::format("{} {}\n", __FUNCTION__, ex.what());
 		OutputDebugStringA(str.c_str());
 
 		print_info_queue();
@@ -1742,10 +1733,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 	{
 		delete result;
 
-		std::string str = __FUNCTION__;
-		str.append(" ");
-		str.append(ex.what());
-
+		const std::string str = std::format("{} {}\n", __FUNCTION__, ex.what());
 		OutputDebugStringA(str.c_str());
 
 		print_info_queue();
@@ -1775,10 +1763,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD 
 	{
 		delete result;
 
-		std::string str = __FUNCTION__;
-		str.append(" ");
-		str.append(ex.what());
-
+		const std::string str = std::format("{} {}\n", __FUNCTION__, ex.what());
 		OutputDebugStringA(str.c_str());
 
 		print_info_queue();
@@ -2351,18 +2336,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			}
 
 			ref.clear();
-			auto it = RS_STRINGS.find(State);
+			const auto it = RS_STRINGS.find(State);
 
 			if (it == RS_STRINGS.end())
 			{
 				break;
 			}
 
-			std::stringstream ss;
-			ss << __FUNCTION__ << " unhandled render state type: "
-				<< it->second << "; value: " << Value << "\n";
+			const std::string str = std::format("{} unhandled render state type: {}; value: {}\n",
+			                                    __FUNCTION__, it->second, Value);
 
-			OutputDebugStringA(ss.str().c_str());
+			OutputDebugStringA(str.c_str());
 			break;
 		}
 
@@ -3952,9 +3936,8 @@ bool Direct3DDevice8::update_input_layout()
 	fvf_layouts[key] = layout;
 	context->IASetInputLayout(layout.Get());
 
-	std::stringstream ss;
-	ss << "Created input layout #" << fvf_layouts.size() << "\n";
-	OutputDebugStringA(ss.str().c_str());
+	const std::string str = std::format("Created input layout #{}\n", fvf_layouts.size());
+	OutputDebugStringA(str.c_str());
 
 	return true;
 }
@@ -4669,13 +4652,10 @@ ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_buffer(size_t 
 
 #if _DEBUG
 	{
-		std::stringstream ss;
+		const std::string str = std::format("creating new UP buffer: count: {}; target size: {}; rounded size: {}\n",
+		                                    up_buffers.size() + 1, target_size, rounded);
 
-		ss << "creating new UP buffer. count: " << up_buffers.size() + 1
-			<< "; target size: " << target_size
-			<< "; rounded size: " << rounded << "\n";
-
-		OutputDebugStringA(ss.str().c_str());
+		OutputDebugStringA(str.c_str());
 	}
 #endif
 

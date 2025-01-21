@@ -5,8 +5,6 @@
 
 #include "pch.h"
 
-#include <iomanip>
-
 #include "d3d8to11.hpp"
 #include "not_implemented.h"
 
@@ -97,17 +95,14 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 		desc.MipLevels  = levels_;
 		desc.SampleDesc = { 1, 0 };
 
-		auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
+		const auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
 
 		if (FAILED(hr))
 		{
-			std::stringstream message;
+			const std::string message = std::format("CreateTexture2D failed with error {:X}: format: {} width: {} height: {} levels: {}",
+			                                        static_cast<uint32_t>(hr), static_cast<uint32_t>(desc.Format), desc.Width, desc.Height, desc.MipLevels);
 
-			message << "CreateTexture2D failed with error " << std::hex << static_cast<uint32_t>(hr) << std::dec
-				<< ": format: " << static_cast<uint32_t>(desc.Format)
-				<< " width: " << desc.Width << " height: " << desc.Height << " levels: " << desc.MipLevels;
-
-			throw std::runtime_error(message.str());
+			throw std::runtime_error(message);
 		}
 
 		auto srv_format = format;

@@ -53,9 +53,8 @@ void ShaderCompilationQueue::enqueue(ShaderCompilationType type, ShaderFlags::ty
 	_functions[key] = std::move(function);
 	_condition.notify_one();
 
-	std::stringstream ss;
-	ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
-	OutputDebugStringA(ss.str().c_str());
+	const std::string str = std::format("active thread: {}; enqueued shaders: {}\n", _active_threads, _enqueued_count);
+	OutputDebugStringA(str.c_str());
 }
 
 void ShaderCompilationQueue::start()
@@ -125,9 +124,9 @@ void ShaderCompilationQueue::work_thread()
 			}
 
 			++_active_threads;
-			std::stringstream ss;
-			ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
-			OutputDebugStringA(ss.str().c_str());
+
+			const std::string str = std::format("active thread: {}; enqueued shaders: {}\n", _active_threads, _enqueued_count);
+			OutputDebugStringA(str.c_str());
 
 			key = _queue.front();
 			_queue.pop();
@@ -143,9 +142,8 @@ void ShaderCompilationQueue::work_thread()
 
 			--_enqueued_count;
 			--_active_threads;
-			std::stringstream ss;
-			ss << "active threads: " << _active_threads << "; enqueued shaders: " << _enqueued_count << "\n";
-			OutputDebugStringA(ss.str().c_str());
+			const std::string str = std::format("active thread: {}; enqueued shaders: {}\n", _active_threads, _enqueued_count);
+			OutputDebugStringA(str.c_str());
 		}
 	}
 }
