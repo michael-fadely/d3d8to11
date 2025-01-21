@@ -961,6 +961,8 @@ namespace d3d8to11
 
 	uint32_t fvf_sanitize(uint32_t value)
 	{
+		value &= ~(D3DFVF_RESERVED0 | D3DFVF_RESERVED2);
+
 		if ((value & D3DFVF_XYZ) == D3DFVF_XYZ)
 		{
 			value &= ~D3DFVF_XYZRHW;
