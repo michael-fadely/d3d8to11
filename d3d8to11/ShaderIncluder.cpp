@@ -5,6 +5,8 @@
 
 #include "ShaderIncluder.h"
 
+namespace fs = d3d8to11::filesystem;
+
 HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) noexcept
 {
 	std::filesystem::path file_path(pFileName);
@@ -20,9 +22,15 @@ HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPC
 					file_path = m_base_directory / file_path;
 				}
 
-				if (d3d8to11::should_extend_length(file_path))
+				if (fs::should_extend_length(file_path))
 				{
-					file_path = d3d8to11::as_extended_length(file_path);
+					if (!fs::extended_length_paths_supported())
+					{
+						// TODO: provide some error output/logging about how the path is too long
+						return S_FALSE;
+					}
+
+					file_path = fs::as_extended_length(file_path);
 				}
 
 				if (!std::filesystem::exists(file_path))
@@ -48,9 +56,15 @@ HRESULT ShaderIncluder::Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPC
 				{
 					std::filesystem::path include_file_path = include_dir / file_path;
 
-					if (d3d8to11::should_extend_length(include_file_path))
+					if (fs::should_extend_length(include_file_path))
 					{
-						include_file_path = d3d8to11::as_extended_length(include_file_path);
+						if (!fs::extended_length_paths_supported())
+						{
+							// TODO: provide some error output/logging about how the path is too long
+							return S_FALSE;
+						}
+
+						include_file_path = fs::as_extended_length(include_file_path);
 					}
 
 					if (std::filesystem::exists(include_file_path))
@@ -95,9 +109,9 @@ HRESULT ShaderIncluder::Close(LPCVOID /*pData*/) noexcept
 
 void ShaderIncluder::set_base_directory(std::filesystem::path dir)
 {
-	if (d3d8to11::is_extended_length(dir))
+	if (fs::is_extended_length(dir))
 	{
-		dir = d3d8to11::without_extended_length_prefix(dir);
+		dir = fs::without_extended_length_prefix(dir);
 	}
 
 	std::unique_lock directories_lock(m_directories_mutex);
@@ -106,9 +120,9 @@ void ShaderIncluder::set_base_directory(std::filesystem::path dir)
 
 void ShaderIncluder::add_include_directory(std::filesystem::path dir)
 {
-	if (d3d8to11::is_extended_length(dir))
+	if (fs::is_extended_length(dir))
 	{
-		dir = d3d8to11::without_extended_length_prefix(dir);
+		dir = fs::without_extended_length_prefix(dir);
 	}
 
 	std::unique_lock directories_lock(m_directories_mutex);
@@ -118,8 +132,8 @@ void ShaderIncluder::add_include_directory(std::filesystem::path dir)
 std::span<const uint8_t> ShaderIncluder::get_shader_source(const std::filesystem::path& file_path)
 {
 	const std::filesystem::path file_path_key =
-		d3d8to11::is_extended_length(file_path)
-		? d3d8to11::without_extended_length_prefix(file_path)
+		fs::is_extended_length(file_path)
+		? fs::without_extended_length_prefix(file_path)
 		: file_path;
 
 	std::lock_guard sources_lock(m_sources_mutex);
@@ -131,7 +145,26 @@ std::span<const uint8_t> ShaderIncluder::get_shader_source(const std::filesystem
 		return it->second;
 	}
 
-	std::ifstream file(file_path, std::ios::binary | std::ios::ate);
+	std::ifstream file;
+
+	if (fs::should_extend_length(file_path))
+	{
+		if (!fs::extended_length_paths_supported())
+		{
+			// TODO: provide some error output/logging about how the path is too long
+			// TODO: better error state in general
+			return {};
+		}
+
+		file = std::ifstream(fs::as_extended_length(file_path), std::ios::binary | std::ios::ate);
+	}
+	else
+	{
+		file = std::ifstream(file_path, std::ios::binary | std::ios::ate);
+	}
+
+	// TODO: return some kind of error if the file couldn't be opened
+
 	const auto size = static_cast<size_t>(file.tellg());
 	file.seekg(0, std::ios::beg);
 	std::vector<uint8_t> buffer(size);

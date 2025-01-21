@@ -8,6 +8,8 @@
 
 extern "C" Direct3D8* WINAPI Direct3DCreate8(UINT SDKVersion)
 {
+	d3d8to11::filesystem::initialize();
+
 	if (d3d8to11::config == nullptr)
 	{
 		d3d8to11::config = std::make_unique<d3d8to11::GlobalConfig>();
