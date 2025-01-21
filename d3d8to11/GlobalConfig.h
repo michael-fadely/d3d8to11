@@ -15,7 +15,7 @@ public:
 	GlobalConfig() = default;
 
 	void read_config();
-	void save_config();
+	void save_config() const;
 
 	[[nodiscard]] const std::filesystem::path& get_shader_cache_dir();
 	[[nodiscard]] const std::filesystem::path& get_shader_cache_variants_file_path();

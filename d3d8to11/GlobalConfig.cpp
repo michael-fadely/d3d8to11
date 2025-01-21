@@ -10,18 +10,6 @@
 
 using d3d8to11::tstring;
 
-/*
- * WIP: new structure:
- * - .d3d8to11 dir
- *     -> shader cache dir
- *         -> permutations.bin
- *         -> other shader output (like recompiled shaders)
- *     -> config.ini
- * - shader *source* dir:
- *     - default to working directory
- *     - override with environment variable
- */
-
 namespace
 {
 const std::string default_config_dir(".d3d8to11");
@@ -82,23 +70,25 @@ void GlobalConfig::read_config()
 	}
 	else
 	{
-		// TODO: move this to save_config?
-		std::fstream file(m_config_file_path.string(), std::fstream::out);
-
-		ini_file ini;
-
-		auto section = std::make_shared<ini_section>();
-
-		ini.set_section("OIT", section);
-		section->set("enabled", m_oit_config.enabled);
-
-		ini.write(file);
+		save_config();
 	}
 }
 
-void GlobalConfig::save_config()
+void GlobalConfig::save_config() const
 {
-	// WIP: save_config
+	// this is the same as the old implementation from Direct3DDevice8.
+	// it's good enough for now.
+
+	std::fstream file(m_config_file_path.string(), std::fstream::out);
+
+	ini_file ini;
+
+	auto section = std::make_shared<ini_section>();
+
+	ini.set_section("OIT", section);
+	section->set("enabled", m_oit_config.enabled);
+
+	ini.write(file);
 }
 
 const std::filesystem::path& GlobalConfig::get_shader_cache_dir()
