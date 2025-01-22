@@ -1515,40 +1515,6 @@ void Direct3DDevice8::oit_start()
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
 {
-	if (!compiling_vertex_shaders.empty())
-	{
-		for (auto it = compiling_vertex_shaders.begin();
-		     it != compiling_vertex_shaders.end();)
-		{
-			if (is_future_ready(it->second))
-			{
-				vertex_shaders[it->first] = std::move(it->second.get());
-				it = compiling_vertex_shaders.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-
-	if (!compiling_pixel_shaders.empty())
-	{
-		for (auto it = compiling_pixel_shaders.begin();
-		     it != compiling_pixel_shaders.end();)
-		{
-			if (is_future_ready(it->second))
-			{
-				pixel_shaders[it->first] = std::move(it->second.get());
-				it = compiling_pixel_shaders.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
-
 	{
 		ComPtr<Direct3DSurface8> rt_surface;
 		render_target_wrapper->GetSurfaceLevel(0, &rt_surface);
