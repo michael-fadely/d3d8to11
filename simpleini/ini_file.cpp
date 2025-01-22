@@ -1,14 +1,14 @@
 #include "ini_file.h"
 
 #include <algorithm>
-#include <ranges>
-#include <utility>
 #include <cctype>
 #include <locale>
+#include <ranges>
+#include <utility>
 
 namespace
 {
- void trim_left(std::string& str)
+void trim_left(std::string& str)
 {
 	str.erase(str.begin(), std::ranges::find_if(str, [](int ch)
 	{
@@ -16,7 +16,7 @@ namespace
 	}));
 }
 
- void trim_right(std::string& str)
+void trim_right(std::string& str)
 {
 	str.erase(std::ranges::find_if(std::ranges::reverse_view(str), [](int ch)
 	{
@@ -24,7 +24,7 @@ namespace
 	}).base(), str.end());
 }
 
- void trim(std::string& str)
+void trim(std::string& str)
 {
 	trim_left(str);
 	trim_right(str);
