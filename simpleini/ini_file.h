@@ -1,7 +1,7 @@
 #pragma once
 
+#include <iosfwd>
 #include <cstdint>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -121,8 +121,8 @@ public:
 	ini_file& operator=(ini_file&&) noexcept = default;
 	ini_file& operator=(const ini_file& rhs);
 
-	void read(std::fstream& stream);
-	void write(std::fstream& stream);
+	void read(std::istream& stream);
+	void write(std::ostream& stream);
 
 	[[nodiscard]] bool contains_section(const std::string& section_name) const;
 

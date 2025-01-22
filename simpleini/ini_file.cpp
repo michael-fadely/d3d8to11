@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <istream>
 #include <locale>
+#include <ostream>
 #include <ranges>
 #include <string_view>
 #include <utility>
@@ -211,7 +213,7 @@ ini_file& ini_file::operator=(const ini_file& rhs)
 	return *this;
 }
 
-void ini_file::read(std::fstream& stream)
+void ini_file::read(std::istream& stream)
 {
 	static const std::string assignment_delim = "=";
 	std::string line;
@@ -264,9 +266,9 @@ void ini_file::read(std::fstream& stream)
 	}
 }
 
-void ini_file::write(std::fstream& stream)
+void ini_file::write(std::ostream& stream)
 {
-	auto write_section = [](std::fstream& s, const decltype(m_sections)::value_type& section_pair)
+	auto write_section = [](std::ostream& s, const decltype(m_sections)::value_type& section_pair)
 	{
 		s << "[" << section_pair.first << "]" << std::endl;
 
@@ -276,7 +278,9 @@ void ini_file::write(std::fstream& stream)
 		}
 	};
 
-	// we do this to separate each [section] by a blank line efficiently
+	// we do this so that there is a single blank line after each section
+	// (and its variables) without adding two line breaks at the end of the
+	// file. purely for the aesthetic.
 
 	auto it = m_sections.begin();
 	write_section(stream, *it);
