@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <fstream>
 #include <unordered_set>
-#include <shared_mutex>
 #include <mutex>
 
 #include <d3d11_1.h>
@@ -19,9 +18,9 @@
 #include "cbuffers.h"
 #include "hash_combine.h"
 #include "alignment.h"
-#include "ShaderCompilationQueue.h"
 #include "ShaderFlags.h"
 #include "ShaderIncluder.h"
+#include "ThreadPool.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;
@@ -316,10 +315,11 @@ public:
 
 	void draw_call_increment();
 
-	VertexShader get_vs_internal(ShaderFlags::type flags, std::unordered_map<ShaderFlags::type, VertexShader>& shaders, std::shared_mutex& mutex, bool is_uber);
-	PixelShader get_ps_internal(ShaderFlags::type flags, std::unordered_map<ShaderFlags::type, PixelShader>& shaders, std::shared_mutex& mutex, bool is_uber);
-	VertexShader get_vs(ShaderFlags::type flags, bool use_uber_shader_fallback);
-	PixelShader get_ps(ShaderFlags::type flags, bool use_uber_shader_fallback);
+	[[nodiscard]] VertexShader compile_vertex_shader(ShaderFlags::type flags, bool is_uber);
+	[[nodiscard]] PixelShader compile_pixel_shader(ShaderFlags::type flags, bool is_uber);
+	void store_permutation_flags(ShaderFlags::type flags);
+	[[nodiscard]] VertexShader get_vertex_shader(ShaderFlags::type flags);
+	[[nodiscard]] PixelShader get_pixel_shader(ShaderFlags::type flags);
 	void create_depth_stencil();
 	void create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc);
 	void create_render_target(D3D11_TEXTURE2D_DESC& tex_desc);
@@ -375,14 +375,13 @@ public:
 	PixelShader current_ps;
 
 	ShaderIncluder shader_includer;
-	ShaderCompilationQueue shader_compilation_queue;
-
-	std::shared_mutex ps_mutex, vs_mutex;
+	ThreadPool thread_pool;
 
 	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
 
-	std::shared_mutex uber_ps_mutex, uber_vs_mutex;
+	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> compiling_vertex_shaders;
+	std::unordered_map<ShaderFlags::type, std::future<PixelShader>>  compiling_pixel_shaders;
 
 	std::unordered_map<ShaderFlags::type, VertexShader> uber_vertex_shaders;
 	std::unordered_map<ShaderFlags::type, PixelShader> uber_pixel_shaders;

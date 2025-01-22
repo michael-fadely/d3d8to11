@@ -335,11 +335,11 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="not_implemented.h" />
     <ClInclude Include="safe_release.h" />
     <ClInclude Include="Shader.h" />
-    <ClInclude Include="ShaderCompilationQueue.h" />
     <ClInclude Include="ShaderFlags.h" />
     <ClInclude Include="ShaderIncluder.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="tstring.h" />
     <ClInclude Include="Unknown.h" />
   </ItemGroup>
@@ -360,7 +360,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
-    <ClCompile Include="ShaderCompilationQueue.cpp" />
     <ClCompile Include="ShaderFlags.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="simple_math.cpp" />
@@ -372,6 +371,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Unknown.cpp" />
   </ItemGroup>
   <ItemGroup>

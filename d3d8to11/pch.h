@@ -60,5 +60,6 @@
 #include "Material.h"
 #include "Shader.h"
 #include "simple_math.h"
+#include "ThreadPool.h"
 #include "tstring.h"
 #include "Unknown.h"

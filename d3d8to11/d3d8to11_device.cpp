@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <ranges>
 #include <shared_mutex>
 
 #include "alignment.h"
@@ -32,8 +33,6 @@
 // TODO: provide a wrapper structure that can swap out render targets when OIT is toggled
 
 #define SHADER_ASYNC_COMPILE
-
-#define _LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> MUTEX ## _guard(MUTEX)
 
 using namespace Microsoft::WRL;
 using namespace d3d8to11;
@@ -308,10 +307,7 @@ static constexpr auto SHADER_COMPILER_FLAGS =
 #endif
 ;
 
-VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
-                                              std::unordered_map<ShaderFlags::type, VertexShader>& shaders,
-                                              std::shared_mutex& mutex,
-                                              bool is_uber)
+VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, bool is_uber)
 {
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -344,30 +340,10 @@ VertexShader Direct3DDevice8::get_vs_internal(ShaderFlags::type flags,
 		throw std::runtime_error("vertex shader creation failed");
 	}
 
-	{
-		std::unique_lock lock(mutex);
-
-		auto result = VertexShader(shader, blob);
-		shaders[flags] = result;
-
-		_LOCK(permutation_mutex);
-
-		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
-		{
-			OutputDebugStringA("writing vs permutation to permutation file\n");
-			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
-			permutation_cache.flush();
-			permutation_flags.insert(flags);
-		}
-
-		return result;
-	}
+	return VertexShader(std::move(shader), std::move(blob));
 }
 
-PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
-                                             std::unordered_map<ShaderFlags::type, PixelShader>& shaders,
-                                             std::shared_mutex& mutex,
-                                             bool is_uber)
+PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool is_uber)
 {
 	ComPtr<ID3DBlob> errors;
 	ComPtr<ID3DBlob> blob;
@@ -400,36 +376,30 @@ PixelShader Direct3DDevice8::get_ps_internal(ShaderFlags::type flags,
 		throw std::runtime_error("pixel shader creation failed");
 	}
 
+	return PixelShader(std::move(shader), std::move(blob));
+}
+
+void Direct3DDevice8::store_permutation_flags(ShaderFlags::type flags)
+{
+	std::lock_guard permutation_lock(permutation_mutex);
+
+	if (permutation_cache.is_open() &&
+	    permutation_flags.insert(flags).second == true)
 	{
-		std::unique_lock lock(mutex);
-
-		auto result = PixelShader(shader, blob);
-		shaders[flags] = result;
-
-		_LOCK(permutation_mutex);
-
-		if (permutation_cache.is_open() && !permutation_flags.contains(flags))
-		{
-			OutputDebugStringA("writing ps permutation to permutation file\n");
-			permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
-			permutation_cache.flush();
-			permutation_flags.insert(flags);
-		}
-
-		return result;
+		const std::string str = std::format("writing shader permutation to cache: 0x{:016X}\n", flags);
+		OutputDebugStringA(str.c_str());
+		permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
+		permutation_cache.flush();
 	}
 }
 
-VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool use_uber_shader_fallback)
+VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 {
-	flags = ShaderFlags::sanitize(flags);
+	const auto sanitized_flags = ShaderFlags::sanitize(flags);
 
-	const auto base_flags = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
-	const auto uber_flags = ShaderFlags::sanitize(flags & ShaderFlags::uber_vs_mask);
+	const auto base_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::vs_mask);
 
 	{
-		std::shared_lock lock(vs_mutex);
-
 		const auto it = vertex_shaders.find(base_flags);
 
 		if (it != vertex_shaders.end())
@@ -438,25 +408,47 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool use_uber_shad
 		}
 	}
 
-	if (!use_uber_shader_fallback)
 	{
-		return get_vs_internal(base_flags, vertex_shaders, vs_mutex, false);
-	}
-
-	{
-		std::shared_lock lock(uber_vs_mutex);
-
-#ifdef SHADER_ASYNC_COMPILE
-		auto enqueue_function = [this](const ShaderCompilationQueueEntry& e)
+		auto enqueue_function = [this](ShaderFlags::type flags) -> VertexShader
 		{
-			get_vs_internal(e.flags, vertex_shaders, vs_mutex, false);
+			auto result = compile_vertex_shader(flags, false);
+			store_permutation_flags(flags);
+			return std::move(result);
 		};
 
-		shader_compilation_queue.enqueue(ShaderCompilationType::vertex, base_flags, enqueue_function);
-#else
-		get_vs_internal(base_flags, vertex_shaders, vs_mutex, false);
-#endif
+#ifdef SHADER_ASYNC_COMPILE
+		const auto it = compiling_vertex_shaders.find(base_flags);
 
+		if (it == compiling_vertex_shaders.end())
+		{
+			auto compilation_task = thread_pool.enqueue(enqueue_function, base_flags);
+
+			// we *could* check *right now* to see if this shader is somehow already done
+			// and skip the compiling queue, but nah.
+			compiling_vertex_shaders[base_flags] = std::move(compilation_task);
+		}
+		else
+		{
+			auto& future = it->second;
+
+			if (is_future_ready(future))
+			{
+				auto shader = std::move(future.get());
+				compiling_vertex_shaders.erase(it);
+				vertex_shaders[base_flags] = shader;
+				return shader;
+			}
+		}
+#else
+		auto shader = enqueue_function(base_flags);
+		vertex_shaders[base_flags] = shader;
+		return shader;
+#endif
+	}
+
+	const auto uber_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::uber_vs_mask);
+
+	{
 		const auto it = uber_vertex_shaders.find(uber_flags);
 
 		if (it != uber_vertex_shaders.end())
@@ -465,20 +457,19 @@ VertexShader Direct3DDevice8::get_vs(ShaderFlags::type flags, bool use_uber_shad
 		}
 	}
 
-	auto result = get_vs_internal(uber_flags, uber_vertex_shaders, uber_vs_mutex, true);
-	return result;
+	auto shader = compile_vertex_shader(uber_flags, true);
+	uber_vertex_shaders[uber_flags] = shader;
+	store_permutation_flags(uber_flags);
+	return shader;
 }
 
-PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool use_uber_shader_fallback)
+PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 {
-	flags = ShaderFlags::sanitize(flags);
+	const auto sanitized_flags = ShaderFlags::sanitize(flags);
 
-	const auto base_flags = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
-	const auto uber_flags = ShaderFlags::sanitize(flags & ShaderFlags::uber_ps_mask);
+	const auto base_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::ps_mask);
 
 	{
-		std::shared_lock lock(ps_mutex);
-
 		const auto it = pixel_shaders.find(base_flags);
 
 		if (it != pixel_shaders.end())
@@ -487,25 +478,47 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool use_uber_shade
 		}
 	}
 
-	if (!use_uber_shader_fallback)
 	{
-		return get_ps_internal(base_flags, pixel_shaders, ps_mutex, false);
-	}
-
-	{
-		std::shared_lock lock(uber_ps_mutex);
-
-#ifdef SHADER_ASYNC_COMPILE
-		auto enqueue_function = [this](const ShaderCompilationQueueEntry& e)
+		auto enqueue_function = [this](ShaderFlags::type flags) -> PixelShader
 		{
-			get_ps_internal(e.flags, pixel_shaders, ps_mutex, false);
+			auto result = compile_pixel_shader(flags, false);
+			store_permutation_flags(flags);
+			return std::move(result);
 		};
 
-		shader_compilation_queue.enqueue(ShaderCompilationType::pixel, base_flags, enqueue_function);
-#else
-		get_ps_internal(base_flags, pixel_shaders, ps_mutex, false);
-#endif
+#ifdef SHADER_ASYNC_COMPILE
+		const auto it = compiling_pixel_shaders.find(base_flags);
 
+		if (it == compiling_pixel_shaders.end())
+		{
+			auto compilation_task = thread_pool.enqueue(enqueue_function, base_flags);
+
+			// we *could* check *right now* to see if this shader is somehow already done
+			// and skip the compiling queue, but nah.
+			compiling_pixel_shaders[base_flags] = std::move(compilation_task);
+		}
+		else
+		{
+			auto& future = it->second;
+
+			if (is_future_ready(future))
+			{
+				auto shader = std::move(future.get());
+				compiling_pixel_shaders.erase(it);
+				pixel_shaders[base_flags] = shader;
+				return shader;
+			}
+		}
+#else
+		auto shader = enqueue_function(base_flags);
+		pixel_shaders[base_flags] = shader;
+		return shader;
+#endif
+	}
+
+	const auto uber_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::uber_ps_mask);
+
+	{
 		const auto it = uber_pixel_shaders.find(uber_flags);
 
 		if (it != uber_pixel_shaders.end())
@@ -514,8 +527,10 @@ PixelShader Direct3DDevice8::get_ps(ShaderFlags::type flags, bool use_uber_shade
 		}
 	}
 
-	auto result = get_ps_internal(uber_flags, uber_pixel_shaders, uber_ps_mutex, true);
-	return result;
+	auto shader = compile_pixel_shader(uber_flags, true);
+	uber_pixel_shaders[uber_flags] = shader;
+	store_permutation_flags(uber_flags);
+	return shader;
 }
 
 void Direct3DDevice8::create_depth_stencil()
@@ -811,7 +826,8 @@ void Direct3DDevice8::create_native()
 		const auto& permutation_file_path = d3d8to11::config->get_shader_cache_variants_file_path();
 		const bool exists = std::filesystem::exists(permutation_file_path);
 
-		std::fstream file;
+		decltype(permutation_flags) temp_permutation_flags;
+		std::fstream permutation_file;
 
 		if (permutation_file_path.empty())
 		{
@@ -827,9 +843,9 @@ void Direct3DDevice8::create_native()
 				file_flags |= std::ios::trunc;
 			}
 
-			file.open(permutation_file_path, file_flags);
+			permutation_file.open(permutation_file_path, file_flags);
 
-			if (!file.is_open())
+			if (!permutation_file.is_open())
 			{
 				const std::string str =
 					std::format("Unable to open or create shader permutation cache file: \"{}\"\nShaders will not be cached.\n",
@@ -843,73 +859,78 @@ void Direct3DDevice8::create_native()
 		{
 			OutputDebugStringA("precompiling shaders...\n");
 
-			auto uber_enqueue_vs = [this](const auto& e)
+			while (permutation_file.is_open() && !permutation_file.eof())
 			{
-				get_vs_internal(e.flags, uber_vertex_shaders, uber_vs_mutex, true);
-			};
+				ShaderFlags::type flags = 0;
 
-			auto uber_enqueue_ps = [this](const auto& e)
-			{
-				get_ps_internal(e.flags, uber_pixel_shaders, uber_ps_mutex, true);
-			};
+				auto start = permutation_file.tellg();
+				permutation_file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
+				auto end = permutation_file.tellg();
 
-			auto standard_enqueue_vs = [this](const auto& e)
-			{
-				get_vs_internal(e.flags, vertex_shaders, vs_mutex, false);
-			};
-
-			auto standard_enqueue_ps = [this](const auto& e)
-			{
-				get_ps_internal(e.flags, pixel_shaders, ps_mutex, false);
-			};
-
-			const auto uber_start = std::chrono::high_resolution_clock::now();
-
-			{
-				_LOCK(permutation_mutex);
-
-				while (file.is_open() && !file.eof())
+				if (end - start != sizeof(flags))
 				{
-					ShaderFlags::type flags = 0;
-
-					auto start = file.tellg();
-					file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
-					auto end = file.tellg();
-
-					if (end - start != sizeof(flags))
-					{
-						break;
-					}
-
-					permutation_flags.insert(flags);
+					break;
 				}
 
-				for (ShaderFlags::type flags : permutation_flags)
+				temp_permutation_flags.insert(flags);
+			}
+
+			auto compile_vertex_shader_wrapper = [this](ShaderFlags::type flags, bool is_uber)
+			{
+				return compile_vertex_shader(flags, is_uber);
+			};
+
+			auto compile_pixel_shader_wrapper = [this](ShaderFlags::type flags, bool is_uber)
+			{
+				return compile_pixel_shader(flags, is_uber);
+			};
+
+			{
+				const auto uber_start = std::chrono::high_resolution_clock::now();
+
+				std::unordered_map<ShaderFlags::type, std::future<VertexShader>> uber_vs_tasks;
+				std::unordered_map<ShaderFlags::type, std::future<PixelShader>> uber_ps_tasks;
+
+				uber_vs_tasks.reserve(temp_permutation_flags.size());
+				uber_ps_tasks.reserve(temp_permutation_flags.size());
+
+				for (ShaderFlags::type flags : temp_permutation_flags)
 				{
 					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::uber_vs_mask);
 					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::uber_ps_mask);
 
-					const std::string str = std::format("enqueueing uber shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
-					                                    flags, sanitized_vs, sanitized_ps);
+					if (!uber_vs_tasks.contains(sanitized_vs))
+					{
+						const std::string str = std::format("enqueueing uber vertex shader: 0x{:016X}\n", sanitized_vs);
+						OutputDebugStringA(str.c_str());
 
-					OutputDebugStringA(str.c_str());
+						uber_vs_tasks[sanitized_vs] = thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, true);
+					}
 
-					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, uber_enqueue_vs);
-					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, uber_enqueue_ps);
+					if (!uber_ps_tasks.contains(sanitized_ps))
+					{
+						const std::string str = std::format("enqueueing uber pixel shader: 0x{:016X}\n", sanitized_ps);
+						OutputDebugStringA(str.c_str());
+
+						uber_ps_tasks[sanitized_ps] = thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, true);
+					}
 				}
-			}
 
-			OutputDebugStringA("waiting for uber shader compilation to finish...\n");
+				OutputDebugStringA("waiting for uber shader compilation to finish...\n");
 
-			while (shader_compilation_queue.enqueued_count())
-			{
-				std::this_thread::yield();
-			}
+				for (auto& [flags, task] : uber_vs_tasks)
+				{
+					uber_vertex_shaders[flags] = std::move(task.get());
+				}
 
-			const auto uber_end = std::chrono::high_resolution_clock::now();
-			const auto uber_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(uber_end - uber_start);
+				for (auto& [flags, task] : uber_ps_tasks)
+				{
+					uber_pixel_shaders[flags] = std::move(task.get());
+				}
 
-			{
+				const auto uber_end = std::chrono::high_resolution_clock::now();
+				const auto uber_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(uber_end - uber_start);
+
 				const size_t uber_vs_count = uber_vertex_shaders.size();
 				const size_t uber_ps_count = uber_pixel_shaders.size();
 
@@ -921,30 +942,39 @@ void Direct3DDevice8::create_native()
 				OutputDebugStringA(str.c_str());
 			}
 
+			for (ShaderFlags::type flags : temp_permutation_flags)
 			{
-				_LOCK(permutation_mutex);
+				const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
+				const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-				for (ShaderFlags::type flags : permutation_flags)
+				if (!compiling_vertex_shaders.contains(sanitized_vs))
 				{
-					const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
-					const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
-
-					const std::string str = std::format("enqueueing standard shader: 0x{:016X} (vs: 0x{:016X}; ps: 0x{:016X})\n",
-					                                    flags, sanitized_vs, sanitized_ps);
-
+					const std::string str = std::format("enqueueing standard vertex shader: 0x{:016X}\n", sanitized_vs);
 					OutputDebugStringA(str.c_str());
 
-					shader_compilation_queue.enqueue(ShaderCompilationType::vertex, sanitized_vs, standard_enqueue_vs);
-					shader_compilation_queue.enqueue(ShaderCompilationType::pixel, sanitized_ps, standard_enqueue_ps);
+					compiling_vertex_shaders[sanitized_vs] = thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, false);
+				}
+
+				if (!compiling_pixel_shaders.contains(sanitized_ps))
+				{
+					const std::string str = std::format("enqueueing standard pixel shader: 0x{:016X}\n", sanitized_ps);
+					OutputDebugStringA(str.c_str());
+
+					compiling_pixel_shaders[sanitized_ps] = thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, false);
 				}
 			}
 
 			OutputDebugStringA("done\n");
 		}
 
-		file.seekg(0, std::ios_base::end);
-		file.seekp(0, std::ios_base::end);
-		permutation_cache = std::move(file);
+		if (permutation_file.is_open())
+		{
+			std::lock_guard permutation_lock(permutation_mutex);
+			permutation_file.seekg(0, std::ios_base::end);
+			permutation_file.seekp(0, std::ios_base::end);
+			permutation_cache = std::move(permutation_file);
+			permutation_flags = std::move(temp_permutation_flags);
+		}
 	}
 
 	blend_flags        = 0;
@@ -1153,7 +1183,7 @@ Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device
 	  focus_window(focus_window),
 	  device_type(device_type),
 	  behavior_flags(behavior_flags),
-	  shader_compilation_queue(std::thread::hardware_concurrency()),
+	  thread_pool(std::max<size_t>(2, std::thread::hardware_concurrency()) - 1),
 	  present_params(parameters),
 	  d3d(d3d)
 {
@@ -1485,6 +1515,40 @@ void Direct3DDevice8::oit_start()
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
 {
+	if (!compiling_vertex_shaders.empty())
+	{
+		for (auto it = compiling_vertex_shaders.begin();
+		     it != compiling_vertex_shaders.end();)
+		{
+			if (is_future_ready(it->second))
+			{
+				vertex_shaders[it->first] = std::move(it->second.get());
+				it = compiling_vertex_shaders.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+	}
+
+	if (!compiling_pixel_shaders.empty())
+	{
+		for (auto it = compiling_pixel_shaders.begin();
+		     it != compiling_pixel_shaders.end();)
+		{
+			if (is_future_ready(it->second))
+			{
+				pixel_shaders[it->first] = std::move(it->second.get());
+				it = compiling_pixel_shaders.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+	}
+
 	{
 		ComPtr<Direct3DSurface8> rt_surface;
 		render_target_wrapper->GetSurfaceLevel(0, &rt_surface);
@@ -3921,7 +3985,7 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	VertexShader vs = get_vs(shader_flags, true);
+	VertexShader vs = get_vertex_shader(shader_flags);
 
 	ComPtr<ID3D11InputLayout> layout;
 
@@ -4084,8 +4148,8 @@ void Direct3DDevice8::get_shaders(ShaderFlags::type flags, VertexShader* vs, Pix
 	{
 		try
 		{
-			*vs = get_vs(flags, true);
-			*ps = get_ps(flags, true);
+			*vs = get_vertex_shader(flags);
+			*ps = get_pixel_shader(flags);
 			break;
 		}
 		catch (std::exception& ex)
@@ -4322,15 +4386,9 @@ bool Direct3DDevice8::skip_draw() const
 
 void Direct3DDevice8::free_shaders()
 {
-	shader_compilation_queue.shutdown();
-	shader_compilation_queue.start();
+	thread_pool.wait();
 
 	last_shader_flags = ShaderFlags::mask;
-
-	std::unique_lock vs_lock(vs_mutex);
-	std::unique_lock ps_lock(ps_mutex);
-	std::unique_lock uber_vs_lock(uber_vs_mutex);
-	std::unique_lock uber_ps_lock(uber_ps_mutex);
 
 	current_vs = {};
 	current_ps = {};
@@ -4339,6 +4397,19 @@ void Direct3DDevice8::free_shaders()
 	pixel_shaders.clear();
 	uber_vertex_shaders.clear();
 	uber_pixel_shaders.clear();
+
+	for (auto& future : compiling_vertex_shaders | std::views::values)
+	{
+		future.wait();
+	}
+
+	for (auto& future : compiling_pixel_shaders | std::views::values)
+	{
+		future.wait();
+	}
+
+	compiling_vertex_shaders.clear();
+	compiling_pixel_shaders.clear();
 
 	shader_includer.clear_shader_source_cache();
 
