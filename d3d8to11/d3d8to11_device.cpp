@@ -875,6 +875,11 @@ void Direct3DDevice8::create_native()
 				temp_permutation_flags.insert(flags);
 			}
 
+			if (permutation_file.is_open() && permutation_file.eof())
+			{
+				permutation_file.clear();
+			}
+
 			auto compile_vertex_shader_wrapper = [this](ShaderFlags::type flags, bool is_uber)
 			{
 				return compile_vertex_shader(flags, is_uber);
