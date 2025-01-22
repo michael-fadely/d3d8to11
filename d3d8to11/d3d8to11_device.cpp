@@ -4454,6 +4454,7 @@ void Direct3DDevice8::oit_load_shaders()
 			const std::string shader_path_string = shader_path.string(); // unfortunately a necessary evil :(
 			const auto shader_source = shader_includer.get_shader_source(shader_path);
 
+			// first, compile the vertex shader (vs_main)
 			HRESULT hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
@@ -4469,6 +4470,9 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
+			composite_vs.blob = std::exchange(blob, nullptr);
+
+			// second, compile the pixel shader (ps_main)
 			hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
@@ -4484,6 +4488,7 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite pixel shader creation failed");
 			}
 
+			composite_ps.blob = std::exchange(blob, nullptr);
 			break;
 		}
 		catch (std::exception& ex)
