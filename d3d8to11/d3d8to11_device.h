@@ -174,7 +174,6 @@ class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 class Direct3DDevice8 : public Unknown
 {
 	std::fstream permutation_cache;
-	std::recursive_mutex permutation_mutex;
 	std::unordered_set<ShaderFlags::type> permutation_flags;
 
 	std::vector<uint8_t> trifan_buffer;

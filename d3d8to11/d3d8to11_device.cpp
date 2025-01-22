@@ -381,8 +381,6 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 
 void Direct3DDevice8::store_permutation_flags(ShaderFlags::type flags)
 {
-	std::lock_guard permutation_lock(permutation_mutex);
-
 	if (permutation_cache.is_open() &&
 	    permutation_flags.insert(flags).second == true)
 	{
@@ -411,9 +409,7 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 	{
 		auto enqueue_function = [this](ShaderFlags::type flags) -> VertexShader
 		{
-			auto result = compile_vertex_shader(flags, false);
-			store_permutation_flags(flags);
-			return std::move(result);
+			return compile_vertex_shader(flags, false);
 		};
 
 #ifdef SHADER_ASYNC_COMPILE
@@ -426,6 +422,7 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 			// we *could* check *right now* to see if this shader is somehow already done
 			// and skip the compiling queue, but nah.
 			compiling_vertex_shaders[base_flags] = std::move(compilation_task);
+			store_permutation_flags(base_flags);
 		}
 		else
 		{
@@ -440,6 +437,7 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 			}
 		}
 #else
+		store_permutation_flags(base_flags);
 		auto shader = enqueue_function(base_flags);
 		vertex_shaders[base_flags] = shader;
 		return shader;
@@ -459,7 +457,6 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 
 	auto shader = compile_vertex_shader(uber_flags, true);
 	uber_vertex_shaders[uber_flags] = shader;
-	store_permutation_flags(uber_flags);
 	return shader;
 }
 
@@ -481,9 +478,7 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 	{
 		auto enqueue_function = [this](ShaderFlags::type flags) -> PixelShader
 		{
-			auto result = compile_pixel_shader(flags, false);
-			store_permutation_flags(flags);
-			return std::move(result);
+			return compile_pixel_shader(flags, false);
 		};
 
 #ifdef SHADER_ASYNC_COMPILE
@@ -496,6 +491,7 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 			// we *could* check *right now* to see if this shader is somehow already done
 			// and skip the compiling queue, but nah.
 			compiling_pixel_shaders[base_flags] = std::move(compilation_task);
+			store_permutation_flags(base_flags);
 		}
 		else
 		{
@@ -510,6 +506,7 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 			}
 		}
 #else
+		store_permutation_flags(base_flags);
 		auto shader = enqueue_function(base_flags);
 		pixel_shaders[base_flags] = shader;
 		return shader;
@@ -529,7 +526,6 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 
 	auto shader = compile_pixel_shader(uber_flags, true);
 	uber_pixel_shaders[uber_flags] = shader;
-	store_permutation_flags(uber_flags);
 	return shader;
 }
 
@@ -974,7 +970,6 @@ void Direct3DDevice8::create_native()
 
 		if (permutation_file.is_open())
 		{
-			std::lock_guard permutation_lock(permutation_mutex);
 			permutation_file.seekg(0, std::ios_base::end);
 			permutation_file.seekp(0, std::ios_base::end);
 			permutation_cache = std::move(permutation_file);
