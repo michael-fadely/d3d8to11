@@ -313,13 +313,25 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11VertexShader> shader;
 
-	const auto path = (d3d8to11::config->get_shader_source_dir() / "shader.hlsl").string();
-	const auto src = shader_includer.get_shader_source(path);
+	std::filesystem::path shader_path = d3d8to11::config->get_shader_source_dir() / "shader.hlsl";
+
+	if (d3d8to11::filesystem::should_extend_length(shader_path))
+	{
+		shader_path = d3d8to11::filesystem::as_extended_length(shader_path);
+	}
+
+	const auto shader_source = shader_includer.get_shader_source(shader_path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &shader_includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	HRESULT hr;
+
+	{
+		// unfortunately a necessary evil :(
+		const std::string shader_path_string = shader_path.string();
+		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &shader_includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	}
 
 	if (errors != nullptr)
 	{
@@ -349,13 +361,25 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 	ComPtr<ID3DBlob> blob;
 	ComPtr<ID3D11PixelShader> shader;
 
-	const auto path = (d3d8to11::config->get_shader_source_dir() / "shader.hlsl").string();
-	const auto src = shader_includer.get_shader_source(path);
+	std::filesystem::path shader_path = d3d8to11::config->get_shader_source_dir() / "shader.hlsl";
+
+	if (d3d8to11::filesystem::should_extend_length(shader_path))
+	{
+		shader_path = d3d8to11::filesystem::as_extended_length(shader_path);
+	}
+
+	const auto shader_source = shader_includer.get_shader_source(shader_path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
 
-	HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), preproc.data(), &shader_includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	HRESULT hr;
+
+	{
+		// unfortunately a necessary evil :(
+		const std::string shader_path_string = shader_path.string();
+		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &shader_includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+	}
 
 	if (errors != nullptr)
 	{
@@ -4411,7 +4435,7 @@ void Direct3DDevice8::oit_load_shaders()
 		{}
 	};
 
-	int result;
+	int message_box_result;
 
 	do
 	{
@@ -4420,10 +4444,17 @@ void Direct3DDevice8::oit_load_shaders()
 			ComPtr<ID3DBlob> errors;
 			ComPtr<ID3DBlob> blob;
 
-			const auto path = (d3d8to11::config->get_shader_source_dir() / "composite.hlsl").string();
-			const auto src = shader_includer.get_shader_source(path);
+			std::filesystem::path shader_path = d3d8to11::config->get_shader_source_dir() / "composite.hlsl";
 
-			HRESULT hr = D3DCompile(src.data(), src.size(), path.c_str(), &preproc[0], &shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			if (d3d8to11::filesystem::should_extend_length(shader_path))
+			{
+				shader_path = d3d8to11::filesystem::as_extended_length(shader_path);
+			}
+
+			const std::string shader_path_string = shader_path.string(); // unfortunately a necessary evil :(
+			const auto shader_source = shader_includer.get_shader_source(shader_path);
+
+			HRESULT hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -4438,7 +4469,7 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			hr = D3DCompile(src.data(), src.size(), path.c_str(), &preproc[0], &shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -4452,15 +4483,16 @@ void Direct3DDevice8::oit_load_shaders()
 			{
 				throw std::runtime_error("composite pixel shader creation failed");
 			}
+
 			break;
 		}
 		catch (std::exception& ex)
 		{
 			print_info_queue();
 			free_shaders();
-			result = MessageBoxA(nullptr, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
+			message_box_result = MessageBoxA(nullptr, ex.what(), "Shader compilation error", MB_RETRYCANCEL | MB_ICONERROR);
 		}
-	} while (result == IDRETRY);
+	} while (message_box_result == IDRETRY);
 }
 
 void Direct3DDevice8::oit_release()
