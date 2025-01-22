@@ -139,7 +139,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -166,7 +166,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -193,7 +193,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -224,7 +224,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -257,7 +257,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -288,7 +288,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11;..\simpleini</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\DirectXTK\Inc;..\libd3d8to11</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -330,6 +330,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="globals.h" />
     <ClInclude Include="hash_combine.h" />
     <ClInclude Include="alignment.h" />
+    <ClInclude Include="ini_file.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="not_implemented.h" />
@@ -358,6 +359,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="GlobalConfig.cpp" />
     <ClCompile Include="globals.cpp" />
+    <ClCompile Include="ini_file.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="ShaderFlags.cpp" />
@@ -404,9 +406,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     </ProjectReference>
     <ProjectReference Include="..\libd3d8to11\libd3d8to11.vcxproj">
       <Project>{322c4a08-4b89-4ddf-95c1-e73949432507}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\simpleini\simpleini.vcxproj">
-      <Project>{622921e4-cfa6-484a-9959-785762058bcf}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

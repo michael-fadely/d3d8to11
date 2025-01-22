@@ -56,6 +56,7 @@
 #include "filesystem.h"
 #include "GlobalConfig.h"
 #include "hash_combine.h"
+#include "ini_file.h"
 #include "Light.h"
 #include "Material.h"
 #include "Shader.h"

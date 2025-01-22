@@ -1,3 +1,5 @@
+#include "pch.h"
+
 #include <algorithm>
 #include <cctype>
 #include <istream>
