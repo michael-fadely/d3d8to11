@@ -30,18 +30,19 @@
 
 // DirectX 11
 #include <d3d11_1.h>
-#include "d3d8types.h"
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
 // DirectXTK
 #include <SimpleMath.h>
 
+// Project libraries
+#include <CBufferWriter.h>
+#include <dirty_t.h>
+
 // Local
 #include "alignment.h"
 #include "cbuffers.h"
-#include "CBufferWriter.h"
-#include "ShaderFlags.h"
 #include "d3d8to11.hpp"
 #include "d3d8to11_base.h"
 #include "d3d8to11_device.h"
@@ -50,9 +51,9 @@
 #include "d3d8to11_surface.h"
 #include "d3d8to11_texture.h"
 #include "d3d8to11_vertex_buffer.h"
+#include "d3d8types.h"
 #include "d3d8types.hpp"
 #include "defs.h"
-#include <dirty_t.h>
 #include "filesystem.h"
 #include "GlobalConfig.h"
 #include "hash_combine.h"
@@ -60,6 +61,7 @@
 #include "Light.h"
 #include "Material.h"
 #include "Shader.h"
+#include "ShaderFlags.h"
 #include "simple_math.h"
 #include "ThreadPool.h"
 #include "tstring.h"
