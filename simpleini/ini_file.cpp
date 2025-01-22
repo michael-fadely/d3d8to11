@@ -4,10 +4,13 @@
 #include <cctype>
 #include <locale>
 #include <ranges>
+#include <string_view>
 #include <utility>
 
 namespace
 {
+// TODO: handle locale differences
+
 void trim_left(std::string& str)
 {
 	str.erase(str.begin(), std::ranges::find_if(str, [](int ch)
@@ -28,6 +31,12 @@ void trim(std::string& str)
 {
 	trim_left(str);
 	trim_right(str);
+}
+
+bool equals_case_insensitive(const std::string_view& a, const std::string_view& b)
+{
+	auto fn = [](unsigned char ca, unsigned char cb) { return std::tolower(ca) == std::tolower(cb); };
+	return std::ranges::equal(a, b, fn);
 }
 }  // namespace
 
@@ -96,7 +105,7 @@ template <>
 bool ini_section::get<bool>(const std::string& key) const
 {
 	const std::string& value = m_pairs.at(key);
-	return value == "true";
+	return equals_case_insensitive(value, "true");
 }
 
 template <>
