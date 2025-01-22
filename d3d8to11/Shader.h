@@ -25,9 +25,9 @@ struct Shader
 	}
 
 	Shader(Microsoft::WRL::ComPtr<T> shader, Microsoft::WRL::ComPtr<ID3DBlob> blob)
+		: shader(std::move(shader)),
+		  blob(std::move(blob))
 	{
-		this->shader = std::move(shader);
-		this->blob   = std::move(blob);
 	}
 
 	Shader& operator=(Shader&& other) noexcept
