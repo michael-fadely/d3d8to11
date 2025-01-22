@@ -1,5 +1,3 @@
-#include "ini_file.h"
-
 #include <algorithm>
 #include <cctype>
 #include <istream>
@@ -8,6 +6,8 @@
 #include <ranges>
 #include <string_view>
 #include <utility>
+
+#include "ini_file.h"
 
 namespace
 {
