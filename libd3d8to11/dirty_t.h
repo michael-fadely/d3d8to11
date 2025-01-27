@@ -1,17 +1,17 @@
 #pragma once
 
-#include <type_traits>
-
 enum class dirty_mode
 {
 	/**
-	* \brief Fastest - mark as dirty on any assignment.
-	*/
+	 * \brief Fastest - mark as dirty on any assignment.
+	 */
 	on_assignment,
 	/**
-	* \brief Fast - always compare until marked as dirty.
-	*/
+
+	 * \brief Fast - always compare until marked as dirty.
+	 */
 	until_dirty,
+
 	/**
 	 * \brief Slowest - check upon each assignment, even if marked dirty.
 	 */
