@@ -3,24 +3,24 @@
 #include <array>
 #include <cstdint>
 #include <deque>
-#include <unordered_map>
 #include <fstream>
+#include <unordered_map>
 #include <unordered_set>
-#include <mutex>
 
 #include <d3d11_1.h>
 #include <wrl/client.h>
 
-#include "Unknown.h"
 #include <dirty_t.h>
-#include "simple_math.h"
-#include "Shader.h"
+
+#include "alignment.h"
 #include "cbuffers.h"
 #include "hash_combine.h"
-#include "alignment.h"
+#include "Shader.h"
 #include "ShaderFlags.h"
 #include "ShaderIncluder.h"
+#include "simple_math.h"
 #include "ThreadPool.h"
+#include "Unknown.h"
 
 class Direct3DBaseTexture8;
 class Direct3DIndexBuffer8;

@@ -8,13 +8,11 @@
 #include <d3d11_1.h> // TODO: switch to newer header (11.3, 11.4)
 #include <DirectXMath.h>
 
-#include <cassert>
 #include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <ranges>
-#include <shared_mutex>
 
 #include "alignment.h"
 #include "CBufferWriter.h"
@@ -24,9 +22,11 @@
 #include "Material.h"
 #include "not_implemented.h"
 #include "safe_release.h"
+#include "ShaderFlags.h"
 #include "ShaderIncluder.h"
 #include "SimpleMath.h"
-#include "ShaderFlags.h"
+
+#include "d3d8to11_device.h"
 
 #pragma comment(lib, "dxguid.lib") // for D3DDebugObjectName
 
