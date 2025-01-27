@@ -3353,7 +3353,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	// memory like in the past. that will need to be reimplemented :/
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		return D3DERR_INVALIDCALL;
+		// hopefully not too spammy, but this case doesn't seem common
+		NOT_IMPLEMENTED;
+		// let's just pretend everything is fine
+		return D3D_OK;
 	}
 
 	if (!set_primitive_type(PrimitiveType))
