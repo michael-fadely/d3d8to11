@@ -114,9 +114,6 @@
     <ClInclude Include="ini_file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource_helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -186,9 +183,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ini_file.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="resource_helper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

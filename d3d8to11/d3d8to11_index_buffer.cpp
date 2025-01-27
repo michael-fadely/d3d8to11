@@ -6,7 +6,6 @@
 #include "pch.h"
 #include "d3d8to11.hpp"
 #include "not_implemented.h"
-#include "resource_helper.h"
 
 void Direct3DIndexBuffer8::create_native()
 {
@@ -142,12 +141,12 @@ HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT Siz
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (!are_lock_flags_valid(desc8.Usage, Flags))
+	if (!d3d8to11::are_lock_flags_valid(desc8.Usage, Flags))
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const auto map_type = d3dlock_to_map_type(Flags);
+	const auto map_type = d3d8to11::d3dlock_to_map_type(Flags);
 
 	const auto& context = device8->context;
 	D3D11_MAPPED_SUBRESOURCE mapped_resource {};

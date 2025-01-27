@@ -334,7 +334,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="not_implemented.h" />
-    <ClInclude Include="resource_helper.h" />
     <ClInclude Include="safe_release.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderFlags.h" />
@@ -363,7 +362,6 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="ini_file.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
-    <ClCompile Include="resource_helper.cpp" />
     <ClCompile Include="ShaderFlags.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="simple_math.cpp" />

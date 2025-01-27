@@ -60,7 +60,6 @@
 #include "ini_file.h"
 #include "Light.h"
 #include "Material.h"
-#include "resource_helper.h"
 #include "Shader.h"
 #include "ShaderFlags.h"
 #include "simple_math.h"
