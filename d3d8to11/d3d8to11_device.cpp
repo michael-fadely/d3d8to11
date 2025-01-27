@@ -3499,20 +3499,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 	}
 
 	ComPtr<Direct3DIndexBuffer8> up_index_buffer;
+	const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16_t) : sizeof(uint32_t);
 
 	// convert triangle fan to triangle list before rendering since D3D11 can't render fans
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		if (IndexDataFormat != D3DFMT_INDEX32)
-		{
-			OutputDebugStringA("invalid index format for triangle fan! expected D3DFMT_INDEX32\n");
-			return D3DERR_INVALIDCALL;
-		}
-
 		const size_t tri_list_index_count = 3 * PrimitiveCount;
-		const size_t tri_list_index_buffer_size = tri_list_index_count * 4;
+		const size_t tri_list_index_buffer_size = tri_list_index_count * index_size;
 
-		up_index_buffer = get_user_primitive_index_buffer(tri_list_index_buffer_size, D3DFMT_INDEX32);
+		up_index_buffer = get_user_primitive_index_buffer(tri_list_index_buffer_size, IndexDataFormat);
 
 		if (up_index_buffer  == nullptr)
 		{
@@ -3522,19 +3517,40 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		BYTE* raw_output_indices_ptr = nullptr;
 		up_index_buffer->Lock(0, static_cast<UINT>(tri_list_index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
 
-		const auto* index_0 = static_cast<const uint32_t*>(pIndexData);
-		const auto* input_indices = index_0 + 1;
-		auto tri_list_indices = std::span(reinterpret_cast<uint32_t*>(raw_output_indices_ptr), tri_list_index_count);
-
-		for (size_t i = 0; i < PrimitiveCount; ++i)
+		// copy/pasted code below to handle 16-bit and 32-bit indices because I was too lazy to make a template function
+		if (IndexDataFormat == D3DFMT_INDEX16)
 		{
-			const size_t o = 3 * i;
+			const auto* index_0 = static_cast<const uint16_t*>(pIndexData);
+			const auto* input_indices = index_0 + 1;
+			auto tri_list_indices = std::span(reinterpret_cast<uint16_t*>(raw_output_indices_ptr), tri_list_index_count);
 
-			tri_list_indices[o + 0] = *index_0;
-			tri_list_indices[o + 1] = *input_indices;
+			for (size_t i = 0; i < PrimitiveCount; ++i)
+			{
+				const size_t o = 3 * i;
 
-			++input_indices;
-			tri_list_indices[o + 2] = *input_indices;
+				tri_list_indices[o + 0] = *index_0;
+				tri_list_indices[o + 1] = *input_indices;
+
+				++input_indices;
+				tri_list_indices[o + 2] = *input_indices;
+			}
+		}
+		else
+		{
+			const auto* index_0 = static_cast<const uint32_t*>(pIndexData);
+			const auto* input_indices = index_0 + 1;
+			auto tri_list_indices = std::span(reinterpret_cast<uint32_t*>(raw_output_indices_ptr), tri_list_index_count);
+
+			for (size_t i = 0; i < PrimitiveCount; ++i)
+			{
+				const size_t o = 3 * i;
+
+				tri_list_indices[o + 0] = *index_0;
+				tri_list_indices[o + 1] = *input_indices;
+
+				++input_indices;
+				tri_list_indices[o + 2] = *input_indices;
+			}
 		}
 
 		up_index_buffer->Unlock();
@@ -3546,7 +3562,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		uint32_t vertex_count = PrimitiveCount;
 		primitive_vertex_count(PrimitiveType, vertex_count);
 
-		const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16_t) : sizeof(uint32_t);
 		const size_t index_buffer_size = index_size * vertex_count;
 
 		up_index_buffer = get_user_primitive_index_buffer(index_buffer_size, IndexDataFormat);
