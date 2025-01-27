@@ -3251,7 +3251,7 @@ void Direct3DDevice8::oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE)
 // the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
-	// convert triangle fan to triangle list before rendering since D3D11 can't render fans
+	// convert triangle fan to indexed triangle list before rendering since D3D11 can't render fans
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
 		ComPtr<Direct3DIndexBuffer8> last_index_buffer;
@@ -3397,7 +3397,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
-	// convert triangle fan to triangle list before rendering since D3D11 can't render fans
+	// D3D11 can't render triangle fans natively, so we'll forward this draw call to
+	// DrawIndexedPrimitiveUP and let it handle conversion to an indexed triangle list.
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
 		ComPtr<Direct3DIndexBuffer8> last_index_buffer;
