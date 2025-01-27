@@ -3509,7 +3509,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 
 		up_index_buffer = get_user_primitive_index_buffer(tri_list_index_buffer_size, IndexDataFormat);
 
-		if (up_index_buffer  == nullptr)
+		if (up_index_buffer == nullptr)
 		{
 			return D3DERR_INVALIDCALL;
 		}
