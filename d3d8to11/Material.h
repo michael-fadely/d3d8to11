@@ -1,5 +1,5 @@
 #pragma once
-#include "CBufferWriter.h"
+#include <CBufferWriter.h>
 
 struct Material
 {

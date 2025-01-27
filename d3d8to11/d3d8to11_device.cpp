@@ -14,8 +14,9 @@
 #include <fstream>
 #include <ranges>
 
+#include <CBufferWriter.h>
+
 #include "alignment.h"
-#include "CBufferWriter.h"
 #include "d3d8to11.hpp"
 #include "globals.h"
 #include "ini_file.h"

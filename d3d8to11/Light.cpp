@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Light.h"
-#include "CBufferWriter.h"
+#include <CBufferWriter.h>
 
 void Light::copy(const D3DLIGHT8& rhs)
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Material.h"
-#include "CBufferWriter.h"
+#include <CBufferWriter.h>
 
 Material::Material(const D3DMATERIAL8& rhs)
 {
