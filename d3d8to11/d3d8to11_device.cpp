@@ -1774,6 +1774,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 		return D3DERR_INVALIDCALL;
 	}
 
+	if (Usage & D3DUSAGE_DYNAMIC)
+	{
+		if (Pool != D3DPOOL_DEFAULT)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+	}
+
 	*ppVertexBuffer = nullptr;
 	auto result = new Direct3DVertexBuffer8(this, Length, Usage, FVF, Pool);
 	result->AddRef();
@@ -1800,6 +1808,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateVertexBuffer(UINT Length, DWORD
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::CreateIndexBuffer(UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, Direct3DIndexBuffer8** ppIndexBuffer)
 {
 	if (ppIndexBuffer == nullptr)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (Usage & D3DUSAGE_DYNAMIC)
+	{
+		if (Pool != D3DPOOL_DEFAULT)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+	}
+
+	if (Format != D3DFMT_INDEX16 && Format != D3DFMT_INDEX32)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -3181,6 +3202,7 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 			break;
 
 		case D3DPT_TRIANGLESTRIP:
+		case D3DPT_TRIANGLEFAN:
 			count += 2;
 			break;
 
@@ -3194,9 +3216,6 @@ bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, ui
 		case D3DPT_LINESTRIP:
 			++count;
 			break;
-
-		case D3DPT_TRIANGLEFAN:
-			return false;
 
 		default:
 			return false;
@@ -3232,28 +3251,56 @@ void Direct3DDevice8::oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE)
 // the other draw function (UP) gets routed through here
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount)
 {
+	// convert triangle fan to indexed triangle list before rendering since D3D11 can't render fans
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		auto stream = stream_sources[0]; // HACK: shouldn't only be handling 0!
+		ComPtr<Direct3DIndexBuffer8> last_index_buffer;
+		UINT last_index_base = 0;
+		GetIndices(&last_index_buffer, &last_index_base);
 
-		if (!stream.buffer)
+		uint32_t fan_vertex_count = PrimitiveCount;
+		primitive_vertex_count(PrimitiveType, fan_vertex_count);
+
+		const size_t tri_list_index_count = 3 * PrimitiveCount;
+		const size_t tri_list_index_buffer_size = tri_list_index_count * 4;
+
+		auto up_index_buffer = get_user_primitive_index_buffer(tri_list_index_buffer_size, D3DFMT_INDEX32);
+
+		if (up_index_buffer == nullptr)
 		{
 			return D3DERR_INVALIDCALL;
 		}
 
-		const auto buffer = stream.buffer;
-		const auto stride = stream.stride;
-		const auto offset = StartVertex * stride;
-		const auto size   = (2 + PrimitiveCount) * stride;
+		BYTE* raw_output_indices_ptr = nullptr;
+		up_index_buffer->Lock(0, static_cast<UINT>(tri_list_index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
 
-		uint8_t* data = nullptr;
-		buffer->get_buffer(offset, size, &data);
+		auto tri_list_indices = std::span(reinterpret_cast<uint32_t*>(raw_output_indices_ptr), tri_list_index_count);
 
-		ComPtr<Direct3DVertexBuffer8> temp;
-		UINT temp_stride;
-		GetStreamSource(0, &temp, &temp_stride);
-		const auto result = DrawPrimitiveUP(PrimitiveType, PrimitiveCount, data, stride);
-		SetStreamSource(0, temp.Get(), temp_stride);
+		{
+			UINT n = 1;
+			for (size_t i = 0; i < PrimitiveCount; ++i)
+			{
+				const size_t o = 3 * i;
+
+				tri_list_indices[o + 0] = StartVertex;
+				tri_list_indices[o + 1] = StartVertex + n++;
+				tri_list_indices[o + 2] = StartVertex + n;
+			}
+		}
+
+		up_index_buffer->Unlock();
+		SetIndices(up_index_buffer.Get(), 0);
+
+		const auto result = DrawIndexedPrimitive(D3DPT_TRIANGLELIST,
+		                                         0,
+		                                         static_cast<UINT>(tri_list_index_count),
+		                                         0,
+		                                         PrimitiveCount);
+
+		SetIndices(last_index_buffer.Get(), last_index_base);
+
+		up_index_buffers.emplace_back(std::move(up_index_buffer));
+
 		return result;
 	}
 
@@ -3299,10 +3346,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 		return D3DERR_INVALIDCALL;
 	}
 
-	// TODO: triangle fan
+	// TODO: convert triangle fan to triangle list before rendering since D3D11 can't render fans? details below
+	// we have to be able to reference the contents of the index buffer so that
+	// it can be (temporarily) converted to a triangle list index buffer. but
+	// with the vertex/index buffer rewrite, we no longer have a copy in system
+	// memory like in the past. that will need to be reimplemented :/
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		return D3DERR_INVALIDCALL;
+		// hopefully not too spammy, but this case doesn't seem common
+		NOT_IMPLEMENTED;
+		// let's just pretend everything is fine
+		return D3D_OK;
 	}
 
 	if (!set_primitive_type(PrimitiveType))
@@ -3343,35 +3397,36 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
+	// D3D11 can't render triangle fans natively, so we'll forward this draw call to
+	// DrawIndexedPrimitiveUP and let it handle conversion to an indexed triangle list.
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
 	{
-		const auto data   = reinterpret_cast<const uint8_t*>(pVertexStreamZeroData);
-		const auto stride = VertexStreamZeroStride;
+		ComPtr<Direct3DIndexBuffer8> last_index_buffer;
+		UINT last_index_base = 0;
+		GetIndices(&last_index_buffer, &last_index_base);
 
-		trifan_buffer.resize(3 * stride * PrimitiveCount);
+		uint32_t vertex_count = 0;
+		primitive_vertex_count(PrimitiveType, vertex_count);
 
-		auto buffer = trifan_buffer.data();
+		trifan_index_buffer.resize(vertex_count);
 
-		const auto v0 = &data[0];
-		auto vx = &data[stride];
-
-		for (size_t i = 0; i < PrimitiveCount; i++)
+		for (uint32_t i = 0; i < vertex_count; ++i)
 		{
-			// 0
-			memcpy(buffer, v0, stride);
-			buffer += stride;
-
-			// last (or second from 0) vertex
-			memcpy(buffer, vx, stride);
-			buffer += stride;
-
-			// next vertex
-			vx += stride;
-			memcpy(buffer, vx, stride);
-			buffer += stride;
+			trifan_index_buffer[i] = i;
 		}
 
-		return DrawPrimitiveUP(D3DPT_TRIANGLELIST, PrimitiveCount, trifan_buffer.data(), stride);
+		const auto result = DrawIndexedPrimitiveUP(PrimitiveType,
+		                                           0,
+		                                           vertex_count,
+		                                           PrimitiveCount,
+		                                           trifan_index_buffer.data(),
+		                                           D3DFMT_INDEX32,
+		                                           pVertexStreamZeroData,
+		                                           VertexStreamZeroStride);
+
+		SetIndices(last_index_buffer.Get(), last_index_base);
+
+		return result;
 	}
 
 	if (!set_primitive_type(PrimitiveType))
@@ -3400,35 +3455,178 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 
 	const auto size = count * VertexStreamZeroStride;
 
-	auto up_buffer = get_user_primitive_buffer(size);
+	auto up_vertex_buffer = get_user_primitive_vertex_buffer(size);
 
-	if (up_buffer == nullptr)
+	if (up_vertex_buffer == nullptr)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
 	BYTE* ptr;
-	up_buffer->Lock(0, size, &ptr, D3DLOCK_DISCARD);
+	up_vertex_buffer->Lock(0, size, &ptr, D3DLOCK_DISCARD);
 
 	memcpy(ptr, pVertexStreamZeroData, size);
 
-	up_buffer->Unlock();
+	up_vertex_buffer->Unlock();
 
-	SetStreamSource(0, up_buffer.Get(), VertexStreamZeroStride);
+	SetStreamSource(0, up_vertex_buffer.Get(), VertexStreamZeroStride);
 
 	run_draw_prologues(__FUNCTION__);
 	const auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
 	run_draw_epilogues(__FUNCTION__);
 
 	SetStreamSource(0, nullptr, 0);
-	up_buffers.emplace_back(std::move(up_buffer));
+	up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
 
 	return result;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT MinVertexIndex, UINT NumVertexIndices, UINT PrimitiveCount, const void* pIndexData, D3DFORMAT IndexDataFormat, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride)
 {
-	NOT_IMPLEMENTED_RETURN;
+	if (!pVertexStreamZeroData)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (!pIndexData)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (IndexDataFormat != D3DFMT_INDEX16 && IndexDataFormat != D3DFMT_INDEX32)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	ComPtr<Direct3DIndexBuffer8> up_index_buffer;
+	const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16_t) : sizeof(uint32_t);
+
+	// convert triangle fan to triangle list before rendering since D3D11 can't render fans
+	if (PrimitiveType == D3DPT_TRIANGLEFAN)
+	{
+		const size_t tri_list_index_count = 3 * PrimitiveCount;
+		const size_t tri_list_index_buffer_size = tri_list_index_count * index_size;
+
+		up_index_buffer = get_user_primitive_index_buffer(tri_list_index_buffer_size, IndexDataFormat);
+
+		if (up_index_buffer == nullptr)
+		{
+			return D3DERR_INVALIDCALL;
+		}
+
+		BYTE* raw_output_indices_ptr = nullptr;
+		up_index_buffer->Lock(0, static_cast<UINT>(tri_list_index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
+
+		// copy/pasted code below to handle 16-bit and 32-bit indices because I was too lazy to make a template function
+		if (IndexDataFormat == D3DFMT_INDEX16)
+		{
+			const auto* index_0 = static_cast<const uint16_t*>(pIndexData);
+			const auto* input_indices = index_0 + 1;
+			auto tri_list_indices = std::span(reinterpret_cast<uint16_t*>(raw_output_indices_ptr), tri_list_index_count);
+
+			for (size_t i = 0; i < PrimitiveCount; ++i)
+			{
+				const size_t o = 3 * i;
+
+				tri_list_indices[o + 0] = *index_0;
+				tri_list_indices[o + 1] = *input_indices;
+
+				++input_indices;
+				tri_list_indices[o + 2] = *input_indices;
+			}
+		}
+		else
+		{
+			const auto* index_0 = static_cast<const uint32_t*>(pIndexData);
+			const auto* input_indices = index_0 + 1;
+			auto tri_list_indices = std::span(reinterpret_cast<uint32_t*>(raw_output_indices_ptr), tri_list_index_count);
+
+			for (size_t i = 0; i < PrimitiveCount; ++i)
+			{
+				const size_t o = 3 * i;
+
+				tri_list_indices[o + 0] = *index_0;
+				tri_list_indices[o + 1] = *input_indices;
+
+				++input_indices;
+				tri_list_indices[o + 2] = *input_indices;
+			}
+		}
+
+		up_index_buffer->Unlock();
+
+		PrimitiveType = D3DPT_TRIANGLELIST;
+	}
+	else
+	{
+		uint32_t vertex_count = PrimitiveCount;
+		primitive_vertex_count(PrimitiveType, vertex_count);
+
+		const size_t index_buffer_size = index_size * vertex_count;
+
+		up_index_buffer = get_user_primitive_index_buffer(index_buffer_size, IndexDataFormat);
+
+		BYTE* raw_output_indices_ptr = nullptr;
+		up_index_buffer->Lock(0, static_cast<UINT>(index_buffer_size), &raw_output_indices_ptr, D3DLOCK_DISCARD);
+
+		memcpy(raw_output_indices_ptr, pIndexData, index_buffer_size);
+
+		up_index_buffer->Unlock();
+	}
+
+	if (!set_primitive_type(PrimitiveType))
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	uint32_t count = PrimitiveCount;
+
+	if (!primitive_vertex_count(PrimitiveType, count))
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	draw_call_increment();
+	if (!update())
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	if (skip_draw())
+	{
+		//OutputDebugStringA("WARNING: SKIPPING DRAW CALL\n");
+		return D3D_OK;
+	}
+
+	const auto size = count * VertexStreamZeroStride;
+
+	ComPtr<Direct3DVertexBuffer8> up_vertex_buffer = get_user_primitive_vertex_buffer(size);
+
+	if (up_vertex_buffer == nullptr)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	BYTE* ptr;
+	up_vertex_buffer->Lock(0, size, &ptr, D3DLOCK_DISCARD);
+
+	memcpy(ptr, pVertexStreamZeroData, size);
+
+	up_vertex_buffer->Unlock();
+
+	SetStreamSource(0, up_vertex_buffer.Get(), VertexStreamZeroStride);
+	SetIndices(up_index_buffer.Get(), MinVertexIndex);
+
+	run_draw_prologues(__FUNCTION__);
+	const auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
+	run_draw_epilogues(__FUNCTION__);
+
+	SetIndices(nullptr, 0);
+	SetStreamSource(0, nullptr, 0);
+	up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
+	up_index_buffers.emplace_back(std::move(up_index_buffer));
+
+	return result;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::ProcessVertices(UINT SrcStartIndex, UINT DestIndex, UINT VertexCount, Direct3DVertexBuffer8* pDestBuffer, DWORD Flags)
@@ -4709,30 +4907,63 @@ void Direct3DDevice8::frag_list_nodes_init()
 	}
 }
 
-ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_buffer(size_t target_size)
+ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_vertex_buffer(size_t target_size)
 {
 	ComPtr<Direct3DVertexBuffer8> up_buffer;
 	const size_t rounded = round_pow2(target_size);
 
-	for (auto it = up_buffers.begin(); it != up_buffers.end(); ++it)
+	for (auto it = up_vertex_buffers.begin(); it != up_vertex_buffers.end(); ++it)
 	{
 		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
 		{
 			up_buffer = std::move(*it);
-			up_buffers.erase(it);
+			up_vertex_buffers.erase(it);
 			return up_buffer;
 		}
 	}
 
 #if _DEBUG
 	{
-		const std::string str = std::format("creating new UP buffer: count: {}; target size: {}; rounded size: {}\n",
-		                                    up_buffers.size() + 1, target_size, rounded);
+		const std::string str = std::format("creating new UP vertex buffer. count: {}; target size: {}; rounded size: {}\n",
+		                                    up_vertex_buffers.size() + 1, target_size, rounded);
 
 		OutputDebugStringA(str.c_str());
 	}
 #endif
 
-	CreateVertexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, 0, D3DPOOL_MANAGED, &up_buffer);
+	CreateVertexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &up_buffer);
+	return up_buffer;
+}
+
+ComPtr<Direct3DIndexBuffer8> Direct3DDevice8::get_user_primitive_index_buffer(size_t target_size, D3DFORMAT format)
+{
+	ComPtr<Direct3DIndexBuffer8> up_buffer;
+	const size_t rounded = round_pow2(target_size);
+
+	for (auto it = up_index_buffers.begin(); it != up_index_buffers.end(); ++it)
+	{
+		if ((*it)->desc8.Format != format)
+		{
+			continue;
+		}
+
+		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
+		{
+			up_buffer = std::move(*it);
+			up_index_buffers.erase(it);
+			return up_buffer;
+		}
+	}
+
+#if _DEBUG
+	{
+		const std::string str = std::format("creating new UP index buffer. count: {}; target size: {}; rounded size: {}\n",
+		                                    up_index_buffers.size() + 1, target_size, rounded);
+
+		OutputDebugStringA(str.c_str());
+	}
+#endif
+
+	CreateIndexBuffer(static_cast<UINT>(rounded), D3DUSAGE_DYNAMIC, format, D3DPOOL_DEFAULT, &up_buffer);
 	return up_buffer;
 }

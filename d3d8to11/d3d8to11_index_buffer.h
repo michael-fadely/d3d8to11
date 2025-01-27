@@ -41,10 +41,6 @@ public:
 	D3DINDEXBUFFER_DESC desc8 {};
 
 private:
-	bool locked      = false;
-	UINT lock_offset = 0;
-	UINT lock_size   = 0;
-	DWORD lock_flags = 0;
-	std::vector<uint8_t> buffer;
+	size_t lock_count = 0;
 	Direct3DDevice8* const device8;
 };

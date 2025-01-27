@@ -7,23 +7,14 @@
 #include "d3d8to11.hpp"
 #include "not_implemented.h"
 
-#ifndef USE_SUBRESOURCE
-#define USE_SUBRESOURCE
-#endif
-
 void Direct3DIndexBuffer8::create_native()
 {
 	const auto& device = device8->device;
 
 	D3D11_BUFFER_DESC desc = {};
 
-#ifdef USE_SUBRESOURCE
-	desc.Usage = D3D11_USAGE_DEFAULT;
-#else
-	desc.Usage          = D3D11_USAGE_DYNAMIC;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-#endif
-
 	desc.ByteWidth = desc8.Size;
 	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
@@ -31,9 +22,6 @@ void Direct3DIndexBuffer8::create_native()
 	{
 		throw std::runtime_error("index buffer_resource creation failed");
 	}
-
-	buffer.resize(desc8.Size);
-	buffer.shrink_to_fit();
 }
 
 // IDirect3DIndexBuffer8
@@ -136,76 +124,55 @@ D3DRESOURCETYPE STDMETHODCALLTYPE Direct3DIndexBuffer8::GetType()
 
 HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Lock(UINT OffsetToLock, UINT SizeToLock, BYTE** ppbData, DWORD Flags)
 {
-	if (!ppbData || locked)
+	if (!ppbData)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (OffsetToLock >= buffer.size())
+	if (OffsetToLock >= desc8.Size)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const uint64_t remainder = buffer.size() - OffsetToLock;
+	const uint64_t remainder = desc8.Size - OffsetToLock;
 
 	if (SizeToLock > remainder)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	locked = true;
-	*ppbData = reinterpret_cast<BYTE*>(&buffer[OffsetToLock]);
+	if (!d3d8to11::are_lock_flags_valid(desc8.Usage, Flags))
+	{
+		return D3DERR_INVALIDCALL;
+	}
 
-	this->lock_offset = OffsetToLock;
-	this->lock_size   = SizeToLock ? SizeToLock : static_cast<UINT>(buffer.size());
-	this->lock_flags  = Flags;
+	const auto map_type = d3d8to11::d3dlock_to_map_type(Flags);
 
+	const auto& context = device8->context;
+	D3D11_MAPPED_SUBRESOURCE mapped_resource {};
+	const HRESULT result = context->Map(buffer_resource.Get(), 0, map_type, 0, &mapped_resource);
+
+	if (result != S_OK)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	*ppbData = static_cast<BYTE*>(mapped_resource.pData) + OffsetToLock;
+
+	++lock_count;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DIndexBuffer8::Unlock()
 {
-	if (!locked)
+	if (!lock_count)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	locked = false;
 	const auto& context = device8->context;
-
-#ifdef USE_SUBRESOURCE
-	D3D11_BOX box {};
-
-	box.left   = lock_offset;
-	box.right  = lock_offset + lock_size;
-	box.bottom = 1;
-	box.back   = 1;
-
-	if (box.left >= box.right)
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
-	context->UpdateSubresource(buffer_resource.Get(), 0, &box, &buffer[lock_offset], 0, 0);
-#else
-	D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
-
-	if (lock_flags & D3DLOCK_NOOVERWRITE)
-	{
-		map = D3D11_MAP_WRITE_NO_OVERWRITE;
-	}
-
-	D3D11_MAPPED_SUBRESOURCE resource {};
-	auto hr = context->Map(buffer_resource.Get(), 0, map, 0, &resource);
-
-	if (FAILED(hr))
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
-	memcpy(resource.pData, buffer.data(), buffer.size());
 	context->Unmap(buffer_resource.Get(), 0);
-#endif
+	--lock_count;
 
 	return D3D_OK;
 }
