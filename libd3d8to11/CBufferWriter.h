@@ -25,7 +25,7 @@ class ICBuffer
 {
 public:
 	virtual ~ICBuffer() = default;
-	virtual void write(CBufferBase& cbuf) const = 0;
+	virtual void write(CBufferBase& cbuff) const = 0;
 
 	[[nodiscard]] size_t cbuffer_size() const;
 
@@ -40,8 +40,8 @@ public:
 class CBufferBase
 {
 protected:
-	size_t offset_ = 0;
-	size_t alignment_ = 0;
+	size_t m_offset = 0;
+	size_t m_alignment = 0;
 
 public:
 	virtual ~CBufferBase() = default;
@@ -49,8 +49,8 @@ public:
 	void add(size_t size);
 	void reset();
 
-	[[nodiscard]] size_t offset() const { return offset_; }
-	[[nodiscard]] size_t alignment() const { return alignment_; }
+	[[nodiscard]] size_t offset() const { return m_offset; }
+	[[nodiscard]] size_t alignment() const { return m_alignment; }
 
 	template <typename T>
 	CBufferBase& operator<<(const T& data) = delete;
@@ -234,10 +234,10 @@ inline CBufferBase& CBufferBase::operator<<(const bool& data)
 
 class CBufferWriter : public CBufferBase
 {
-	uint8_t* ptr = nullptr;
+	uint8_t* m_ptr = nullptr;
 
 public:
-	explicit CBufferWriter(uint8_t* ptr_);
+	explicit CBufferWriter(uint8_t* ptr);
 
 	void write(const void* data, size_t size) override;
 
@@ -275,7 +275,7 @@ public:
 	void write_t(const T& data)
 	{
 		align(sizeof(T));
-		*reinterpret_cast<T*>(&ptr[offset()]) = data;
+		*reinterpret_cast<T*>(&m_ptr[offset()]) = data;
 		add(sizeof(T));
 	}
 };

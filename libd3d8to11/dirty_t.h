@@ -31,41 +31,41 @@ template <typename T, dirty_mode set_mode = dirty_mode::continuous>
 class dirty_t
 {
 protected:
-	T    _last {};
-	T    _data {};
-	bool _dirty = false;
+	T    m_last {};
+	T    m_data {};
+	bool m_dirty = false;
 
 public:
 	dirty_t() = default;
 
 	explicit dirty_t(const T& initial_value)
 	{
-		_data = initial_value;
+		m_data = initial_value;
 	}
 
 	[[nodiscard]] bool dirty() const
 	{
-		return _dirty;
+		return m_dirty;
 	}
 
 	void clear()
 	{
-		_dirty = false;
+		m_dirty = false;
 
 		if constexpr (set_mode == dirty_mode::continuous)
 		{
-			_last = _data;
+			m_last = m_data;
 		}
 	}
 
 	void mark()
 	{
-		_dirty = true;
+		m_dirty = true;
 	}
 
 	[[nodiscard]] const T& data() const
 	{
-		return _data;
+		return m_data;
 	}
 
 	void data(const T& value)
@@ -89,20 +89,20 @@ protected:
 	{
 		if constexpr (set_mode == dirty_mode::on_assignment)
 		{
-			_dirty = true;
+			m_dirty = true;
 		}
 		else if constexpr (set_mode == dirty_mode::until_dirty)
 		{
-			if (!_dirty)
+			if (!m_dirty)
 			{
-				_dirty = value != _data;
+				m_dirty = value != m_data;
 			}
 		}
 		else if constexpr (set_mode == dirty_mode::continuous)
 		{
-			_dirty = _last != value;
+			m_dirty = m_last != value;
 		}
 
-		_data = value;
+		m_data = value;
 	}
 };

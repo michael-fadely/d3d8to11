@@ -2,40 +2,40 @@
 
 #include <stdexcept>
 
-CBufferWriter::CBufferWriter(uint8_t* ptr_)
-	: ptr(ptr_)
+CBufferWriter::CBufferWriter(uint8_t* ptr)
+	: m_ptr(ptr)
 {
 }
 
 bool CBufferBase::align(size_t size)
 {
-	if (!alignment_)
+	if (!m_alignment)
 	{
 		return false;
 	}
 
-	const auto delta = VECTOR_SIZE - alignment_;
+	const auto delta = VECTOR_SIZE - m_alignment;
 
 	if (delta >= size)
 	{
 		return false;
 	}
 
-	offset_ += delta;
-	alignment_ = 0;
+	m_offset += delta;
+	m_alignment = 0;
 	return true;
 }
 
 void CBufferBase::add(size_t size)
 {
-	offset_ += size;
-	alignment_ = (alignment_ + size) % VECTOR_SIZE;
+	m_offset += size;
+	m_alignment = (m_alignment + size) % VECTOR_SIZE;
 }
 
 void CBufferBase::reset()
 {
-	offset_    = 0;
-	alignment_ = 0;
+	m_offset    = 0;
+	m_alignment = 0;
 }
 
 void CBufferWriter::write(const void* data, size_t size)
@@ -46,7 +46,7 @@ void CBufferWriter::write(const void* data, size_t size)
 	}
 
 	align(size);
-	memcpy(&ptr[offset()], data, size);
+	memcpy(&m_ptr[offset()], data, size);
 	add(size);
 }
 
