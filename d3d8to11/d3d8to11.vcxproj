@@ -324,6 +324,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="d3d8types.h" />
     <ClInclude Include="d3d8types.hpp" />
     <ClInclude Include="defs.h" />
+    <ClInclude Include="DepthStencilFlags.h" />
     <ClInclude Include="dirty_t.h" />
     <ClInclude Include="filesystem.h" />
     <ClInclude Include="GlobalConfig.h" />
@@ -334,7 +335,9 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="not_implemented.h" />
+    <ClInclude Include="RasterFlags.h" />
     <ClInclude Include="safe_release.h" />
+    <ClInclude Include="SamplerSettings.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderFlags.h" />
     <ClInclude Include="ShaderIncluder.h" />
@@ -356,12 +359,14 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClCompile Include="d3d8to11_vertex_buffer.cpp" />
     <ClCompile Include="d3d8to11_volume.cpp" />
     <ClCompile Include="d3d8types.cpp" />
+    <ClCompile Include="DepthStencilFlags.cpp" />
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="GlobalConfig.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="ini_file.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="SamplerSettings.cpp" />
     <ClCompile Include="ShaderFlags.cpp" />
     <ClCompile Include="ShaderIncluder.cpp" />
     <ClCompile Include="simple_math.cpp" />

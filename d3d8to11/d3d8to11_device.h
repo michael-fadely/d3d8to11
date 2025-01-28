@@ -14,7 +14,8 @@
 
 #include "alignment.h"
 #include "cbuffers.h"
-#include "hash_combine.h"
+#include "DepthStencilFlags.h"
+#include "SamplerSettings.h"
 #include "Shader.h"
 #include "ShaderFlags.h"
 #include "ShaderIncluder.h"
@@ -33,140 +34,6 @@ using Direct3DCubeTexture8 = void;
 using Direct3DVolumeTexture8 = void;
 
 using Microsoft::WRL::ComPtr;
-
-struct DepthFlags
-{
-	using type = uint32_t;
-
-	enum T : type
-	{
-		comparison_mask = 0xF
-	};
-};
-
-struct StencilFlags
-{
-	using type = uint32_t;
-
-	static constexpr type op_mask     = 0xF;
-
-	static constexpr type fail_shift  = 0;
-	static constexpr type zfail_shift = 4;
-	static constexpr type pass_shift  = 8;
-	static constexpr type func_shift  = 12;
-
-	static constexpr type rw_mask    = 0xFF;
-
-	static constexpr type read_shift = 16;
-	static constexpr type write_shift = 24;
-};
-
-struct DepthStencilFlags : dirty_impl
-{
-	using type = uint32_t;
-
-	enum T : type
-	{
-		depth_test_enabled  = 1 << 0,
-		depth_write_enabled = 1 << 1,
-		stencil_enabled     = 1 << 2,
-	};
-
-	dirty_t<type> flags = dirty_t<type>(0);
-	dirty_t<DepthFlags::type> depth_flags = dirty_t<DepthFlags::type>(0);
-	dirty_t<StencilFlags::type> stencil_flags = dirty_t<StencilFlags::type>(0);
-
-	[[nodiscard]] bool dirty() const override;
-	void clear() override;
-	void mark() override;
-
-	bool operator==(const DepthStencilFlags& rhs) const;
-};
-
-template <>
-struct std::hash<DepthStencilFlags>
-{
-	std::size_t operator()(const DepthStencilFlags& s) const noexcept
-	{
-		size_t h = std::hash<size_t>()(s.flags.data());
-
-		hash_combine(h, static_cast<size_t>(s.depth_flags.data()));
-		hash_combine(h, static_cast<size_t>(s.stencil_flags.data()));
-
-		return h;
-	}
-};
-
-struct RasterFlags
-{
-	enum T : uint32_t
-	{
-		cull_none = 1,
-		cull_front,
-		cull_back,
-		fill_wireframe = 2 << 2,
-		fill_solid = 3 << 2
-	};
-
-	static constexpr uint32_t cull_mask = 0b0011;
-	static constexpr uint32_t fill_mask = 0b1100;
-};
-
-struct SamplerSettings : dirty_impl
-{
-	dirty_t<D3DTEXTUREADDRESS> address_u, address_v, address_w;
-	dirty_t<D3DTEXTUREFILTERTYPE> filter_mag, filter_min, filter_mip;
-	dirty_t<float> mip_lod_bias;
-	dirty_t<uint32_t> max_mip_level, max_anisotropy;
-
-	SamplerSettings();
-
-	bool operator==(const SamplerSettings& s) const;
-
-	[[nodiscard]] bool dirty() const override;
-	void clear() override;
-	void mark() override;
-};
-
-template <>
-struct std::hash<SamplerSettings>
-{
-	std::size_t operator()(const SamplerSettings& s) const noexcept
-	{
-		size_t h = std::hash<size_t>()(s.address_u.data());
-
-		hash_combine(h, (size_t)s.address_v.data());
-		hash_combine(h, (size_t)s.address_w.data());
-		hash_combine(h, (size_t)s.filter_mag.data());
-		hash_combine(h, (size_t)s.filter_min.data());
-		hash_combine(h, (size_t)s.filter_mip.data());
-		hash_combine(h, s.mip_lod_bias.data());
-		hash_combine(h, (size_t)s.max_mip_level.data());
-		hash_combine(h, (size_t)s.max_anisotropy.data());
-
-		return h;
-	}
-};
-
-struct StreamPair
-{
-	Direct3DVertexBuffer8* buffer;
-	UINT stride;
-
-	bool operator==(const StreamPair& other) const
-	{
-		return buffer == other.buffer &&
-		       stride == other.stride;
-	}
-};
-
-struct OitNode
-{
-	float    depth; // fragment depth
-	uint32_t color; // 32-bit packed fragment color
-	uint32_t flags; // 16 bit draw call number, 4 bit blend op, 4 bit source blend, 4 bit destination blend
-	uint32_t next;  // index of the next entry, or OIT_FRAGMENT_LIST_NULL
-};
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
@@ -395,6 +262,18 @@ public:
 	bool oit_enabled = false;
 
 protected:
+	struct StreamPair
+	{
+		Direct3DVertexBuffer8* buffer;
+		UINT stride;
+
+		bool operator==(const StreamPair& other) const
+		{
+			return buffer == other.buffer &&
+			       stride == other.stride;
+		}
+	};
+
 	bool oit_actually_enabled = false;
 	Direct3D8* const d3d;
 
