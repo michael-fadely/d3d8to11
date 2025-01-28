@@ -11,7 +11,7 @@ inline uint32_t blocks_size_in_bytes(uint32_t w, uint32_t h, uint32_t block_size
 {
 	uint32_t w_ = std::max(1u, (w + 3u) / 4u);
 	uint32_t h_ = std::max(1u, (h + 3u) / 4u);
-	
+
 	return w_ * h_ * block_size;
 }
 

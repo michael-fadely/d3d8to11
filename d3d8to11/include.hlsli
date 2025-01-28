@@ -120,7 +120,7 @@
 static const uint OIT_FRAGMENT_LIST_NULL = 0xFFFFFFFF;
 
 // OIT fragment linked list node.
-struct OitNode
+struct OITNode
 {
 	float depth; // fragment depth
 	uint  color; // 32-bit packed fragment color
@@ -136,7 +136,7 @@ struct OitNode
 
 globallycoherent RWTexture2D<uint>           frag_list_head  : register(u1);
 globallycoherent RWTexture2D<uint>           frag_list_count : register(u2);
-globallycoherent RWStructuredBuffer<OitNode> frag_list_nodes : register(u3);
+globallycoherent RWStructuredBuffer<OITNode> frag_list_nodes : register(u3);
 
 #else
 
@@ -144,7 +144,7 @@ globallycoherent RWStructuredBuffer<OitNode> frag_list_nodes : register(u3);
 
 Texture2D<uint>           frag_list_head  : register(t0);
 Texture2D<uint>           frag_list_count : register(t1);
-StructuredBuffer<OitNode> frag_list_nodes : register(t2);
+StructuredBuffer<OITNode> frag_list_nodes : register(t2);
 Texture2D                 back_buffer     : register(t3);
 Texture2D                 depth_buffer    : register(t4);
 

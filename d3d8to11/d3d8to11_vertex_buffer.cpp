@@ -9,16 +9,16 @@
 
 void Direct3DVertexBuffer8::create_native()
 {
-	const auto& device = device8->device;
+	ID3D11Device* device = m_device8->get_native_device();
 
 	D3D11_BUFFER_DESC desc = {};
 
 	desc.Usage = D3D11_USAGE_DYNAMIC;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	desc.ByteWidth = desc8.Size;
+	desc.ByteWidth = m_desc8.Size;
 	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-	if (FAILED(device->CreateBuffer(&desc, nullptr, &buffer_resource)))
+	if (FAILED(device->CreateBuffer(&desc, nullptr, &m_buffer_resource)))
 	{
 		throw std::runtime_error("vertex buffer_resource creation failed");
 	}
@@ -26,13 +26,13 @@ void Direct3DVertexBuffer8::create_native()
 
 // IDirect3DVertexBuffer8
 Direct3DVertexBuffer8::Direct3DVertexBuffer8(Direct3DDevice8* Device, UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool)
-	: device8(Device)
+	: m_device8(Device)
 {
-	desc8.Type  = D3DRTYPE_VERTEXBUFFER;
-	desc8.Size  = Length;
-	desc8.Usage = Usage;
-	desc8.FVF   = FVF;
-	desc8.Pool  = Pool;
+	m_desc8.Type  = D3DRTYPE_VERTEXBUFFER;
+	m_desc8.Size  = Length;
+	m_desc8.Usage = Usage;
+	m_desc8.FVF   = FVF;
+	m_desc8.Pool  = Pool;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::QueryInterface(REFIID riid, void** ppvObj)
@@ -80,9 +80,9 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDevice(Direct3DDevice8** ppD
 		return D3DERR_INVALIDCALL;
 	}
 
-	device8->AddRef();
+	m_device8->AddRef();
 
-	*ppDevice = device8;
+	*ppDevice = m_device8;
 
 	return D3D_OK;
 }
@@ -129,28 +129,28 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (OffsetToLock >= desc8.Size)
+	if (OffsetToLock >= m_desc8.Size)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const uint64_t remainder = desc8.Size - OffsetToLock;
+	const uint64_t remainder = m_desc8.Size - OffsetToLock;
 
 	if (SizeToLock > remainder)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (!d3d8to11::are_lock_flags_valid(desc8.Usage, Flags))
+	if (!d3d8to11::are_lock_flags_valid(m_desc8.Usage, Flags))
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
 	const auto map_type = d3d8to11::d3dlock_to_map_type(Flags);
 
-	const auto& context = device8->context;
+	ID3D11DeviceContext* context = m_device8->get_native_context();
 	D3D11_MAPPED_SUBRESOURCE mapped_resource {};
-	const HRESULT result = context->Map(buffer_resource.Get(), 0, map_type, 0, &mapped_resource);
+	const HRESULT result = context->Map(m_buffer_resource.Get(), 0, map_type, 0, &mapped_resource);
 
 	if (result != S_OK)
 	{
@@ -159,20 +159,20 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Lock(UINT OffsetToLock, UINT Si
 
 	*ppbData = static_cast<BYTE*>(mapped_resource.pData) + OffsetToLock;
 
-	++lock_count;
+	++m_lock_count;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::Unlock()
 {
-	if (!lock_count)
+	if (!m_lock_count)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const auto& context = device8->context;
-	context->Unmap(buffer_resource.Get(), 0);
-	--lock_count;
+	ID3D11DeviceContext* context = m_device8->get_native_context();
+	context->Unmap(m_buffer_resource.Get(), 0);
+	--m_lock_count;
 
 	return D3D_OK;
 }
@@ -184,6 +184,6 @@ HRESULT STDMETHODCALLTYPE Direct3DVertexBuffer8::GetDesc(D3DVERTEXBUFFER_DESC* p
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pDesc = desc8;
+	*pDesc = m_desc8;
 	return D3D_OK;
 }

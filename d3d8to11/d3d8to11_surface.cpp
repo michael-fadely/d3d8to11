@@ -10,40 +10,40 @@
 using namespace d3d8to11;
 
 // IDirect3DSurface8
-Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent_, UINT level_)
-	: parent(parent_),
-	  device8(device),
-	  level(level_)
+Direct3DSurface8::Direct3DSurface8(Direct3DDevice8* device, Direct3DTexture8* parent, UINT level)
+	: m_parent(parent),
+	  m_device8(device),
+	  m_level(level)
 {
-	auto width  = parent->width_;
-	auto height = parent->height_;
+	auto width  = m_parent->get_width();
+	auto height = m_parent->get_height();
 
-	for (size_t i = 0; i < level && width > 1 && height > 1; ++i)
+	for (size_t i = 0; i < m_level && width > 1 && height > 1; ++i)
 	{
 		width  = std::max(1u, width / 2);
 		height = std::max(1u, height / 2);
 	}
 
-	desc8.Format          = parent->format_;
-	desc8.Type            = parent->GetType();
-	desc8.Usage           = parent->usage_;
-	desc8.Pool            = parent->pool_;
-	desc8.Size            = calc_texture_size(width, height, 1, parent->format_);
-	desc8.MultiSampleType = D3DMULTISAMPLE_NONE;
-	desc8.Width           = width;
-	desc8.Height          = height;
+	m_desc8.Format          = m_parent->get_d3d8_format();
+	m_desc8.Type            = m_parent->GetType();
+	m_desc8.Usage           = m_parent->get_d3d8_usage();
+	m_desc8.Pool            = m_parent->get_d3d8_pool();
+	m_desc8.Size            = calc_texture_size(width, height, 1, m_parent->get_d3d8_format());
+	m_desc8.MultiSampleType = D3DMULTISAMPLE_NONE;
+	m_desc8.Width           = width;
+	m_desc8.Height          = height;
 
-	if (parent->is_render_target)
+	if (m_parent->is_render_target())
 	{
-		rt_desc.Format             = parent->desc.Format;
-		rt_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
-		rt_desc.Texture2D.MipSlice = level;
+		m_rt_desc.Format             = m_parent->get_native_desc().Format;
+		m_rt_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
+		m_rt_desc.Texture2D.MipSlice = m_level;
 	}
 
-	if (parent->is_depth_stencil)
+	if (m_parent->is_depth_stencil())
 	{
-		depth_vdesc.Format        = typeless_to_depth(parent->desc.Format);
-		depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		m_depth_vdesc.Format        = typeless_to_depth(m_parent->get_native_desc().Format);
+		m_depth_vdesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	}
 }
 
@@ -91,9 +91,9 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDevice(Direct3DDevice8** ppDevice
 		return D3DERR_INVALIDCALL;
 	}
 
-	device8->AddRef();
+	m_device8->AddRef();
 
-	*ppDevice = device8;
+	*ppDevice = m_device8;
 
 	return D3D_OK;
 }
@@ -125,41 +125,41 @@ HRESULT STDMETHODCALLTYPE Direct3DSurface8::GetDesc(D3DSURFACE_DESC8* pDesc)
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pDesc = desc8;
+	*pDesc = m_desc8;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::LockRect(D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD Flags)
 {
-	return parent->LockRect(level, pLockedRect, pRect, Flags);
+	return m_parent->LockRect(m_level, pLockedRect, pRect, Flags);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DSurface8::UnlockRect()
 {
-	return parent->UnlockRect(level);
+	return m_parent->UnlockRect(m_level);
 }
 
 void Direct3DSurface8::create_native()
 {
-	const auto& device = device8->device;
+	ID3D11Device* device = m_device8->get_native_device();
 
-	if (parent)
+	if (m_parent)
 	{
-		if (parent->is_render_target)
+		if (m_parent->is_render_target())
 		{
-			auto hr = device->CreateRenderTargetView(parent->texture.Get(), /*&rt_desc*/ nullptr, &render_target);
+			auto hr = device->CreateRenderTargetView(m_parent->get_native_texture(), /*&rt_desc*/ nullptr, &m_render_target);
 
 			if (FAILED(hr))
 			{
 				throw std::runtime_error("CreateRenderTargetView failed");
 			}
 
-			render_target->GetDesc(&rt_desc);
+			m_render_target->GetDesc(&m_rt_desc);
 		}
 
-		if (parent->is_depth_stencil)
+		if (m_parent->is_depth_stencil())
 		{
-			auto hr = device->CreateDepthStencilView(parent->texture.Get(), &depth_vdesc, &depth_stencil);
+			auto hr = device->CreateDepthStencilView(m_parent->get_native_texture(), &m_depth_vdesc, &m_depth_stencil);
 
 			if (FAILED(hr))
 			{
@@ -169,12 +169,12 @@ void Direct3DSurface8::create_native()
 			D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
 			// create a shader resource view with a readable pixel format
-			auto srv_format = typeless_to_float(depth_vdesc.Format);
+			auto srv_format = typeless_to_float(m_depth_vdesc.Format);
 
 			// if float didn't work, it's probably int we want
 			if (srv_format == DXGI_FORMAT_UNKNOWN)
 			{
-				srv_format = typeless_to_unorm(depth_vdesc.Format);
+				srv_format = typeless_to_unorm(m_depth_vdesc.Format);
 			}
 
 			srv_desc.Format                    = srv_format;
@@ -182,7 +182,7 @@ void Direct3DSurface8::create_native()
 			srv_desc.Texture2D.MostDetailedMip = 0;
 			srv_desc.Texture2D.MipLevels       = 1;
 
-			hr = device->CreateShaderResourceView(parent->texture.Get(), &srv_desc, &depth_srv);
+			hr = device->CreateShaderResourceView(m_parent->get_native_texture(), &srv_desc, &m_depth_srv);
 
 			if (FAILED(hr))
 			{

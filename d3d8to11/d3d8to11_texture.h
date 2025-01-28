@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <d3d11_1.h>
 #include <vector>
 #include "d3d8types.hpp"
@@ -31,6 +33,8 @@ protected:
 
 class __declspec(uuid("E4CDD575-2866-4F01-B12E-7EECE1EC9358")) Direct3DTexture8;
 
+// the destructor cannot be virtual because that would change the layout of the vtable
+// ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
 class Direct3DTexture8 : public Direct3DBaseTexture8
 {
 public:
@@ -42,7 +46,7 @@ public:
 
 	void create_native(ID3D11Texture2D* view_of = nullptr);
 
-	Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
+	Direct3DTexture8(Direct3DDevice8* Device, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool);
 	~Direct3DTexture8() = default;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
@@ -68,32 +72,78 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE UnlockRect(UINT Level);
 	virtual HRESULT STDMETHODCALLTYPE AddDirtyRect(const RECT* pDirtyRect);
 
-	ComPtr<ID3D11Texture2D> texture;
-	ComPtr<ID3D11ShaderResourceView> srv;
+	[[nodiscard]] UINT get_width() const
+	{
+		return m_width;
+	}
 
-	UINT      width_;
-	UINT      height_;
-	UINT      levels_;
-	DWORD     usage_;
-	D3DFORMAT format_;
-	D3DPOOL   pool_;
+	[[nodiscard]] UINT get_height() const
+	{
+		return m_height;
+	}
 
-	D3D11_TEXTURE2D_DESC desc {};
+	[[nodiscard]] UINT get_level_count() const
+	{
+		return m_level_count;
+	}
 
-	bool is_render_target = false;
-	bool is_depth_stencil = false;
-	bool block_compressed = false;
+	[[nodiscard]] DWORD get_d3d8_usage() const
+	{
+		return m_usage;
+	}
+
+	[[nodiscard]] D3DFORMAT get_d3d8_format() const
+	{
+		return m_format;
+	}
+
+	[[nodiscard]] D3DPOOL get_d3d8_pool() const
+	{
+		return m_pool;
+	}
+
+	[[nodiscard]] ID3D11Texture2D* get_native_texture() const
+	{
+		return m_texture.Get();
+	}
+
+	[[nodiscard]] ID3D11ShaderResourceView* get_native_srv() const
+	{
+		return m_srv.Get();
+	}
+
+	[[nodiscard]] const D3D11_TEXTURE2D_DESC& get_native_desc() const
+	{
+		return m_desc;
+	}
+
+	[[nodiscard]] bool is_render_target() const;
+	[[nodiscard]] bool is_depth_stencil() const;
+	[[nodiscard]] bool is_block_compressed() const;
 
 private:
-	std::vector<ComPtr<Direct3DSurface8>> surfaces;
-
-	void get_level_offset(UINT level, size_t& offset, size_t& size) const;
-
+	void get_level_offset(UINT level, size_t* offset, size_t* size) const;
 	bool convert(UINT level);
-	bool should_convert() const;
+	[[nodiscard]] bool should_convert() const;
 
-	Direct3DDevice8* const device8;
+	Direct3DDevice8* const m_device8;
 
-	std::unordered_map<UINT, D3DLOCKED_RECT> locked_rects;
-	std::vector<uint8_t> texture_buffer;
+	uint8_t m_flags = 0;
+
+	ComPtr<ID3D11Texture2D> m_texture;
+	ComPtr<ID3D11ShaderResourceView> m_srv;
+
+	D3D11_TEXTURE2D_DESC m_desc {};
+
+	std::vector<ComPtr<Direct3DSurface8>> m_surfaces;
+
+	std::unordered_map<UINT, D3DLOCKED_RECT> m_locked_rects;
+	std::vector<uint8_t> m_texture_buffer;
+
+	UINT      m_width;
+	UINT      m_height;
+	UINT      m_level_count;
+	DWORD     m_usage;
+	D3DFORMAT m_format;
+	D3DPOOL   m_pool;
 };

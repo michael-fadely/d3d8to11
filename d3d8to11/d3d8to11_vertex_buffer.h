@@ -6,6 +6,8 @@ class Direct3DDevice8;
 
 class __declspec(uuid("8AEEEAC7-05F9-44D4-B591-000B0DF1CB95")) Direct3DVertexBuffer8;
 
+// the destructor cannot be virtual because that would change the layout of the vtable
+// ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
 class Direct3DVertexBuffer8 : public Direct3DResource8
 {
 public:
@@ -37,10 +39,20 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE Unlock();
 	virtual HRESULT STDMETHODCALLTYPE GetDesc(D3DVERTEXBUFFER_DESC* pDesc);
 
-	ComPtr<ID3D11Buffer> buffer_resource;
-	D3DVERTEXBUFFER_DESC desc8 {};
+	[[nodiscard]] const D3DVERTEXBUFFER_DESC& get_d3d8_desc() const
+	{
+		return m_desc8;
+	}
+
+	[[nodiscard]] ID3D11Buffer* get_native_buffer() const
+	{
+		return m_buffer_resource.Get();
+	}
 
 private:
-	size_t lock_count = 0;
-	Direct3DDevice8* const device8;
+	Direct3DDevice8* const m_device8;
+
+	size_t m_lock_count = 0;
+	ComPtr<ID3D11Buffer> m_buffer_resource;
+	D3DVERTEXBUFFER_DESC m_desc8 {};
 };

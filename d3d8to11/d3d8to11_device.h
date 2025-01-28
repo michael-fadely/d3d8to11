@@ -37,25 +37,10 @@ using Microsoft::WRL::ComPtr;
 
 class __declspec(uuid("7385E5DF-8FE8-41D5-86B6-D7B48547B6CF")) Direct3DDevice8;
 
-// TODO: remove ABI-dependent fields, make this an interface
+// the destructor cannot be virtual because that would change the layout of the vtable
+// ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
 class Direct3DDevice8 : public Unknown
 {
-	std::fstream permutation_cache;
-	std::unordered_set<ShaderFlags::type> permutation_flags;
-
-	std::vector<uint32_t> trifan_index_buffer;
-
-	std::unordered_map<size_t, std::string> digit_strings;
-
-	const std::string fragments_str;
-
-	bool freeing_shaders = false;
-
-	UINT adapter;
-	HWND focus_window;
-	D3DDEVTYPE device_type;
-	DWORD behavior_flags;
-
 public:
 	Direct3DDevice8(const Direct3DDevice8&)     = delete;
 	Direct3DDevice8(Direct3DDevice8&&) noexcept = delete;
@@ -65,6 +50,16 @@ public:
 
 	Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device_type, HWND focus_window, DWORD behavior_flags, const D3DPRESENT_PARAMETERS8& parameters);
 	~Direct3DDevice8() = default;
+
+	[[nodiscard]] ID3D11Device* get_native_device() const
+	{
+		return m_device.Get();
+	}
+
+	[[nodiscard]] ID3D11DeviceContext* get_native_context() const
+	{
+		return m_context.Get();
+	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) override;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override;
@@ -82,10 +77,6 @@ public:
 	virtual BOOL STDMETHODCALLTYPE ShowCursor(BOOL bShow);
 	virtual HRESULT STDMETHODCALLTYPE CreateAdditionalSwapChain(D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DSwapChain8** ppSwapChain);
 	virtual HRESULT STDMETHODCALLTYPE Reset(D3DPRESENT_PARAMETERS8* pPresentationParameters);
-
-	void oit_composite();
-	void oit_start();
-
 	virtual HRESULT STDMETHODCALLTYPE Present(const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion);
 	virtual HRESULT STDMETHODCALLTYPE GetBackBuffer(UINT iBackBuffer, D3DBACKBUFFER_TYPE Type, Direct3DSurface8** ppBackBuffer);
 	virtual HRESULT STDMETHODCALLTYPE GetRasterStatus(D3DRASTER_STATUS* pRasterStatus);
@@ -141,10 +132,6 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetPaletteEntries(UINT PaletteNumber, PALETTEENTRY* pEntries);
 	virtual HRESULT STDMETHODCALLTYPE SetCurrentTexturePalette(UINT PaletteNumber);
 	virtual HRESULT STDMETHODCALLTYPE GetCurrentTexturePalette(UINT* pPaletteNumber);
-
-	void run_draw_prologues(const std::string& callback);
-	void run_draw_epilogues(const std::string& callback);
-
 	virtual HRESULT STDMETHODCALLTYPE DrawPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount);
 	virtual HRESULT STDMETHODCALLTYPE DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount);
 	virtual HRESULT STDMETHODCALLTYPE DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void* pVertexStreamZeroData, UINT VertexStreamZeroStride);
@@ -173,6 +160,9 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE DrawTriPatch(UINT Handle, const float* pNumSegs, const D3DTRIPATCH_INFO* pTriPatchInfo);
 	virtual HRESULT STDMETHODCALLTYPE DeletePatch(UINT Handle);
 
+	void run_draw_prologues(const std::string& callback);
+	void run_draw_epilogues(const std::string& callback);
+
 	void print_info_queue() const;
 
 	[[nodiscard]] size_t count_texture_stages() const;
@@ -193,6 +183,8 @@ public:
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE primitive_type) const;
 	static bool primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count);
+	void oit_composite();
+	void oit_start();
 	void oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE);
 	void oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE);
 	bool update_input_layout();
@@ -226,7 +218,7 @@ public:
 		desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
 		desc.StructureByteStride = static_cast<decltype(desc.StructureByteStride)>(cbuffer_size);
 
-		return device->CreateBuffer(&desc, nullptr, &cbuffer);
+		return m_device->CreateBuffer(&desc, nullptr, &cbuffer);
 	}
 
 	using ShaderCallback = std::function<void(const std::vector<D3D_SHADER_MACRO>&, ShaderFlags::type)>;
@@ -234,34 +226,9 @@ public:
 	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_prologues;
 	std::unordered_map<std::string, std::deque<ShaderCallback>> draw_epilogues;
 
-	ShaderFlags::type shader_flags      = ShaderFlags::none;
-	ShaderFlags::type last_shader_flags = ShaderFlags::mask;
-
-	VertexShader current_vs;
-	PixelShader current_ps;
-
-	ShaderIncluder shader_includer;
-	ThreadPool thread_pool;
-
-	std::unordered_map<ShaderFlags::type, VertexShader> vertex_shaders;
-	std::unordered_map<ShaderFlags::type, PixelShader> pixel_shaders;
-
-	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> compiling_vertex_shaders;
-	std::unordered_map<ShaderFlags::type, std::future<PixelShader>>  compiling_pixel_shaders;
-
-	std::unordered_map<ShaderFlags::type, VertexShader> uber_vertex_shaders;
-	std::unordered_map<ShaderFlags::type, PixelShader> uber_pixel_shaders;
-
-	D3DPRESENT_PARAMETERS8 present_params {};
-	ComPtr<IDXGISwapChain> swap_chain;
-
-	ComPtr<ID3D11Device> device;
-	ComPtr<ID3D11DeviceContext> context;
-	ComPtr<ID3D11InfoQueue> info_queue;
-
 	bool oit_enabled = false;
 
-protected:
+private:
 	struct StreamPair
 	{
 		Direct3DVertexBuffer8* buffer;
@@ -274,99 +241,140 @@ protected:
 		}
 	};
 
-	bool oit_actually_enabled = false;
-	Direct3D8* const d3d;
-
-	VertexShader composite_vs;
-	PixelShader composite_ps;
-
-	ComPtr<Direct3DTexture8> back_buffer;
-	ComPtr<ID3D11RenderTargetView> back_buffer_view;
-
-	ComPtr<Direct3DTexture8>         render_target_wrapper;
-	ComPtr<ID3D11Texture2D>          render_target_texture;
-	ComPtr<ID3D11RenderTargetView>   render_target_view;
-	ComPtr<ID3D11ShaderResourceView> render_target_srv;
-
-	ComPtr<Direct3DSurface8> current_render_target;
-	ComPtr<Direct3DSurface8> current_depth_stencil;
-
-	ComPtr<Direct3DTexture8> composite_wrapper;
-	ComPtr<ID3D11Texture2D> composite_texture;
-	ComPtr<ID3D11RenderTargetView> composite_view;
-	ComPtr<ID3D11ShaderResourceView> composite_srv;
-
-	ComPtr<ID3D11Texture2D>           frag_list_head;
-	ComPtr<ID3D11ShaderResourceView>  frag_list_head_srv;
-	ComPtr<ID3D11UnorderedAccessView> frag_list_head_uav;
-
-	ComPtr<ID3D11Texture2D>           frag_list_count;
-	ComPtr<ID3D11ShaderResourceView>  frag_list_count_srv;
-	ComPtr<ID3D11UnorderedAccessView> frag_list_count_uav;
-
-	ComPtr<ID3D11Buffer>              frag_list_nodes;
-	ComPtr<ID3D11ShaderResourceView>  frag_list_nodes_srv;
-	ComPtr<ID3D11UnorderedAccessView> frag_list_nodes_uav;
-
-	std::unordered_map<DWORD, Direct3DTexture8*> textures;
-	std::unordered_map<DWORD, SamplerSettings> sampler_setting_values;
-	std::array<dirty_t<DWORD>, 174> render_state_values;
-	std::unordered_map<ShaderFlags::type, ComPtr<ID3D11InputLayout>> fvf_layouts;
-	std::unordered_map<DWORD, StreamPair> stream_sources;
-
-	dirty_t<uint32_t> raster_flags;
-	std::unordered_map<uint32_t, ComPtr<ID3D11RasterizerState>> raster_states;
-
-	std::unordered_map<SamplerSettings, ComPtr<ID3D11SamplerState>> sampler_states;
-
-	dirty_t<uint32_t> blend_flags;
-	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> blend_states;
-
-	ComPtr<Direct3DIndexBuffer8> index_buffer = nullptr;
-
 	void oit_write();
 	void oit_read() const;
 	void oit_init();
-	void frag_list_head_init();
-	void frag_list_count_init();
-	void frag_list_nodes_init();
+	void oit_frag_list_head_init();
+	void oit_frag_list_count_init();
+	void oit_frag_list_nodes_init();
 
-	std::deque<ComPtr<Direct3DVertexBuffer8>> up_vertex_buffers;
+	Direct3D8* const m_d3d;
+	UINT m_adapter;
+	HWND m_focus_window;
+	D3DDEVTYPE m_device_type;
+	DWORD m_behavior_flags;
+	D3DPRESENT_PARAMETERS8 m_present_params {};
+
+	std::unordered_map<size_t, std::string> m_digit_strings;
+	const std::string m_oit_fragments_str;
+
+	ThreadPool m_thread_pool;
+
+	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
+	ComPtr<ID3D11InfoQueue> m_info_queue;
+
+	ComPtr<IDXGISwapChain> m_swap_chain;
+
+	std::vector<uint32_t> m_trifan_index_buffer;
+
+	std::fstream m_permutation_cache_file;
+	std::unordered_set<ShaderFlags::type> m_permutation_flags;
+
+	bool m_freeing_shaders = false;
+
+	ShaderFlags::type m_shader_flags = ShaderFlags::none;
+	ShaderFlags::type m_last_shader_flags = ShaderFlags::mask;
+
+	ShaderIncluder m_shader_includer;
+
+	VertexShader m_current_vs;
+	PixelShader m_current_ps;
+
+	std::unordered_map<ShaderFlags::type, VertexShader> m_vertex_shaders;
+	std::unordered_map<ShaderFlags::type, PixelShader> m_pixel_shaders;
+
+	std::unordered_map<ShaderFlags::type, std::future<VertexShader>> m_compiling_vertex_shaders;
+	std::unordered_map<ShaderFlags::type, std::future<PixelShader>>  m_compiling_pixel_shaders;
+
+	std::unordered_map<ShaderFlags::type, VertexShader> m_uber_vertex_shaders;
+	std::unordered_map<ShaderFlags::type, PixelShader> m_uber_pixel_shaders;
+
+	bool m_oit_actually_enabled = false;
+
+	VertexShader m_oit_composite_vs;
+	PixelShader m_oit_composite_ps;
+
+	ComPtr<Direct3DTexture8> m_back_buffer;
+	ComPtr<ID3D11RenderTargetView> m_back_buffer_view;
+
+	ComPtr<Direct3DTexture8>         m_render_target_wrapper;
+	ComPtr<ID3D11Texture2D>          m_render_target_texture;
+	ComPtr<ID3D11RenderTargetView>   m_render_target_view;
+	ComPtr<ID3D11ShaderResourceView> m_render_target_srv;
+
+	ComPtr<Direct3DSurface8> m_current_render_target;
+	ComPtr<Direct3DSurface8> m_current_depth_stencil;
+
+	ComPtr<Direct3DTexture8> m_oit_composite_wrapper;
+	ComPtr<ID3D11Texture2D> m_oit_composite_texture;
+	ComPtr<ID3D11RenderTargetView> m_oit_composite_view;
+	ComPtr<ID3D11ShaderResourceView> m_oit_composite_srv;
+
+	ComPtr<ID3D11Texture2D>           m_oit_frag_list_head;
+	ComPtr<ID3D11ShaderResourceView>  m_oit_frag_list_head_srv;
+	ComPtr<ID3D11UnorderedAccessView> m_oit_frag_list_head_uav;
+
+	ComPtr<ID3D11Texture2D>           m_oit_frag_list_count;
+	ComPtr<ID3D11ShaderResourceView>  m_oit_frag_list_count_srv;
+	ComPtr<ID3D11UnorderedAccessView> m_oit_frag_list_count_uav;
+
+	ComPtr<ID3D11Buffer>              m_oit_frag_list_nodes;
+	ComPtr<ID3D11ShaderResourceView>  m_oit_frag_list_nodes_srv;
+	ComPtr<ID3D11UnorderedAccessView> m_oit_frag_list_nodes_uav;
+
+	std::unordered_map<DWORD, Direct3DTexture8*> m_textures;
+	std::unordered_map<DWORD, SamplerSettings> m_sampler_setting_values;
+	std::array<dirty_t<DWORD>, 174> m_render_state_values;
+	std::unordered_map<ShaderFlags::type, ComPtr<ID3D11InputLayout>> m_fvf_layouts;
+	std::unordered_map<DWORD, StreamPair> m_stream_sources;
+
+	dirty_t<uint32_t> m_raster_flags;
+	std::unordered_map<uint32_t, ComPtr<ID3D11RasterizerState>> m_raster_states;
+
+	std::unordered_map<SamplerSettings, ComPtr<ID3D11SamplerState>> m_sampler_states;
+
+	dirty_t<uint32_t> m_blend_flags;
+	std::unordered_map<uint32_t, ComPtr<ID3D11BlendState>> m_blend_states;
+
+	ComPtr<Direct3DIndexBuffer8> m_current_index_buffer = nullptr;
+
+	std::deque<ComPtr<Direct3DVertexBuffer8>> m_up_vertex_buffers;
 	[[nodiscard]] ComPtr<Direct3DVertexBuffer8> get_user_primitive_vertex_buffer(size_t target_size);
 
-	std::deque<ComPtr<Direct3DIndexBuffer8>> up_index_buffers;
+	std::deque<ComPtr<Direct3DIndexBuffer8>> m_up_index_buffers;
 	[[nodiscard]] ComPtr<Direct3DIndexBuffer8> get_user_primitive_index_buffer(size_t target_size, D3DFORMAT format);
 
-	dirty_t<DWORD> FVF;
-	ComPtr<Direct3DTexture8> depth_stencil;
+	dirty_t<DWORD> m_fvf_flags;
+	ComPtr<Direct3DTexture8> m_depth_stencil;
 
-	DepthStencilFlags depthstencil_flags {};
-	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> depth_states;
+	DepthStencilFlags m_depth_stencil_flags {};
+	std::unordered_map<DepthStencilFlags, ComPtr<ID3D11DepthStencilState>> m_depth_states;
 
-	ComPtr<ID3D11Buffer> uber_shader_cbuffer;
-	ComPtr<ID3D11Buffer> per_scene_cbuffer;
-	ComPtr<ID3D11Buffer> per_model_cbuffer;
-	ComPtr<ID3D11Buffer> per_pixel_cbuffer;
-	ComPtr<ID3D11Buffer> per_texture_cbuffer;
+	ComPtr<ID3D11Buffer> m_uber_shader_cbuffer;
+	ComPtr<ID3D11Buffer> m_per_scene_cbuffer;
+	ComPtr<ID3D11Buffer> m_per_model_cbuffer;
+	ComPtr<ID3D11Buffer> m_per_pixel_cbuffer;
+	ComPtr<ID3D11Buffer> m_per_texture_cbuffer;
 
-	UberShaderFlagsBuffer uber_shader_flags {};
-	PerSceneBuffer per_scene {};
-	PerModelBuffer per_model {};
-	PerPixelBuffer per_pixel {};
-	TextureStages per_texture {};
+	UberShaderFlagsBuffer m_uber_shader_flags {};
+	PerSceneBuffer m_per_scene {};
+	PerModelBuffer m_per_model {};
+	PerPixelBuffer m_per_pixel {};
+	TextureStages m_per_texture {};
 
-	INT current_base_vertex_index = 0;
+	INT m_current_base_vertex_index = 0;
 	//const BOOL ZBufferDiscarding = FALSE;
-	DWORD current_vertex_shader_handle = 0;
+	DWORD m_current_vertex_shader_handle = 0;
 	//DWORD CurrentPixelShaderHandle = 0;
-	bool palette_flag = false;
+	bool m_palette_flag = false;
 
-	static constexpr size_t MAX_CLIP_PLANES    = 6;
-	float stored_clip_planes[MAX_CLIP_PLANES][4] = {};
+	static constexpr size_t MAX_CLIP_PLANES = 6;
+	float m_stored_clip_planes[MAX_CLIP_PLANES][4] = {};
 	//DWORD ClipPlaneRenderState = 0;
 
-	D3D11_VIEWPORT viewport {};
-	D3DMATERIAL8 material {};
+	D3D11_VIEWPORT m_viewport {};
+	D3DMATERIAL8 m_material {};
 
-	std::vector<D3D_SHADER_MACRO> draw_prologue_epilogue_preproc;
+	std::vector<D3D_SHADER_MACRO> m_draw_prologue_epilogue_preproc;
 };

@@ -132,7 +132,7 @@ size_t Direct3DDevice8::count_texture_stages() const
 {
 	size_t n = 0;
 
-	for (const auto& stage : per_texture.stages)
+	for (const auto& stage : m_per_texture.stages)
 	{
 		if (stage.color_op.data() == D3DTOP_DISABLE && stage.alpha_op.data() == D3DTOP_DISABLE)
 		{
@@ -182,7 +182,7 @@ void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, s
 	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(flags);
 
 	definitions.clear();
-	definitions.emplace_back("OIT_MAX_FRAGMENTS", fragments_str.c_str());
+	definitions.emplace_back("OIT_MAX_FRAGMENTS", m_oit_fragments_str.c_str());
 	definitions.emplace_back("TEXTURE_STAGE_MAX", TOSTRING(TEXTURE_STAGE_MAX));
 
 	auto uv_format = sanitized_flags >> 16u; // FIXME: magic number
@@ -220,7 +220,7 @@ void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, s
 
 	{
 		const size_t stage_count = (sanitized_flags & ShaderFlags::stage_count_mask) >> ShaderFlags::stage_count_shift;
-		const std::string& digit_string = digit_strings.at(stage_count);
+		const std::string& digit_string = m_digit_strings.at(stage_count);
 		definitions.push_back({ "TEXTURE_STAGE_COUNT", digit_string.c_str() });
 	}
 
@@ -252,7 +252,7 @@ void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, s
 	if (sanitized_flags & D3DFVF_TEXCOUNT_MASK)
 	{
 		const size_t texcount = (sanitized_flags & D3DFVF_TEXCOUNT_MASK) >> D3DFVF_TEXCOUNT_SHIFT;
-		const std::string& digit_string = digit_strings.at(texcount);
+		const std::string& digit_string = m_digit_strings.at(texcount);
 		definitions.push_back({ "FVF_TEXCOUNT", digit_string.c_str() });
 	}
 	else
@@ -283,8 +283,8 @@ void Direct3DDevice8::shader_preprocess(ShaderFlags::type flags, bool is_uber, s
 		const auto alpha_test_mode = static_cast<size_t>((sanitized_flags & ShaderFlags::rs_alpha_test_mode_mask) >> ShaderFlags::rs_alpha_test_mode_shift);
 		const auto fog_mode        = static_cast<size_t>((sanitized_flags & ShaderFlags::rs_fog_mode_mask) >> ShaderFlags::rs_fog_mode_shift);
 
-		definitions.push_back({ "RS_ALPHA_TEST_MODE", digit_strings.at(alpha_test_mode).c_str() });
-		definitions.push_back({ "RS_FOG_MODE", digit_strings.at(fog_mode).c_str() });
+		definitions.push_back({ "RS_ALPHA_TEST_MODE", m_digit_strings.at(alpha_test_mode).c_str() });
+		definitions.push_back({ "RS_FOG_MODE", m_digit_strings.at(fog_mode).c_str() });
 	}
 }
 
@@ -297,7 +297,7 @@ std::vector<D3D_SHADER_MACRO> Direct3DDevice8::shader_preprocess(ShaderFlags::ty
 
 void Direct3DDevice8::draw_call_increment()
 {
-	per_model.draw_call = (per_model.draw_call.data() + 1) % 65536;
+	m_per_model.draw_call = (m_per_model.draw_call.data() + 1) % 65536;
 }
 
 static constexpr auto SHADER_COMPILER_FLAGS =
@@ -322,7 +322,7 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 		shader_path = d3d8to11::filesystem::as_extended_length(shader_path);
 	}
 
-	const auto shader_source = shader_includer.get_shader_source(shader_path);
+	const auto shader_source = m_shader_includer.get_shader_source(shader_path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
@@ -332,7 +332,7 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 	{
 		// unfortunately a necessary evil :(
 		const std::string shader_path_string = shader_path.string();
-		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &shader_includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &m_shader_includer, "vs_main", "vs_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 	}
 
 	if (errors != nullptr)
@@ -347,7 +347,7 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 		}
 	}
 
-	hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
+	hr = m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
 
 	if (FAILED(hr))
 	{
@@ -370,7 +370,7 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 		shader_path = d3d8to11::filesystem::as_extended_length(shader_path);
 	}
 
-	const auto shader_source = shader_includer.get_shader_source(shader_path);
+	const auto shader_source = m_shader_includer.get_shader_source(shader_path);
 
 	std::vector<D3D_SHADER_MACRO> preproc = shader_preprocess(flags, is_uber);
 	preproc.push_back({});
@@ -380,7 +380,7 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 	{
 		// unfortunately a necessary evil :(
 		const std::string shader_path_string = shader_path.string();
-		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &shader_includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
+		hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), preproc.data(), &m_shader_includer, "ps_main", "ps_5_0", SHADER_COMPILER_FLAGS, 0, &blob, &errors);
 	}
 
 	if (errors != nullptr)
@@ -395,7 +395,7 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 		}
 	}
 
-	hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
+	hr = m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &shader);
 
 	if (FAILED(hr))
 	{
@@ -407,13 +407,13 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 
 void Direct3DDevice8::store_permutation_flags(ShaderFlags::type flags)
 {
-	if (permutation_cache.is_open() &&
-	    permutation_flags.insert(flags).second == true)
+	if (m_permutation_cache_file.is_open() &&
+	    m_permutation_flags.insert(flags).second == true)
 	{
 		const std::string str = std::format("writing shader permutation to cache: 0x{:016X}\n", flags);
 		OutputDebugStringA(str.c_str());
-		permutation_cache.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
-		permutation_cache.flush();
+		m_permutation_cache_file.write(reinterpret_cast<const char*>(&flags), sizeof(flags));
+		m_permutation_cache_file.flush();
 	}
 }
 
@@ -424,9 +424,9 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 	const auto base_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::vs_mask);
 
 	{
-		const auto it = vertex_shaders.find(base_flags);
+		const auto it = m_vertex_shaders.find(base_flags);
 
-		if (it != vertex_shaders.end())
+		if (it != m_vertex_shaders.end())
 		{
 			return it->second;
 		}
@@ -439,15 +439,15 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 		};
 
 #ifdef SHADER_ASYNC_COMPILE
-		const auto it = compiling_vertex_shaders.find(base_flags);
+		const auto it = m_compiling_vertex_shaders.find(base_flags);
 
-		if (it == compiling_vertex_shaders.end())
+		if (it == m_compiling_vertex_shaders.end())
 		{
-			auto compilation_task = thread_pool.enqueue(enqueue_function, base_flags);
+			auto compilation_task = m_thread_pool.enqueue(enqueue_function, base_flags);
 
 			// we *could* check *right now* to see if this shader is somehow already done
 			// and skip the compiling queue, but nah.
-			compiling_vertex_shaders[base_flags] = std::move(compilation_task);
+			m_compiling_vertex_shaders[base_flags] = std::move(compilation_task);
 			store_permutation_flags(base_flags);
 		}
 		else
@@ -457,8 +457,8 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 			if (is_future_ready(future))
 			{
 				auto shader = std::move(future.get());
-				compiling_vertex_shaders.erase(it);
-				vertex_shaders[base_flags] = shader;
+				m_compiling_vertex_shaders.erase(it);
+				m_vertex_shaders[base_flags] = shader;
 				return shader;
 			}
 		}
@@ -473,16 +473,16 @@ VertexShader Direct3DDevice8::get_vertex_shader(ShaderFlags::type flags)
 	const auto uber_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::uber_vs_mask);
 
 	{
-		const auto it = uber_vertex_shaders.find(uber_flags);
+		const auto it = m_uber_vertex_shaders.find(uber_flags);
 
-		if (it != uber_vertex_shaders.end())
+		if (it != m_uber_vertex_shaders.end())
 		{
 			return it->second;
 		}
 	}
 
 	auto shader = compile_vertex_shader(uber_flags, true);
-	uber_vertex_shaders[uber_flags] = shader;
+	m_uber_vertex_shaders[uber_flags] = shader;
 	return shader;
 }
 
@@ -493,9 +493,9 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 	const auto base_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::ps_mask);
 
 	{
-		const auto it = pixel_shaders.find(base_flags);
+		const auto it = m_pixel_shaders.find(base_flags);
 
-		if (it != pixel_shaders.end())
+		if (it != m_pixel_shaders.end())
 		{
 			return it->second;
 		}
@@ -508,15 +508,15 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 		};
 
 #ifdef SHADER_ASYNC_COMPILE
-		const auto it = compiling_pixel_shaders.find(base_flags);
+		const auto it = m_compiling_pixel_shaders.find(base_flags);
 
-		if (it == compiling_pixel_shaders.end())
+		if (it == m_compiling_pixel_shaders.end())
 		{
-			auto compilation_task = thread_pool.enqueue(enqueue_function, base_flags);
+			auto compilation_task = m_thread_pool.enqueue(enqueue_function, base_flags);
 
 			// we *could* check *right now* to see if this shader is somehow already done
 			// and skip the compiling queue, but nah.
-			compiling_pixel_shaders[base_flags] = std::move(compilation_task);
+			m_compiling_pixel_shaders[base_flags] = std::move(compilation_task);
 			store_permutation_flags(base_flags);
 		}
 		else
@@ -526,8 +526,8 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 			if (is_future_ready(future))
 			{
 				auto shader = std::move(future.get());
-				compiling_pixel_shaders.erase(it);
-				pixel_shaders[base_flags] = shader;
+				m_compiling_pixel_shaders.erase(it);
+				m_pixel_shaders[base_flags] = shader;
 				return shader;
 			}
 		}
@@ -542,26 +542,26 @@ PixelShader Direct3DDevice8::get_pixel_shader(ShaderFlags::type flags)
 	const auto uber_flags = ShaderFlags::sanitize(sanitized_flags & ShaderFlags::uber_ps_mask);
 
 	{
-		const auto it = uber_pixel_shaders.find(uber_flags);
+		const auto it = m_uber_pixel_shaders.find(uber_flags);
 
-		if (it != uber_pixel_shaders.end())
+		if (it != m_uber_pixel_shaders.end())
 		{
 			return it->second;
 		}
 	}
 
 	auto shader = compile_pixel_shader(uber_flags, true);
-	uber_pixel_shaders[uber_flags] = shader;
+	m_uber_pixel_shaders[uber_flags] = shader;
 	return shader;
 }
 
 void Direct3DDevice8::create_depth_stencil()
 {
-	depth_stencil = new Direct3DTexture8(this, present_params.BackBufferWidth, present_params.BackBufferHeight, 1,
-	                                     D3DUSAGE_DEPTHSTENCIL, present_params.AutoDepthStencilFormat, D3DPOOL_DEFAULT);
+	m_depth_stencil = new Direct3DTexture8(this, m_present_params.BackBufferWidth, m_present_params.BackBufferHeight, 1,
+	                                       D3DUSAGE_DEPTHSTENCIL, m_present_params.AutoDepthStencilFormat, D3DPOOL_DEFAULT);
 
-	depth_stencil->create_native();
-	depth_stencil->GetSurfaceLevel(0, &current_depth_stencil);
+	m_depth_stencil->create_native();
+	m_depth_stencil->GetSurfaceLevel(0, &m_current_depth_stencil);
 }
 
 void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
@@ -569,7 +569,7 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
 	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &composite_texture);
+	HRESULT hr = m_device->CreateTexture2D(&tex_desc, nullptr, &m_oit_composite_texture);
 
 	if (FAILED(hr))
 	{
@@ -582,15 +582,15 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 	view_desc.Texture2D.MipSlice = 0;
 
-	hr = device->CreateRenderTargetView(composite_texture.Get(), &view_desc, &composite_view);
+	hr = m_device->CreateRenderTargetView(m_oit_composite_texture.Get(), &view_desc, &m_oit_composite_view);
 
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("Failed to create composite target view");
 	}
 
-	std::string composite_view_name = "composite_view";
-	composite_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_view_name.size()), composite_view_name.data());
+	std::string composite_view_name = "m_oit_composite_view";
+	m_oit_composite_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_view_name.size()), composite_view_name.data());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
@@ -599,18 +599,18 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;
 
-	hr = device->CreateShaderResourceView(composite_texture.Get(), &srv_desc, &composite_srv);
+	hr = m_device->CreateShaderResourceView(m_oit_composite_texture.Get(), &srv_desc, &m_oit_composite_srv);
 
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("Failed to create composite resource view");
 	}
 
-	std::string composite_srv_name = "composite_srv";
-	composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_srv_name.size()), composite_srv_name.data());
+	std::string composite_srv_name = "m_oit_composite_srv";
+	m_oit_composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_srv_name.size()), composite_srv_name.data());
 
-	composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
-	composite_wrapper->create_native(composite_texture.Get());
+	m_oit_composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	m_oit_composite_wrapper->create_native(m_oit_composite_texture.Get());
 }
 
 void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
@@ -618,7 +618,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
 	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &render_target_texture);
+	HRESULT hr = m_device->CreateTexture2D(&tex_desc, nullptr, &m_render_target_texture);
 
 	if (FAILED(hr))
 	{
@@ -631,15 +631,15 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 	view_desc.Texture2D.MipSlice = 0;
 
-	hr = device->CreateRenderTargetView(render_target_texture.Get(), &view_desc, &render_target_view);
+	hr = m_device->CreateRenderTargetView(m_render_target_texture.Get(), &view_desc, &m_render_target_view);
 
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("Failed to create render target view");
 	}
 
-	std::string view_name = "render_target_view";
-	render_target_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(view_name.size()), view_name.data());
+	std::string view_name = "m_render_target_view";
+	m_render_target_view->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(view_name.size()), view_name.data());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
@@ -648,71 +648,71 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;
 
-	hr = device->CreateShaderResourceView(render_target_texture.Get(), &srv_desc, &render_target_srv);
+	hr = m_device->CreateShaderResourceView(m_render_target_texture.Get(), &srv_desc, &m_render_target_srv);
 
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("Failed to create composite resource view");
 	}
 
-	std::string render_target_srv_name = "render_target_srv";
-	render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(render_target_srv_name.size()), render_target_srv_name.data());
+	std::string render_target_srv_name = "m_render_target_srv";
+	m_render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(render_target_srv_name.size()), render_target_srv_name.data());
 
-	render_target_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
-	render_target_wrapper->create_native(render_target_texture.Get());
+	m_render_target_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	m_render_target_wrapper->create_native(m_render_target_texture.Get());
 }
 
 void Direct3DDevice8::get_back_buffer()
 {
 	ID3D11Texture2D* pBackBuffer = nullptr;
-	swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
+	m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
 
 	D3D11_TEXTURE2D_DESC tex_desc {};
 	pBackBuffer->GetDesc(&tex_desc);
 
-	back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, present_params.BackBufferFormat, D3DPOOL_DEFAULT);
-	back_buffer->create_native(pBackBuffer);
+	m_back_buffer = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	m_back_buffer->create_native(pBackBuffer);
 
-	//back_buffer->GetSurfaceLevel(0, &current_render_target);
+	//m_back_buffer->GetSurfaceLevel(0, &current_render_target);
 
-	device->CreateRenderTargetView(pBackBuffer, nullptr, &back_buffer_view);
+	m_device->CreateRenderTargetView(pBackBuffer, nullptr, &m_back_buffer_view);
 
 	pBackBuffer->Release();
 
 	ComPtr<Direct3DSurface8> ds_surface;
-	depth_stencil->GetSurfaceLevel(0, &ds_surface);
+	m_depth_stencil->GetSurfaceLevel(0, &ds_surface);
 
 	create_composite_texture(tex_desc);
 	create_render_target(tex_desc);
 
 	if (oit_enabled)
 	{
-		context->OMSetRenderTargets(1, composite_view.GetAddressOf(), ds_surface->depth_stencil.Get());
+		m_context->OMSetRenderTargets(1, m_oit_composite_view.GetAddressOf(), ds_surface->get_native_depth_stencil());
 
 		// FIXME: this doesn't make sense! If a program is expecting the render target with things in it, this has nothing until ::Present()!
-		composite_wrapper->GetSurfaceLevel(0, &current_render_target);
+		m_oit_composite_wrapper->GetSurfaceLevel(0, &m_current_render_target);
 	}
 	else
 	{
 		// set the composite render target as the back buffer
-		context->OMSetRenderTargets(1, render_target_view.GetAddressOf(), ds_surface->depth_stencil.Get());
-		render_target_wrapper->GetSurfaceLevel(0, &current_render_target);
+		m_context->OMSetRenderTargets(1, m_render_target_view.GetAddressOf(), ds_surface->get_native_depth_stencil());
+		m_render_target_wrapper->GetSurfaceLevel(0, &m_current_render_target);
 	}
 }
 
 void Direct3DDevice8::create_native()
 {
-	shader_includer.set_base_directory(d3d8to11::config->get_shader_source_dir());
-	shader_includer.add_include_directory(d3d8to11::config->get_shader_source_dir());
+	m_shader_includer.set_base_directory(d3d8to11::config->get_shader_source_dir());
+	m_shader_includer.add_include_directory(d3d8to11::config->get_shader_source_dir());
 
 	oit_enabled = d3d8to11::config->get_oit_config().enabled;
 
-	if (!present_params.EnableAutoDepthStencil)
+	if (!m_present_params.EnableAutoDepthStencil)
 	{
 		throw std::runtime_error("manual depth buffer not supported");
 	}
 
-	palette_flag = supports_palettes();
+	m_palette_flag = supports_palettes();
 
 	/*
 	 * BackBufferWidth and BackBufferHeight 
@@ -722,12 +722,12 @@ void Direct3DDevice8::create_native()
 	 * (or the focus window, if hDeviceWindow is NULL) is taken.
 	 */
 
-	UINT& width = present_params.BackBufferWidth;
-	UINT& height = present_params.BackBufferHeight;
+	UINT& width = m_present_params.BackBufferWidth;
+	UINT& height = m_present_params.BackBufferHeight;
 
-	if (present_params.Windowed && (!width || !height))
+	if (m_present_params.Windowed && (!width || !height))
 	{
-		HWND handle = present_params.hDeviceWindow ? present_params.hDeviceWindow : focus_window;
+		HWND handle = m_present_params.hDeviceWindow ? m_present_params.hDeviceWindow : m_focus_window;
 
 		RECT rect;
 		GetClientRect(handle, &rect);
@@ -746,14 +746,14 @@ void Direct3DDevice8::create_native()
 	DXGI_SWAP_CHAIN_DESC desc = {};
 
 	desc.BufferCount        = 1;
-	desc.BufferDesc.Format  = to_dxgi(present_params.BackBufferFormat);
+	desc.BufferDesc.Format  = to_dxgi(m_present_params.BackBufferFormat);
 	desc.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferDesc.Width   = width;
 	desc.BufferDesc.Height  = height;
 	desc.BufferDesc.Scaling = DXGI_MODE_SCALING_CENTERED;
-	desc.OutputWindow       = present_params.hDeviceWindow;
+	desc.OutputWindow       = m_present_params.hDeviceWindow;
 	desc.SampleDesc.Count   = 1;
-	desc.Windowed           = present_params.Windowed;
+	desc.Windowed           = m_present_params.Windowed;
 	desc.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	auto feature_level = static_cast<D3D_FEATURE_LEVEL>(0);
@@ -767,8 +767,8 @@ void Direct3DDevice8::create_native()
 	// TODO: use more modern swap chain creation and management
 	auto error = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flag,
 	                                           FEATURE_LEVELS.data(), static_cast<UINT>(FEATURE_LEVELS.size()),
-	                                           D3D11_SDK_VERSION, &desc, &swap_chain,
-	                                           &device, &feature_level, &context);
+	                                           D3D11_SDK_VERSION, &desc, &m_swap_chain,
+	                                           &m_device, &feature_level, &m_context);
 
 	if (feature_level < D3D_FEATURE_LEVEL_11_0)
 	{
@@ -780,75 +780,75 @@ void Direct3DDevice8::create_native()
 		throw std::runtime_error("Device creation failed with a known error that I'm too lazy to get the details of.");
 	}
 
-	device->QueryInterface(__uuidof(ID3D11InfoQueue), &info_queue);
+	m_device->QueryInterface(__uuidof(ID3D11InfoQueue), &m_info_queue);
 
-	if (info_queue)
+	if (m_info_queue)
 	{
 		OutputDebugStringA("D3D11 debug info queue enabled\n");
-		info_queue->SetMuteDebugOutput(FALSE);
+		m_info_queue->SetMuteDebugOutput(FALSE);
 	}
 
-	swap_chain->SetFullscreenState(!present_params.Windowed, nullptr);
+	m_swap_chain->SetFullscreenState(!m_present_params.Windowed, nullptr);
 
 	create_depth_stencil();
 	get_back_buffer();
 
 	D3DVIEWPORT8 vp {};
-	vp.Width  = present_params.BackBufferWidth;
-	vp.Height = present_params.BackBufferHeight;
+	vp.Width  = m_present_params.BackBufferWidth;
+	vp.Height = m_present_params.BackBufferHeight;
 	vp.MaxZ   = 1.0f;
 	SetViewport(&vp);
 
-	HRESULT hr = make_cbuffer(uber_shader_flags, uber_shader_cbuffer);
+	HRESULT hr = make_cbuffer(m_uber_shader_flags, m_uber_shader_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("uber-shader CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_scene, per_scene_cbuffer);
+	hr = make_cbuffer(m_per_scene, m_per_scene_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-scene CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_model, per_model_cbuffer);
+	hr = make_cbuffer(m_per_model, m_per_model_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-model CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_pixel, per_pixel_cbuffer);
+	hr = make_cbuffer(m_per_pixel, m_per_pixel_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-pixel CreateBuffer failed");
 	}
 
-	hr = make_cbuffer(per_texture, per_texture_cbuffer);
+	hr = make_cbuffer(m_per_texture, m_per_texture_cbuffer);
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("per-texture CreateBuffer failed");
 	}
 
-	context->VSSetConstantBuffers(0, 1, uber_shader_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(0, 1, uber_shader_cbuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(0, 1, m_uber_shader_cbuffer.GetAddressOf());
+	m_context->PSSetConstantBuffers(0, 1, m_uber_shader_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(1, 1, per_scene_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(1, 1, per_scene_cbuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(1, 1, m_per_scene_cbuffer.GetAddressOf());
+	m_context->PSSetConstantBuffers(1, 1, m_per_scene_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(2, 1, per_model_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(2, 1, per_model_cbuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(2, 1, m_per_model_cbuffer.GetAddressOf());
+	m_context->PSSetConstantBuffers(2, 1, m_per_model_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(3, 1, per_pixel_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(3, 1, per_pixel_cbuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(3, 1, m_per_pixel_cbuffer.GetAddressOf());
+	m_context->PSSetConstantBuffers(3, 1, m_per_pixel_cbuffer.GetAddressOf());
 
-	context->VSSetConstantBuffers(4, 1, per_texture_cbuffer.GetAddressOf());
-	context->PSSetConstantBuffers(4, 1, per_texture_cbuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(4, 1, m_per_texture_cbuffer.GetAddressOf());
+	m_context->PSSetConstantBuffers(4, 1, m_per_texture_cbuffer.GetAddressOf());
 
 	{
 		const auto& permutation_file_path = d3d8to11::config->get_shader_cache_variants_file_path();
 		const bool exists = std::filesystem::exists(permutation_file_path);
 
-		decltype(permutation_flags) temp_permutation_flags;
+		decltype(m_permutation_flags) temp_permutation_flags;
 		std::fstream permutation_file;
 
 		if (permutation_file_path.empty())
@@ -931,7 +931,7 @@ void Direct3DDevice8::create_native()
 						const std::string str = std::format("enqueueing uber vertex shader: 0x{:016X}\n", sanitized_vs);
 						OutputDebugStringA(str.c_str());
 
-						uber_vs_tasks[sanitized_vs] = thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, true);
+						uber_vs_tasks[sanitized_vs] = m_thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, true);
 					}
 
 					if (!uber_ps_tasks.contains(sanitized_ps))
@@ -939,7 +939,7 @@ void Direct3DDevice8::create_native()
 						const std::string str = std::format("enqueueing uber pixel shader: 0x{:016X}\n", sanitized_ps);
 						OutputDebugStringA(str.c_str());
 
-						uber_ps_tasks[sanitized_ps] = thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, true);
+						uber_ps_tasks[sanitized_ps] = m_thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, true);
 					}
 				}
 
@@ -947,19 +947,19 @@ void Direct3DDevice8::create_native()
 
 				for (auto& [flags, task] : uber_vs_tasks)
 				{
-					uber_vertex_shaders[flags] = std::move(task.get());
+					m_uber_vertex_shaders[flags] = std::move(task.get());
 				}
 
 				for (auto& [flags, task] : uber_ps_tasks)
 				{
-					uber_pixel_shaders[flags] = std::move(task.get());
+					m_uber_pixel_shaders[flags] = std::move(task.get());
 				}
 
 				const auto uber_end = std::chrono::high_resolution_clock::now();
 				const auto uber_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(uber_end - uber_start);
 
-				const size_t uber_vs_count = uber_vertex_shaders.size();
-				const size_t uber_ps_count = uber_pixel_shaders.size();
+				const size_t uber_vs_count = m_uber_vertex_shaders.size();
+				const size_t uber_ps_count = m_uber_pixel_shaders.size();
 
 				const std::string str =
 					std::format("done ({} vertex shader(s) and {} pixel shader(s) ({} total) in {} ms)\n"
@@ -974,20 +974,20 @@ void Direct3DDevice8::create_native()
 				const auto sanitized_vs = ShaderFlags::sanitize(flags & ShaderFlags::vs_mask);
 				const auto sanitized_ps = ShaderFlags::sanitize(flags & ShaderFlags::ps_mask);
 
-				if (!compiling_vertex_shaders.contains(sanitized_vs))
+				if (!m_compiling_vertex_shaders.contains(sanitized_vs))
 				{
 					const std::string str = std::format("enqueueing standard vertex shader: 0x{:016X}\n", sanitized_vs);
 					OutputDebugStringA(str.c_str());
 
-					compiling_vertex_shaders[sanitized_vs] = thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, false);
+					m_compiling_vertex_shaders[sanitized_vs] = m_thread_pool.enqueue(compile_vertex_shader_wrapper, sanitized_vs, false);
 				}
 
-				if (!compiling_pixel_shaders.contains(sanitized_ps))
+				if (!m_compiling_pixel_shaders.contains(sanitized_ps))
 				{
 					const std::string str = std::format("enqueueing standard pixel shader: 0x{:016X}\n", sanitized_ps);
 					OutputDebugStringA(str.c_str());
 
-					compiling_pixel_shaders[sanitized_ps] = thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, false);
+					m_compiling_pixel_shaders[sanitized_ps] = m_thread_pool.enqueue(compile_pixel_shader_wrapper, sanitized_ps, false);
 				}
 			}
 
@@ -998,14 +998,14 @@ void Direct3DDevice8::create_native()
 		{
 			permutation_file.seekg(0, std::ios_base::end);
 			permutation_file.seekp(0, std::ios_base::end);
-			permutation_cache = std::move(permutation_file);
-			permutation_flags = std::move(temp_permutation_flags);
+			m_permutation_cache_file = std::move(permutation_file);
+			m_permutation_flags = std::move(temp_permutation_flags);
 		}
 	}
 
-	blend_flags        = 0;
-	raster_flags       = 0;
-	depthstencil_flags = {};
+	m_blend_flags         = 0;
+	m_raster_flags        = 0;
+	m_depth_stencil_flags = {};
 
 	// TODO: properly set default for D3DRS_ZENABLE; see below
 	// The default value for this render state is D3DZB_TRUE if a depth stencil was created along with the swap chain by setting
@@ -1042,7 +1042,7 @@ void Direct3DDevice8::create_native()
 	SetRenderState(D3DRS_STENCILMASK,      0xFFFFFFFF);
 	SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
 
-	for (auto& state : render_state_values)
+	for (auto& state : m_render_state_values)
 	{
 		state.mark();
 	}
@@ -1080,7 +1080,7 @@ void Direct3DDevice8::create_native()
 		SetTextureStageState(i, D3DTSS_RESULTARG, D3DTA_CURRENT);
 	}
 
-	for (auto& light : per_model.lights)
+	for (auto& light : m_per_model.lights)
 	{
 		Light actual_light = {};
 		actual_light.diffuse = float4(1.0f, 1.0f, 1.0f, 0.0f);
@@ -1092,18 +1092,18 @@ void Direct3DDevice8::create_native()
 	material.Diffuse = { 1.0f, 1.0f, 1.0f, 1.0f };
 	SetMaterial(&material);
 
-	blend_flags.mark();
-	raster_flags.mark();
-	depthstencil_flags.mark();
+	m_blend_flags.mark();
+	m_raster_flags.mark();
+	m_depth_stencil_flags.mark();
 
-	FVF = 0;
-	FVF.mark();
+	m_fvf_flags = 0;
+	m_fvf_flags.mark();
 
-	uber_shader_flags.mark();
-	per_scene.mark();
-	per_model.mark();
-	per_pixel.mark();
-	per_texture.mark();
+	m_uber_shader_flags.mark();
+	m_per_scene.mark();
+	m_per_model.mark();
+	m_per_pixel.mark();
+	m_per_texture.mark();
 
 	oit_load_shaders();
 	oit_init();
@@ -1113,20 +1113,20 @@ void Direct3DDevice8::create_native()
 
 // IDirect3DDevice8
 Direct3DDevice8::Direct3DDevice8(Direct3D8* d3d, UINT adapter, D3DDEVTYPE device_type, HWND focus_window, DWORD behavior_flags, const D3DPRESENT_PARAMETERS8& parameters)
-	: fragments_str(std::to_string(globals::max_fragments)),
-	  adapter(adapter),
-	  focus_window(focus_window),
-	  device_type(device_type),
-	  behavior_flags(behavior_flags),
-	  thread_pool(std::max<size_t>(2, std::thread::hardware_concurrency()) - 1),
-	  present_params(parameters),
-	  d3d(d3d)
+	: m_d3d(d3d),
+	  m_adapter(adapter),
+	  m_focus_window(focus_window),
+	  m_device_type(device_type),
+	  m_behavior_flags(behavior_flags),
+	  m_present_params(parameters),
+	  m_oit_fragments_str(std::to_string(globals::max_fragments)),
+	  m_thread_pool(std::max<size_t>(2, std::thread::hardware_concurrency()) - 1)
 {
 	constexpr size_t max_digit_strings = std::max(static_cast<size_t>(TEXTURE_STAGE_MAX), FVF_TEXCOORD_MAX);
 
 	for (size_t i = 0; i <= max_digit_strings; ++i)
 	{
-		digit_strings[i] = std::to_string(i);
+		m_digit_strings[i] = std::to_string(i);
 	}
 }
 
@@ -1201,21 +1201,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDirect3D(Direct3D8** ppD3D8)
 		return D3DERR_INVALIDCALL;
 	}
 
-	d3d->AddRef();
+	m_d3d->AddRef();
 
-	*ppD3D8 = d3d;
+	*ppD3D8 = m_d3d;
 
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDeviceCaps(D3DCAPS8* pCaps)
 {
-	return d3d->GetDeviceCaps(adapter, device_type, pCaps);
+	return m_d3d->GetDeviceCaps(m_adapter, m_device_type, pCaps);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDisplayMode(D3DDISPLAYMODE* pMode)
 {
-	return d3d->GetAdapterDisplayMode(adapter, pMode);
+	return m_d3d->GetAdapterDisplayMode(m_adapter, pMode);
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCreationParameters(D3DDEVICE_CREATION_PARAMETERS* pParameters)
@@ -1225,10 +1225,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCreationParameters(D3DDEVICE_CREAT
 		return D3DERR_INVALIDCALL;
 	}
 
-	pParameters->BehaviorFlags  = behavior_flags;
-	pParameters->AdapterOrdinal = adapter;
-	pParameters->DeviceType     = device_type;
-	pParameters->hFocusWindow   = focus_window;
+	pParameters->BehaviorFlags  = m_behavior_flags;
+	pParameters->AdapterOrdinal = m_adapter;
+	pParameters->DeviceType     = m_device_type;
+	pParameters->hFocusWindow   = m_focus_window;
 
 	return D3D_OK;
 }
@@ -1315,7 +1315,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 	{
 		HWND handle = pPresentationParameters->hDeviceWindow
 		              ? pPresentationParameters->hDeviceWindow
-		              : focus_window;
+		              : m_focus_window;
 
 		RECT rect;
 		GetClientRect(handle, &rect);
@@ -1331,21 +1331,21 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 		}
 	}
 
-	if (pPresentationParameters->BackBufferWidth != present_params.BackBufferWidth ||
-	    pPresentationParameters->BackBufferHeight != present_params.BackBufferHeight ||
-	    pPresentationParameters->Windowed != present_params.Windowed)
+	if (pPresentationParameters->BackBufferWidth != m_present_params.BackBufferWidth ||
+	    pPresentationParameters->BackBufferHeight != m_present_params.BackBufferHeight ||
+	    pPresentationParameters->Windowed != m_present_params.Windowed)
 	{
-		present_params = *pPresentationParameters;
+		m_present_params = *pPresentationParameters;
 
-		context->OMSetRenderTargets(0, nullptr, nullptr);
+		m_context->OMSetRenderTargets(0, nullptr, nullptr);
 
-		back_buffer           = nullptr;
-		current_depth_stencil = nullptr;
-		current_render_target = nullptr;
-		back_buffer_view      = nullptr;
+		m_back_buffer           = nullptr;
+		m_current_depth_stencil = nullptr;
+		m_current_render_target = nullptr;
+		m_back_buffer_view      = nullptr;
 
-		swap_chain->ResizeBuffers(1, present_params.BackBufferWidth, present_params.BackBufferHeight,
-		                          DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+		m_swap_chain->ResizeBuffers(1, m_present_params.BackBufferWidth, m_present_params.BackBufferHeight,
+		                            DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
 		create_depth_stencil();
 		get_back_buffer();
@@ -1353,17 +1353,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 		D3DVIEWPORT8 vp {};
 		GetViewport(&vp);
 
-		vp.Width  = present_params.BackBufferWidth;
-		vp.Height = present_params.BackBufferHeight;
+		vp.Width  = m_present_params.BackBufferWidth;
+		vp.Height = m_present_params.BackBufferHeight;
 
 		SetViewport(&vp);
 
 		oit_release();
 		oit_init();
 
-		shader_flags &= ~ShaderFlags::fvf_mask;
-		FVF = 0;
-		FVF.clear();
+		m_shader_flags &= ~ShaderFlags::fvf_mask;
+		m_fvf_flags = 0;
+		m_fvf_flags.clear();
 	}
 
 	return D3D_OK;
@@ -1371,7 +1371,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Reset(D3DPRESENT_PARAMETERS8* pPresen
 
 void Direct3DDevice8::oit_composite()
 {
-	if (!oit_actually_enabled)
+	if (!m_oit_actually_enabled)
 	{
 		return;
 	}
@@ -1384,8 +1384,8 @@ void Direct3DDevice8::oit_composite()
 	SetRenderState(D3DRS_ZENABLE, FALSE);
 
 	static constexpr auto BLEND_DEFAULT = D3DBLEND_ONE | (D3DBLEND_ONE << 4) | (D3DBLENDOP_ADD << 8) | (0xF << BLEND_COLORMASK_SHIFT);
-	auto blend_ = blend_flags.data();
-	blend_flags = BLEND_DEFAULT;
+	auto blend_flags = m_blend_flags.data();
+	m_blend_flags = BLEND_DEFAULT;
 	update();
 
 	// Unbinds UAV read/write buffers and binds their read-only
@@ -1395,53 +1395,53 @@ void Direct3DDevice8::oit_composite()
 	ID3D11VertexShader* vs;
 	ID3D11PixelShader* ps;
 
-	context->VSGetShader(&vs, nullptr, nullptr);
-	context->PSGetShader(&ps, nullptr, nullptr);
+	m_context->VSGetShader(&vs, nullptr, nullptr);
+	m_context->PSGetShader(&ps, nullptr, nullptr);
 
 	// Switches to the composite to begin the sorting process.
-	context->VSSetShader(composite_vs.shader.Get(), nullptr, 0);
-	context->PSSetShader(composite_ps.shader.Get(), nullptr, 0);
+	m_context->VSSetShader(m_oit_composite_vs.shader.Get(), nullptr, 0);
+	m_context->PSSetShader(m_oit_composite_ps.shader.Get(), nullptr, 0);
 
 	// Unbind the last vertex & index buffers
-	context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+	m_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// ...then draw 3 points. The composite shader uses SV_VertexID
 	// to generate a full screen triangle, so we don't need a buffer!
-	context->Draw(3, 0);
+	m_context->Draw(3, 0);
 
-	context->VSSetShader(vs, nullptr, 0);
-	context->PSSetShader(ps, nullptr, 0);
+	m_context->VSSetShader(vs, nullptr, 0);
+	m_context->PSSetShader(ps, nullptr, 0);
 
 	safe_release(&vs);
 	safe_release(&ps);
 
-	blend_flags = blend_;
+	m_blend_flags = blend_flags;
 	SetRenderState(D3DRS_CULLMODE, CULLMODE);
 	SetRenderState(D3DRS_ZENABLE, ZENABLE);
 	update();
 
-	for (auto& stream : stream_sources)
+	for (auto& stream : m_stream_sources)
 	{
 		SetStreamSource(stream.first, stream.second.buffer, stream.second.stride);
 	}
 
-	ComPtr<Direct3DIndexBuffer8> index_buffer_ = std::move(index_buffer);
-	SetIndices(index_buffer_.Get(), current_base_vertex_index);
+	ComPtr<Direct3DIndexBuffer8> index_buffer = std::move(m_current_index_buffer);
+	SetIndices(index_buffer.Get(), m_current_base_vertex_index);
 }
 
 void Direct3DDevice8::oit_start()
 {
-	if (!oit_enabled && oit_actually_enabled != oit_enabled)
+	if (!oit_enabled && m_oit_actually_enabled != oit_enabled)
 	{
-		oit_actually_enabled = oit_enabled;
+		m_oit_actually_enabled = oit_enabled;
 		oit_write();
 	}
 
-	oit_actually_enabled = oit_enabled;
+	m_oit_actually_enabled = oit_enabled;
 
-	if (oit_actually_enabled)
+	if (m_oit_actually_enabled)
 	{
 		// Restore R/W access to the UAV buffers from the shader.
 		oit_write();
@@ -1452,10 +1452,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 {
 	{
 		ComPtr<Direct3DSurface8> rt_surface;
-		render_target_wrapper->GetSurfaceLevel(0, &rt_surface);
+		m_render_target_wrapper->GetSurfaceLevel(0, &rt_surface);
 
 		ComPtr<Direct3DSurface8> bb_surface;
-		back_buffer->GetSurfaceLevel(0, &bb_surface);
+		m_back_buffer->GetSurfaceLevel(0, &bb_surface);
 
 		CopyRects(rt_surface.Get(), nullptr, 0, bb_surface.Get(), nullptr);
 	}
@@ -1463,7 +1463,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 	print_info_queue();
 	UNREFERENCED_PARAMETER(pDirtyRegion);
 
-	auto interval = present_params.FullScreen_PresentationInterval;
+	auto interval = m_present_params.FullScreen_PresentationInterval;
 
 	if (interval == D3DPRESENT_INTERVAL_IMMEDIATE)
 	{
@@ -1472,11 +1472,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	oit_composite();
 
-	per_model.draw_call = 0;
+	m_per_model.draw_call = 0;
 
 	try
 	{
-		if (FAILED(swap_chain->Present(interval, 0)))
+		if (FAILED(m_swap_chain->Present(interval, 0)))
 		{
 			return D3DERR_INVALIDCALL;
 		}
@@ -1494,7 +1494,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	if (vk_control && vk_o)
 	{
-		if (oit_actually_enabled == oit_enabled)
+		if (m_oit_actually_enabled == oit_enabled)
 		{
 			oit_enabled = !oit_enabled;
 			OutputDebugStringA(oit_enabled ? "OIT enabled\n" : "OIT disabled\n");
@@ -1504,7 +1504,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 
 	if (vk_control && vk_r)
 	{
-		if (!this->freeing_shaders)
+		if (!this->m_freeing_shaders)
 		{
 			OutputDebugStringA("clearing cached shaders...\n");
 
@@ -1519,12 +1519,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Present(const RECT* pSourceRect, cons
 			}
 
 			update();
-			this->freeing_shaders = true;
+			this->m_freeing_shaders = true;
 		}
 	}
 	else
 	{
-		this->freeing_shaders = false;
+		this->m_freeing_shaders = false;
 	}
 
 	return D3D_OK;
@@ -1542,7 +1542,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetBackBuffer(UINT iBackBuffer, D3DBA
 		return D3DERR_INVALIDCALL; // HACK
 	}
 
-	auto& bb = render_target_wrapper;
+	auto& bb = m_render_target_wrapper;
 
 	ComPtr<Direct3DSurface8> surface;
 	bb->GetSurfaceLevel(0, &surface);
@@ -1795,8 +1795,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 			return D3DERR_INVALIDCALL;
 		}
 
-		if (pSourceSurface->desc8.Width  != static_cast<uint32_t>(pSourceRectsArray->right) ||
-		    pSourceSurface->desc8.Height != static_cast<uint32_t>(pSourceRectsArray->bottom))
+		if (pSourceSurface->get_d3d8_desc().Width  != static_cast<uint32_t>(pSourceRectsArray->right) ||
+		    pSourceSurface->get_d3d8_desc().Height != static_cast<uint32_t>(pSourceRectsArray->bottom))
 		{
 			return D3DERR_INVALIDCALL;
 		}
@@ -1817,27 +1817,27 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::CopyRects(Direct3DSurface8* pSourceSu
 
 	// TODO: MAKE NOT SHIT
 
-	if (pSourceSurface->render_target)
+	if (pSourceSurface->get_native_render_target())
 	{
-		pSourceSurface->render_target->GetResource(&src);
+		pSourceSurface->get_native_render_target()->GetResource(&src);
 	}
-	else if (pSourceSurface->parent)
+	else if (pSourceSurface->get_d3d8_parent())
 	{
-		src = pSourceSurface->parent->texture;
-		src_index = pSourceSurface->level;
-	}
-
-	if (pDestinationSurface->render_target)
-	{
-		pDestinationSurface->render_target->GetResource(&dst);
-	}
-	else if (pDestinationSurface->parent)
-	{
-		dst = pDestinationSurface->parent->texture;
-		dst_index = pDestinationSurface->level;
+		src = pSourceSurface->get_d3d8_parent()->get_native_texture();
+		src_index = pSourceSurface->get_d3d8_level();
 	}
 
-	context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
+	if (pDestinationSurface->get_native_render_target())
+	{
+		pDestinationSurface->get_native_render_target()->GetResource(&dst);
+	}
+	else if (pDestinationSurface->get_d3d8_parent())
+	{
+		dst = pDestinationSurface->get_d3d8_parent()->get_native_texture();
+		dst_index = pDestinationSurface->get_d3d8_level();
+	}
+
+	m_context->CopySubresourceRegion(dst.Get(), dst_index, 0, 0, 0, src.Get(), src_index, nullptr);
 	print_info_queue();
 	return D3D_OK;
 }
@@ -1856,42 +1856,42 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderTarget(Direct3DSurface8* pRe
 {
 	print_info_queue();
 
-	ID3D11RenderTargetView* render_target_ = nullptr;
-	ID3D11DepthStencilView* depth_stencil_ = nullptr;
+	ID3D11RenderTargetView* render_target = nullptr;
+	ID3D11DepthStencilView* depth_stencil = nullptr;
 
 	if (pRenderTarget != nullptr)
 	{
-		render_target_ = pRenderTarget->render_target.Get();
+		render_target = pRenderTarget->get_native_render_target();
 
-		if (!render_target_)
+		if (!render_target)
 		{
 			return D3DERR_INVALIDCALL;
 		}
 
-		current_render_target = pRenderTarget;
+		m_current_render_target = pRenderTarget;
 
-		D3DVIEWPORT8 viewport_ {};
-		GetViewport(&viewport_);
+		D3DVIEWPORT8 viewport {};
+		GetViewport(&viewport);
 
-		viewport_.Width  = pRenderTarget->desc8.Width;
-		viewport_.Height = pRenderTarget->desc8.Height;
+		viewport.Width  = pRenderTarget->get_d3d8_desc().Width;
+		viewport.Height = pRenderTarget->get_d3d8_desc().Height;
 
-		SetViewport(&viewport_);
+		SetViewport(&viewport);
 	}
 
 	if (pNewZStencil != nullptr)
 	{
-		depth_stencil_ = pNewZStencil->depth_stencil.Get();
+		depth_stencil = pNewZStencil->get_native_depth_stencil();
 
-		if (!depth_stencil_)
+		if (!depth_stencil)
 		{
 			return D3DERR_INVALIDCALL;
 		}
 
-		current_depth_stencil = pNewZStencil;
+		m_current_depth_stencil = pNewZStencil;
 	}
 
-	context->OMSetRenderTargets(1, &render_target_, depth_stencil_);
+	m_context->OMSetRenderTargets(1, &render_target, depth_stencil);
 	print_info_queue();
 	return D3D_OK;
 }
@@ -1903,7 +1903,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderTarget(Direct3DSurface8** pp
 		return D3DERR_INVALIDCALL;
 	}
 
-	*ppRenderTarget = current_render_target.Get();
+	*ppRenderTarget = m_current_render_target.Get();
 	(*ppRenderTarget)->AddRef();
 	return D3D_OK;
 }
@@ -1915,7 +1915,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetDepthStencilSurface(Direct3DSurfac
 		return D3DERR_INVALIDCALL;
 	}
 
-	*ppZStencilSurface = current_depth_stencil.Get();
+	*ppZStencilSurface = m_current_depth_stencil.Get();
 	(*ppZStencilSurface)->AddRef();
 	return D3D_OK;
 }
@@ -1934,16 +1934,16 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 {
 	if (Flags & D3DCLEAR_TARGET)
 	{
-		float color[] = {
+		const float color[] = {
 			static_cast<float>((Color >> 16) & 0xFF) / 255.0f,
 			static_cast<float>((Color >> 8) & 0xFF) / 255.0f,
 			static_cast<float>(Color & 0xFF) / 255.0f,
 			static_cast<float>((Color >> 24) & 0xFF) / 255.0f,
 		};
 
-		if (current_render_target)
+		if (m_current_render_target)
 		{
-			context->ClearRenderTargetView(current_render_target->render_target.Get(), color);
+			m_context->ClearRenderTargetView(m_current_render_target->get_native_render_target(), color);
 		}
 	}
 
@@ -1961,9 +1961,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 			flags |= D3D11_CLEAR_STENCIL;
 		}
 
-		if (current_depth_stencil)
+		if (m_current_depth_stencil)
 		{
-			context->ClearDepthStencilView(current_depth_stencil->depth_stencil.Get(), flags, Z, static_cast<uint8_t>(Stencil));
+			m_context->ClearDepthStencilView(m_current_depth_stencil->get_native_depth_stencil(), flags, Z, static_cast<uint8_t>(Stencil));
 		}
 	}
 
@@ -1972,10 +1972,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::Clear(DWORD Count, const D3DRECT* pRe
 
 void Direct3DDevice8::update_wv_inv_t()
 {
-	const matrix m = (per_model.world_matrix.data() * per_scene.view_matrix.data()).Invert();
+	const matrix m = (m_per_model.world_matrix.data() * m_per_scene.view_matrix.data()).Invert();
 
 	// don't need to transpose for reasons
-	per_model.wv_matrix_inv_t = m;
+	m_per_model.wv_matrix_inv_t = m;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE State, const matrix* pMatrix)
@@ -1989,17 +1989,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 	{
 		case D3DTS_VIEW:
 		{
-			per_scene.view_matrix = *pMatrix;
+			m_per_scene.view_matrix = *pMatrix;
 
-			const auto inverse = per_scene.view_matrix.data().Invert();
-			per_scene.view_position = inverse.Translation();
+			const auto inverse = m_per_scene.view_matrix.data().Invert();
+			m_per_scene.view_position = inverse.Translation();
 
 			update_wv_inv_t();
 			break;
 		}
 
 		case D3DTS_PROJECTION:
-			per_scene.projection_matrix = *pMatrix;
+			m_per_scene.projection_matrix = *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
@@ -2010,11 +2010,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE St
 		case D3DTS_TEXTURE5:
 		case D3DTS_TEXTURE6:
 		case D3DTS_TEXTURE7:
-			per_texture.stages[State - D3DTS_TEXTURE0].transform = *pMatrix;
+			m_per_texture.stages[State - D3DTS_TEXTURE0].transform = *pMatrix;
 			break;
 
 		case D3DTS_WORLD:
-			per_model.world_matrix = *pMatrix;
+			m_per_model.world_matrix = *pMatrix;
 			update_wv_inv_t();
 			break;
 
@@ -2035,11 +2035,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE St
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			*pMatrix = per_scene.view_matrix;
+			*pMatrix = m_per_scene.view_matrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			*pMatrix = per_scene.projection_matrix;
+			*pMatrix = m_per_scene.projection_matrix;
 			break;
 
 		case D3DTS_TEXTURE0:
@@ -2050,11 +2050,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE St
 		case D3DTS_TEXTURE5:
 		case D3DTS_TEXTURE6:
 		case D3DTS_TEXTURE7:
-			*pMatrix = per_texture.stages[State - D3DTS_TEXTURE0].transform;
+			*pMatrix = m_per_texture.stages[State - D3DTS_TEXTURE0].transform;
 			break;
 
 		case D3DTS_WORLD:
-			*pMatrix = per_model.world_matrix;
+			*pMatrix = m_per_model.world_matrix;
 			break;
 
 		default:
@@ -2074,11 +2074,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::MultiplyTransform(D3DTRANSFORMSTATETY
 	switch (static_cast<uint32_t>(State))
 	{
 		case D3DTS_VIEW:
-			per_scene.view_matrix = per_scene.view_matrix * *pMatrix;
+			m_per_scene.view_matrix = m_per_scene.view_matrix * *pMatrix;
 			break;
 
 		case D3DTS_PROJECTION:
-			per_scene.projection_matrix = per_scene.projection_matrix * *pMatrix;
+			m_per_scene.projection_matrix = m_per_scene.projection_matrix * *pMatrix;
 			break;
 
 		case D3DTS_TEXTURE0:
@@ -2090,13 +2090,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::MultiplyTransform(D3DTRANSFORMSTATETY
 		case D3DTS_TEXTURE6:
 		case D3DTS_TEXTURE7:
 		{
-			auto& t = per_texture.stages[State - D3DTS_TEXTURE0].transform;
+			auto& t = m_per_texture.stages[State - D3DTS_TEXTURE0].transform;
 			t = t * *pMatrix;
 			break;
 		}
 
 		case D3DTS_WORLD:
-			per_model.world_matrix = per_model.world_matrix * *pMatrix;
+			m_per_model.world_matrix = m_per_model.world_matrix * *pMatrix;
 			break;
 
 		default:
@@ -2113,14 +2113,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetViewport(const D3DVIEWPORT8* pView
 		return D3DERR_INVALIDCALL;
 	}
 
-	viewport.Width    = static_cast<float>(pViewport->Width);
-	viewport.Height   = static_cast<float>(pViewport->Height);
-	viewport.MaxDepth = pViewport->MaxZ;
-	viewport.MinDepth = pViewport->MinZ;
-	viewport.TopLeftX = static_cast<float>(pViewport->X);
-	viewport.TopLeftY = static_cast<float>(pViewport->Y);
+	m_viewport.Width    = static_cast<float>(pViewport->Width);
+	m_viewport.Height   = static_cast<float>(pViewport->Height);
+	m_viewport.MaxDepth = pViewport->MaxZ;
+	m_viewport.MinDepth = pViewport->MinZ;
+	m_viewport.TopLeftX = static_cast<float>(pViewport->X);
+	m_viewport.TopLeftY = static_cast<float>(pViewport->Y);
 
-	context->RSSetViewports(1, &viewport);
+	m_context->RSSetViewports(1, &m_viewport);
 	return D3D_OK;
 }
 
@@ -2131,12 +2131,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetViewport(D3DVIEWPORT8* pViewport)
 		return D3DERR_INVALIDCALL;
 	}
 
-	pViewport->Width  = static_cast<DWORD>(viewport.Width);
-	pViewport->Height = static_cast<DWORD>(viewport.Height);
-	pViewport->MaxZ   = viewport.MaxDepth;
-	pViewport->MinZ   = viewport.MinDepth;
-	pViewport->X      = static_cast<DWORD>(viewport.TopLeftX);
-	pViewport->Y      = static_cast<DWORD>(viewport.TopLeftY);
+	pViewport->Width  = static_cast<DWORD>(m_viewport.Width);
+	pViewport->Height = static_cast<DWORD>(m_viewport.Height);
+	pViewport->MaxZ   = m_viewport.MaxDepth;
+	pViewport->MinZ   = m_viewport.MinDepth;
+	pViewport->X      = static_cast<DWORD>(m_viewport.TopLeftX);
+	pViewport->Y      = static_cast<DWORD>(m_viewport.TopLeftY);
 
 	return D3D_OK;
 }
@@ -2148,8 +2148,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetMaterial(const D3DMATERIAL8* pMate
 		return D3DERR_INVALIDCALL;
 	}
 
-	material = *pMaterial;
-	per_model.material = Material(material);
+	m_material = *pMaterial;
+	m_per_model.material = Material(m_material);
 	return D3D_OK;
 }
 
@@ -2160,7 +2160,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetMaterial(D3DMATERIAL8* pMaterial)
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pMaterial = material;
+	*pMaterial = m_material;
 	return D3D_OK;
 }
 
@@ -2171,14 +2171,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetLight(DWORD Index, const D3DLIGHT8
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= per_model.lights.size())
+	if (Index >= m_per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	Light light = per_model.lights[Index].data();
+	Light light = m_per_model.lights[Index].data();
 	light.copy(*pLight);
-	per_model.lights[Index] = light;
+	m_per_model.lights[Index] = light;
 	return D3D_OK;
 }
 
@@ -2189,12 +2189,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8* pLig
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= per_model.lights.size())
+	if (Index >= m_per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const auto& light = per_model.lights[Index].data();
+	const auto& light = m_per_model.lights[Index].data();
 
 	pLight->Type         = static_cast<D3DLIGHTTYPE>(light.type);
 	pLight->Diffuse      = { light.diffuse.x, light.diffuse.y, light.diffuse.z, light.diffuse.w };
@@ -2215,14 +2215,14 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLight(DWORD Index, D3DLIGHT8* pLig
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::LightEnable(DWORD Index, BOOL Enable)
 {
-	if (Index >= per_model.lights.size())
+	if (Index >= m_per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	Light light = per_model.lights[Index].data();
+	Light light = m_per_model.lights[Index].data();
 	light.enabled = Enable == TRUE;
-	per_model.lights[Index] = light;
+	m_per_model.lights[Index] = light;
 
 	return D3D_OK;
 }
@@ -2234,12 +2234,12 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetLightEnable(DWORD Index, BOOL* pEn
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Index >= per_model.lights.size())
+	if (Index >= m_per_model.lights.size())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pEnable = per_model.lights[Index].data().enabled;
+	*pEnable = m_per_model.lights[Index].data().enabled;
 	return D3D_OK;
 }
 
@@ -2250,7 +2250,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetClipPlane(DWORD Index, const float
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(stored_clip_planes[Index], pPlane, sizeof(stored_clip_planes[0]));
+	memcpy(m_stored_clip_planes[Index], pPlane, sizeof(m_stored_clip_planes[0]));
 	return D3D_OK;
 }
 
@@ -2261,7 +2261,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetClipPlane(DWORD Index, float* pPla
 		return D3DERR_INVALIDCALL;
 	}
 
-	memcpy(pPlane, stored_clip_planes[Index], sizeof(stored_clip_planes[0]));
+	memcpy(pPlane, m_stored_clip_planes[Index], sizeof(m_stored_clip_planes[0]));
 	return D3D_OK;
 }
 
@@ -2292,22 +2292,22 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 	// even if we do custom handling for a render state, we
 	// store its value so the caller can retrieve it later in
 	// Direct3DDevice8::GetRenderState
-	auto& ref = render_state_values[State];
+	auto& ref = m_render_state_values[State];
 
 	auto set_stencil_flags = [&](auto shift)
 	{
-		auto flags = depthstencil_flags.stencil_flags.data();
+		auto flags = m_depth_stencil_flags.stencil_flags.data();
 		flags &= ~(StencilFlags::op_mask << shift);
 		flags |= (Value & StencilFlags::op_mask) << shift;
-		depthstencil_flags.stencil_flags = flags;
+		m_depth_stencil_flags.stencil_flags = flags;
 	};
 
 	auto set_stencil_rw = [&](auto shift)
 	{
-		auto flags = depthstencil_flags.stencil_flags.data();
+		auto flags = m_depth_stencil_flags.stencil_flags.data();
 		flags &= ~(StencilFlags::rw_mask << shift);
 		flags |= (Value & StencilFlags::rw_mask) << shift;
-		depthstencil_flags.stencil_flags = flags;
+		m_depth_stencil_flags.stencil_flags = flags;
 	};
 
 	switch (State)
@@ -2338,51 +2338,51 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_COLORWRITEENABLE:
 		{
-			blend_flags = (blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
+			m_blend_flags = (m_blend_flags.data() & ~(0xF << BLEND_COLORMASK_SHIFT)) | ((Value & 0xF) << BLEND_COLORMASK_SHIFT);
 			ref = Value;
 			break;
 		}
 
 		case D3DRS_TEXTUREFACTOR:
-			per_pixel.texture_factor = to_color4(Value);
+			m_per_pixel.texture_factor = to_color4(Value);
 			ref = Value;
 			break;
 
 		case D3DRS_FOGSTART:
-			per_pixel.fog_start = *reinterpret_cast<float*>(&Value);
+			m_per_pixel.fog_start = *reinterpret_cast<float*>(&Value);
 			ref = Value;
 			break;
 
 		case D3DRS_FOGEND:
-			per_pixel.fog_end = *reinterpret_cast<float*>(&Value);
+			m_per_pixel.fog_end = *reinterpret_cast<float*>(&Value);
 			ref = Value;
 			break;
 
 		case D3DRS_FOGCOLOR:
-			per_pixel.fog_color = to_color4(Value);
+			m_per_pixel.fog_color = to_color4(Value);
 			ref = Value;
 			break;
 
 		case D3DRS_FOGTABLEMODE:
-			shader_flags &= ~ShaderFlags::rs_fog_mode_mask;
-			shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_fog_mode_shift) & ShaderFlags::rs_fog_mode_mask;
+			m_shader_flags &= ~ShaderFlags::rs_fog_mode_mask;
+			m_shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_fog_mode_shift) & ShaderFlags::rs_fog_mode_mask;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_FOGDENSITY:
-			per_pixel.fog_density = *reinterpret_cast<float*>(&Value);
+			m_per_pixel.fog_density = *reinterpret_cast<float*>(&Value);
 			ref = Value;
 			break;
 
 		case D3DRS_SPECULARENABLE:
 			if (Value != 0)
 			{
-				shader_flags |= ShaderFlags::rs_specular;
+				m_shader_flags |= ShaderFlags::rs_specular;
 			}
 			else
 			{
-				shader_flags &= ~ShaderFlags::rs_specular;
+				m_shader_flags &= ~ShaderFlags::rs_specular;
 			}
 
 			ref = Value;
@@ -2392,11 +2392,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_LIGHTING:
 			if (Value == 1)
 			{
-				shader_flags |= ShaderFlags::rs_lighting;
+				m_shader_flags |= ShaderFlags::rs_lighting;
 			}
 			else
 			{
-				shader_flags &= ~ShaderFlags::rs_lighting;
+				m_shader_flags &= ~ShaderFlags::rs_lighting;
 			}
 
 			ref = Value;
@@ -2406,11 +2406,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_FOGENABLE:
 			if (Value != 0)
 			{
-				shader_flags |= ShaderFlags::rs_fog;
+				m_shader_flags |= ShaderFlags::rs_fog;
 			}
 			else
 			{
-				shader_flags &= ~ShaderFlags::rs_fog;
+				m_shader_flags &= ~ShaderFlags::rs_fog;
 			}
 
 			ref = Value;
@@ -2421,11 +2421,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		{
 			if (Value != 0)
 			{
-				shader_flags |= ShaderFlags::rs_alpha_test;
+				m_shader_flags |= ShaderFlags::rs_alpha_test;
 			}
 			else
 			{
-				shader_flags &= ~ShaderFlags::rs_alpha_test;
+				m_shader_flags &= ~ShaderFlags::rs_alpha_test;
 			}
 
 			ref = Value;
@@ -2440,8 +2440,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				return D3DERR_INVALIDCALL;
 			}
 
-			shader_flags &= ~ShaderFlags::rs_alpha_test_mode_mask;
-			shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_alpha_test_mode_shift) & ShaderFlags::rs_alpha_test_mode_mask;
+			m_shader_flags &= ~ShaderFlags::rs_alpha_test_mode_mask;
+			m_shader_flags |= (static_cast<ShaderFlags::type>(Value) << ShaderFlags::rs_alpha_test_mode_shift) & ShaderFlags::rs_alpha_test_mode_mask;
 
 			ref = Value;
 			ref.clear();
@@ -2450,7 +2450,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_ALPHAREF:
 		{
-			per_pixel.alpha_test_reference = static_cast<float>(Value) / 255.0f;
+			m_per_pixel.alpha_test_reference = static_cast<float>(Value) / 255.0f;
 			ref = Value;
 			ref.clear();
 			break;
@@ -2458,7 +2458,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_CULLMODE:
 		{
-			raster_flags = (raster_flags.data() & ~RasterFlags::cull_mask) | (Value & 3);
+			m_raster_flags = (m_raster_flags.data() & ~RasterFlags::cull_mask) | (Value & 3);
 			ref = Value;
 			ref.clear();
 			break;
@@ -2466,7 +2466,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 
 		case D3DRS_FILLMODE:
 		{
-			raster_flags = (raster_flags.data() & ~RasterFlags::fill_mask) | ((Value & 3) << 2);
+			m_raster_flags = (m_raster_flags.data() & ~RasterFlags::fill_mask) | ((Value & 3) << 2);
 			ref = Value;
 			ref.clear();
 			break;
@@ -2476,11 +2476,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		{
 			if (Value)
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::depth_test_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() | DepthStencilFlags::depth_test_enabled;
 			}
 			else
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_test_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() & ~DepthStencilFlags::depth_test_enabled;
 			}
 
 			ref = Value;
@@ -2495,7 +2495,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 				return D3DERR_INVALIDCALL;
 			}
 
-			depthstencil_flags.depth_flags = (depthstencil_flags.depth_flags.data() & ~DepthFlags::comparison_mask) | Value;
+			m_depth_stencil_flags.depth_flags = (m_depth_stencil_flags.depth_flags.data() & ~DepthFlags::comparison_mask) | Value;
 			ref = Value;
 			ref.clear();
 			break;
@@ -2504,11 +2504,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_ZWRITEENABLE:
 			if (Value)
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::depth_write_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() | DepthStencilFlags::depth_write_enabled;
 			}
 			else
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::depth_write_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() & ~DepthStencilFlags::depth_write_enabled;
 			}
 
 			ref = Value;
@@ -2518,11 +2518,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 		case D3DRS_STENCILENABLE:
 			if (Value)
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() | DepthStencilFlags::stencil_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() | DepthStencilFlags::stencil_enabled;
 			}
 			else
 			{
-				depthstencil_flags.flags = depthstencil_flags.flags.data() & ~DepthStencilFlags::stencil_enabled;
+				m_depth_stencil_flags.flags = m_depth_stencil_flags.flags.data() & ~DepthStencilFlags::stencil_enabled;
 			}
 
 			ref = Value;
@@ -2570,65 +2570,65 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_AMBIENT:
-			per_model.ambient = to_color4(Value);
+			m_per_model.ambient = to_color4(Value);
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_DIFFUSEMATERIALSOURCE:
-			per_model.material_sources.diffuse = Value;
+			m_per_model.material_sources.diffuse = Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_SPECULARMATERIALSOURCE:
-			per_model.material_sources.specular = Value;
+			m_per_model.material_sources.specular = Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_AMBIENTMATERIALSOURCE:
-			per_model.material_sources.ambient = Value;
+			m_per_model.material_sources.ambient = Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_EMISSIVEMATERIALSOURCE:
-			per_model.material_sources.emissive = Value;
+			m_per_model.material_sources.emissive = Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_COLORVERTEX:
-			per_model.color_vertex = !!Value;
+			m_per_model.color_vertex = !!Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_SRCBLEND:
-			per_pixel.src_blend = Value;
-			blend_flags = (blend_flags.data() & ~0x0F) | Value;
+			m_per_pixel.src_blend = Value;
+			m_blend_flags = (m_blend_flags.data() & ~0x0F) | Value;
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_DESTBLEND:
-			per_pixel.dst_blend = Value;
-			blend_flags = (blend_flags.data() & ~0xF0) | (Value << 4);
+			m_per_pixel.dst_blend = Value;
+			m_blend_flags = (m_blend_flags.data() & ~0xF0) | (Value << 4);
 			ref = Value;
 			ref.clear();
 			break;
 
 		case D3DRS_ALPHABLENDENABLE:
-			blend_flags = (blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
+			m_blend_flags = (m_blend_flags.data() & ~0x8000) | (Value ? 0x8000 : 0);
 
 			if (Value != 1)
 			{
-				shader_flags &= ~ShaderFlags::rs_alpha;
+				m_shader_flags &= ~ShaderFlags::rs_alpha;
 			}
 			else
 			{
-				shader_flags |= ShaderFlags::rs_alpha;
+				m_shader_flags |= ShaderFlags::rs_alpha;
 			}
 
 			ref = Value;
@@ -2636,8 +2636,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetRenderState(D3DRENDERSTATETYPE Sta
 			break;
 
 		case D3DRS_BLENDOP:
-			blend_flags = (blend_flags.data() & ~0xF00) | (Value << 8);
-			per_pixel.blend_op = Value;
+			m_blend_flags = (m_blend_flags.data() & ~0xF00) | (Value << 8);
+			m_per_pixel.blend_op = Value;
 
 			ref = Value;
 			ref.clear();
@@ -2677,7 +2677,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetRenderState(D3DRENDERSTATETYPE Sta
 		return D3DERR_INVALIDCALL;
 	}
 
-	*pValue = render_state_values[State];
+	*pValue = m_render_state_values[State];
 	return D3D_OK;
 }
 
@@ -2730,9 +2730,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 	*ppTexture = nullptr;
 
-	const auto it = textures.find(Stage);
+	const auto it = m_textures.find(Stage);
 
-	if (it == textures.end())
+	if (it == m_textures.end())
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -2745,19 +2745,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTexture(DWORD Stage, Direct3DBaseT
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseTexture8* pTexture)
 {
-	auto it = textures.find(Stage);
+	auto it = m_textures.find(Stage);
 
 	if (pTexture == nullptr)
 	{
-		per_texture.stages[Stage].bound = false;
+		m_per_texture.stages[Stage].bound = false;
 
 		ID3D11ShaderResourceView* dummy[1] {};
-		context->PSSetShaderResources(Stage, 1, &dummy[0]);
+		m_context->PSSetShaderResources(Stage, 1, &dummy[0]);
 
-		if (it != textures.end())
+		if (it != m_textures.end())
 		{
 			safe_release(&it->second);
-			textures.erase(it);
+			m_textures.erase(it);
 		}
 
 		return D3D_OK;
@@ -2773,7 +2773,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 
 	auto texture = dynamic_cast<Direct3DTexture8*>(pTexture);
 
-	if (it != textures.end())
+	if (it != m_textures.end())
 	{
 		safe_release(&it->second);
 		it->second = texture;
@@ -2781,12 +2781,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTexture(DWORD Stage, Direct3DBaseT
 	}
 	else
 	{
-		textures[Stage] = texture;
+		m_textures[Stage] = texture;
 		texture->AddRef();
 	}
 
-	per_texture.stages[Stage].bound = true;
-	context->PSSetShaderResources(Stage, 1, texture->srv.GetAddressOf());
+	m_per_texture.stages[Stage].bound = true;
+	ID3D11ShaderResourceView* texture_srv = texture->get_native_srv();
+	m_context->PSSetShaderResources(Stage, 1, &texture_srv);
 	return D3D_OK;
 }
 
@@ -2800,84 +2801,84 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetTextureStageState(DWORD Stage, D3D
 	switch (Type)
 	{
 		case D3DTSS_ADDRESSU:
-			*pValue = sampler_setting_values[Stage].address_u.data();
+			*pValue = m_sampler_setting_values[Stage].address_u.data();
 			break;
 		case D3DTSS_ADDRESSV:
-			*pValue = sampler_setting_values[Stage].address_v.data();
+			*pValue = m_sampler_setting_values[Stage].address_v.data();
 			break;
 		case D3DTSS_MAGFILTER:
-			*pValue = sampler_setting_values[Stage].filter_mag.data();
+			*pValue = m_sampler_setting_values[Stage].filter_mag.data();
 			break;
 		case D3DTSS_MINFILTER:
-			*pValue = sampler_setting_values[Stage].filter_min.data();
+			*pValue = m_sampler_setting_values[Stage].filter_min.data();
 			break;
 		case D3DTSS_MIPFILTER:
-			*pValue = sampler_setting_values[Stage].filter_mip.data();
+			*pValue = m_sampler_setting_values[Stage].filter_mip.data();
 			break;
 		case D3DTSS_MIPMAPLODBIAS:
-			*reinterpret_cast<float*>(pValue) = sampler_setting_values[Stage].mip_lod_bias.data();
+			*reinterpret_cast<float*>(pValue) = m_sampler_setting_values[Stage].mip_lod_bias.data();
 			break;
 		case D3DTSS_MAXMIPLEVEL:
-			*pValue = sampler_setting_values[Stage].max_mip_level.data();
+			*pValue = m_sampler_setting_values[Stage].max_mip_level.data();
 			break;
 		case D3DTSS_MAXANISOTROPY:
-			*pValue = sampler_setting_values[Stage].max_anisotropy.data();
+			*pValue = m_sampler_setting_values[Stage].max_anisotropy.data();
 			break;
 		case D3DTSS_ADDRESSW:
-			*pValue = sampler_setting_values[Stage].address_u.data();
+			*pValue = m_sampler_setting_values[Stage].address_u.data();
 			break;
 
 		case D3DTSS_COLOROP:
-			*pValue = per_texture.stages[Stage].color_op;
+			*pValue = m_per_texture.stages[Stage].color_op;
 			break;
 		case D3DTSS_COLORARG1:
-			*pValue = per_texture.stages[Stage].color_arg1;
+			*pValue = m_per_texture.stages[Stage].color_arg1;
 			break;
 		case D3DTSS_COLORARG2:
-			*pValue = per_texture.stages[Stage].color_arg2;
+			*pValue = m_per_texture.stages[Stage].color_arg2;
 			break;
 		case D3DTSS_ALPHAOP:
-			*pValue = per_texture.stages[Stage].alpha_op;
+			*pValue = m_per_texture.stages[Stage].alpha_op;
 			break;
 		case D3DTSS_ALPHAARG1:
-			*pValue = per_texture.stages[Stage].alpha_arg1;
+			*pValue = m_per_texture.stages[Stage].alpha_arg1;
 			break;
 		case D3DTSS_ALPHAARG2:
-			*pValue = per_texture.stages[Stage].alpha_arg2;
+			*pValue = m_per_texture.stages[Stage].alpha_arg2;
 			break;
 		case D3DTSS_BUMPENVMAT00:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat00;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_mat00;
 			break;
 		case D3DTSS_BUMPENVMAT01:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat01;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_mat01;
 			break;
 		case D3DTSS_BUMPENVMAT10:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat10;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_mat10;
 			break;
 		case D3DTSS_BUMPENVMAT11:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_mat11;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_mat11;
 			break;
 		case D3DTSS_TEXCOORDINDEX:
-			*pValue = per_texture.stages[Stage].tex_coord_index;
+			*pValue = m_per_texture.stages[Stage].tex_coord_index;
 			break;
 		// TODO: case D3DTSS_BORDERCOLOR:
 		case D3DTSS_BUMPENVLSCALE:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_lscale;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_lscale;
 			break;
 		case D3DTSS_BUMPENVLOFFSET:
-			*reinterpret_cast<float*>(pValue) = per_texture.stages[Stage].bump_env_loffset;
+			*reinterpret_cast<float*>(pValue) = m_per_texture.stages[Stage].bump_env_loffset;
 			break;
 		case D3DTSS_TEXTURETRANSFORMFLAGS:
-			*pValue = per_texture.stages[Stage].texture_transform_flags;
+			*pValue = m_per_texture.stages[Stage].texture_transform_flags;
 			break;
 		case D3DTSS_COLORARG0:
-			*pValue = per_texture.stages[Stage].color_arg0;
+			*pValue = m_per_texture.stages[Stage].color_arg0;
 			break;
 		case D3DTSS_ALPHAARG0:
-			*pValue = per_texture.stages[Stage].alpha_arg0;
+			*pValue = m_per_texture.stages[Stage].alpha_arg0;
 			break;
 		case D3DTSS_RESULTARG:
-			*pValue = per_texture.stages[Stage].result_arg;
+			*pValue = m_per_texture.stages[Stage].result_arg;
 			break;
 
 		default:
@@ -2892,43 +2893,43 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 	switch (Type)
 	{
 		case D3DTSS_ADDRESSU:
-			sampler_setting_values[Stage].address_u = static_cast<D3DTEXTUREADDRESS>(Value);
+			m_sampler_setting_values[Stage].address_u = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
 
 		case D3DTSS_ADDRESSV:
-			sampler_setting_values[Stage].address_v = static_cast<D3DTEXTUREADDRESS>(Value);
+			m_sampler_setting_values[Stage].address_v = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
 
 		case D3DTSS_MAGFILTER:
-			sampler_setting_values[Stage].filter_mag = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			m_sampler_setting_values[Stage].filter_mag = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
 
 		case D3DTSS_MINFILTER:
-			sampler_setting_values[Stage].filter_min = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			m_sampler_setting_values[Stage].filter_min = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
 
 		case D3DTSS_MIPFILTER:
-			sampler_setting_values[Stage].filter_mip = static_cast<D3DTEXTUREFILTERTYPE>(Value);
+			m_sampler_setting_values[Stage].filter_mip = static_cast<D3DTEXTUREFILTERTYPE>(Value);
 			break;
 
 		case D3DTSS_MIPMAPLODBIAS:
-			sampler_setting_values[Stage].mip_lod_bias = *reinterpret_cast<float*>(&Value);
+			m_sampler_setting_values[Stage].mip_lod_bias = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_MAXMIPLEVEL:
-			sampler_setting_values[Stage].max_mip_level = Value;
+			m_sampler_setting_values[Stage].max_mip_level = Value;
 			break;
 
 		case D3DTSS_MAXANISOTROPY:
-			sampler_setting_values[Stage].max_anisotropy = Value;
+			m_sampler_setting_values[Stage].max_anisotropy = Value;
 			break;
 
 		case D3DTSS_ADDRESSW:
-			sampler_setting_values[Stage].address_w = static_cast<D3DTEXTUREADDRESS>(Value);
+			m_sampler_setting_values[Stage].address_w = static_cast<D3DTEXTUREADDRESS>(Value);
 			break;
 
 		case D3DTSS_COLOROP:
-			per_texture.stages[Stage].color_op = static_cast<D3DTEXTUREOP>(Value);
+			m_per_texture.stages[Stage].color_op = static_cast<D3DTEXTUREOP>(Value);
 
 			switch (Value)
 			{
@@ -2945,15 +2946,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			break;
 
 		case D3DTSS_COLORARG1:
-			per_texture.stages[Stage].color_arg1 = Value;
+			m_per_texture.stages[Stage].color_arg1 = Value;
 			break;
 
 		case D3DTSS_COLORARG2:
-			per_texture.stages[Stage].color_arg2 = Value;
+			m_per_texture.stages[Stage].color_arg2 = Value;
 			break;
 
 		case D3DTSS_ALPHAOP:
-			per_texture.stages[Stage].alpha_op = static_cast<D3DTEXTUREOP>(Value);
+			m_per_texture.stages[Stage].alpha_op = static_cast<D3DTEXTUREOP>(Value);
 
 			switch (Value)
 			{
@@ -2970,51 +2971,51 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 			break;
 
 		case D3DTSS_ALPHAARG1:
-			per_texture.stages[Stage].alpha_arg1 = Value;
+			m_per_texture.stages[Stage].alpha_arg1 = Value;
 			break;
 
 		case D3DTSS_ALPHAARG2:
-			per_texture.stages[Stage].alpha_arg2 = Value;
+			m_per_texture.stages[Stage].alpha_arg2 = Value;
 			break;
 
 		case D3DTSS_BUMPENVMAT00:
-			per_texture.stages[Stage].bump_env_mat00 = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_mat00 = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_BUMPENVMAT01:
-			per_texture.stages[Stage].bump_env_mat01 = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_mat01 = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_BUMPENVMAT10:
-			per_texture.stages[Stage].bump_env_mat10 = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_mat10 = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_BUMPENVMAT11:
-			per_texture.stages[Stage].bump_env_mat11 = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_mat11 = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_TEXCOORDINDEX:
-			per_texture.stages[Stage].tex_coord_index = Value;
+			m_per_texture.stages[Stage].tex_coord_index = Value;
 			break;
 
 		case D3DTSS_BUMPENVLSCALE:
-			per_texture.stages[Stage].bump_env_lscale = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_lscale = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_BUMPENVLOFFSET:
-			per_texture.stages[Stage].bump_env_loffset = *reinterpret_cast<float*>(&Value);
+			m_per_texture.stages[Stage].bump_env_loffset = *reinterpret_cast<float*>(&Value);
 			break;
 
 		case D3DTSS_TEXTURETRANSFORMFLAGS:
-			per_texture.stages[Stage].texture_transform_flags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
+			m_per_texture.stages[Stage].texture_transform_flags = static_cast<D3DTEXTURETRANSFORMFLAGS>(Value);
 			break;
 
 		case D3DTSS_COLORARG0:
-			per_texture.stages[Stage].color_arg0 = Value;
+			m_per_texture.stages[Stage].color_arg0 = Value;
 			break;
 
 		case D3DTSS_ALPHAARG0:
-			per_texture.stages[Stage].alpha_arg0 = Value;
+			m_per_texture.stages[Stage].alpha_arg0 = Value;
 			break;
 
 		case D3DTSS_RESULTARG:
@@ -3023,7 +3024,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetTextureStageState(DWORD Stage, D3D
 				return D3DERR_INVALIDCALL;
 			}
 
-			per_texture.stages[Stage].result_arg = Value;
+			m_per_texture.stages[Stage].result_arg = Value;
 			break;
 
 		default:
@@ -3070,11 +3071,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetCurrentTexturePalette(UINT* pPalet
 void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 {
 #ifndef _DEBUG
-	shader_preprocess(shader_flags, false, draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
+	shader_preprocess(m_shader_flags, false, m_draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
 
 	for (auto& fn : draw_prologues[callback])
 	{
-		fn(draw_prologue_epilogue_preproc, shader_flags);
+		fn(m_draw_prologue_epilogue_preproc, m_shader_flags);
 	}
 #endif
 }
@@ -3082,11 +3083,11 @@ void Direct3DDevice8::run_draw_prologues(const std::string& callback)
 void Direct3DDevice8::run_draw_epilogues(const std::string& callback)
 {
 #ifndef _DEBUG
-	shader_preprocess(shader_flags, false, draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
+	shader_preprocess(m_shader_flags, false, m_draw_prologue_epilogue_preproc); // FIXME: assuming non-uber
 
 	for (auto& fn : draw_epilogues[callback])
 	{
-		fn(draw_prologue_epilogue_preproc, shader_flags);
+		fn(m_draw_prologue_epilogue_preproc, m_shader_flags);
 	}
 #endif
 }
@@ -3097,7 +3098,7 @@ bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE primitive_type) const
 
 	if (topology != D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
 	{
-		context->IASetPrimitiveTopology(topology);
+		m_context->IASetPrimitiveTopology(topology);
 		return true;
 	}
 
@@ -3140,7 +3141,7 @@ void Direct3DDevice8::oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE)
 	GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
 	GetRenderState(D3DRS_ZENABLE, &ZENABLE);
 
-	if (shader_flags & ShaderFlags::rs_alpha && (oit_actually_enabled && oit_enabled))
+	if (m_shader_flags & ShaderFlags::rs_alpha && (m_oit_actually_enabled && oit_enabled))
 	{
 		// force zwrite on to enable writing 100% opaque
 		// pixels to the real backbuffer and depth buffer.
@@ -3210,7 +3211,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 		SetIndices(last_index_buffer.Get(), last_index_base);
 
-		up_index_buffers.emplace_back(std::move(up_index_buffer));
+		m_up_index_buffers.emplace_back(std::move(up_index_buffer));
 
 		return result;
 	}
@@ -3243,7 +3244,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
-	context->Draw(count, StartVertex);
+	m_context->Draw(count, StartVertex);
 	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
@@ -3252,7 +3253,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount)
 {
-	if (!index_buffer)
+	if (!m_current_index_buffer)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -3294,7 +3295,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
-	context->DrawIndexed(count, StartIndex, current_base_vertex_index);
+	m_context->DrawIndexed(count, StartIndex, m_current_base_vertex_index);
 	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
@@ -3319,18 +3320,18 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		uint32_t vertex_count = 0;
 		primitive_vertex_count(PrimitiveType, vertex_count);
 
-		trifan_index_buffer.resize(vertex_count);
+		m_trifan_index_buffer.resize(vertex_count);
 
 		for (uint32_t i = 0; i < vertex_count; ++i)
 		{
-			trifan_index_buffer[i] = i;
+			m_trifan_index_buffer[i] = i;
 		}
 
 		const auto result = DrawIndexedPrimitiveUP(PrimitiveType,
 		                                           0,
 		                                           vertex_count,
 		                                           PrimitiveCount,
-		                                           trifan_index_buffer.data(),
+		                                           m_trifan_index_buffer.data(),
 		                                           D3DFMT_INDEX32,
 		                                           pVertexStreamZeroData,
 		                                           VertexStreamZeroStride);
@@ -3387,7 +3388,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 	run_draw_epilogues(__FUNCTION__);
 
 	SetStreamSource(0, nullptr, 0);
-	up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
+	m_up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
 
 	return result;
 }
@@ -3534,8 +3535,8 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 
 	SetIndices(nullptr, 0);
 	SetStreamSource(0, nullptr, 0);
-	up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
-	up_index_buffers.emplace_back(std::move(up_index_buffer));
+	m_up_vertex_buffers.emplace_back(std::move(up_vertex_buffer));
+	m_up_index_buffers.emplace_back(std::move(up_index_buffer));
 
 	return result;
 }
@@ -3563,11 +3564,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetVertexShader(DWORD Handle)
 
 		const auto fvf = fvf_sanitize(Handle);
 
-		shader_flags &= ~ShaderFlags::fvf_mask;
-		shader_flags |= fvf;
-		FVF = fvf;
+		m_shader_flags &= ~ShaderFlags::fvf_mask;
+		m_shader_flags |= fvf;
+		m_fvf_flags = fvf;
 
-		current_vertex_shader_handle = 0;
+		m_current_vertex_shader_handle = 0;
 		hr = D3D_OK;
 	}
 	else
@@ -3585,9 +3586,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShader(DWORD* pHandle)
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (current_vertex_shader_handle == 0)
+	if (m_current_vertex_shader_handle == 0)
 	{
-		*pHandle = FVF;
+		*pHandle = m_fvf_flags;
 		return D3D_OK;
 	}
 
@@ -3671,11 +3672,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetVertexShaderFunction(DWORD Handle,
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Direct3DVertexBuffer8* pStreamData, UINT Stride)
 {
 	const StreamPair pair = { pStreamData, pStreamData ? Stride : 0 };
-	auto it = stream_sources.find(StreamNumber);
+	auto it = m_stream_sources.find(StreamNumber);
 
-	if (it == stream_sources.end())
+	if (it == m_stream_sources.end())
 	{
-		stream_sources[StreamNumber] = pair;
+		m_stream_sources[StreamNumber] = pair;
 		safe_addref(pStreamData);
 	}
 	else
@@ -3694,12 +3695,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Di
 
 	if (pStreamData == nullptr)
 	{
-		context->IASetVertexBuffers(StreamNumber, 0, nullptr, nullptr, nullptr);
+		m_context->IASetVertexBuffers(StreamNumber, 0, nullptr, nullptr, nullptr);
 	}
 	else
 	{
 		UINT zero = 0;
-		context->IASetVertexBuffers(StreamNumber, 1, pStreamData->buffer_resource.GetAddressOf(), &Stride, &zero);
+		ID3D11Buffer* buffer_resource = pStreamData->get_native_buffer();
+		m_context->IASetVertexBuffers(StreamNumber, 1, &buffer_resource, &Stride, &zero);
 	}
 
 	return D3D_OK;
@@ -3719,9 +3721,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetStreamSource(UINT StreamNumber, Di
 		*pStride = 0;
 	}
 
-	auto it = stream_sources.find(StreamNumber);
+	auto it = m_stream_sources.find(StreamNumber);
 
-	if (it != stream_sources.end() && it->second.buffer)
+	if (it != m_stream_sources.end() && it->second.buffer)
 	{
 		*ppStreamData = it->second.buffer;
 		it->second.buffer->AddRef();
@@ -3744,19 +3746,19 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetIndices(Direct3DIndexBuffer8* pInd
 
 	if (pIndexData == nullptr)
 	{
-		if (pIndexData != index_buffer.Get())
+		if (pIndexData != m_current_index_buffer.Get())
 		{
-			index_buffer = pIndexData;
-			context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+			m_current_index_buffer = pIndexData;
+			m_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
 		}
 
 		return D3D_OK;
 	}
 
-	index_buffer = pIndexData;
-	current_base_vertex_index = static_cast<INT>(BaseVertexIndex);
-	const auto dxgi = to_dxgi(index_buffer->desc8.Format);
-	context->IASetIndexBuffer(index_buffer->buffer_resource.Get(), dxgi, 0);
+	m_current_index_buffer = pIndexData;
+	m_current_base_vertex_index = static_cast<INT>(BaseVertexIndex);
+	const auto dxgi = to_dxgi(m_current_index_buffer->get_d3d8_desc().Format);
+	m_context->IASetIndexBuffer(m_current_index_buffer->get_native_buffer(), dxgi, 0);
 	return D3D_OK;
 }
 
@@ -3767,9 +3769,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetIndices(Direct3DIndexBuffer8** ppI
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (index_buffer)
+	if (m_current_index_buffer)
 	{
-		*ppIndexData = index_buffer.Get();
+		*ppIndexData = m_current_index_buffer.Get();
 		(*ppIndexData)->AddRef();
 	}
 	else
@@ -3779,7 +3781,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::GetIndices(Direct3DIndexBuffer8** ppI
 
 	if (pBaseVertexIndex != nullptr)
 	{
-		*pBaseVertexIndex = static_cast<UINT>(current_base_vertex_index);
+		*pBaseVertexIndex = static_cast<UINT>(m_current_base_vertex_index);
 	}
 
 	return D3D_OK;
@@ -3838,7 +3840,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DeletePatch(UINT Handle)
 void Direct3DDevice8::print_info_queue() const
 {
 #ifndef DEBUG
-	if (!info_queue)
+	if (!m_info_queue)
 	{
 		return;
 	}
@@ -3848,7 +3850,7 @@ void Direct3DDevice8::print_info_queue() const
 	do
 	{
 		SIZE_T size = 0;
-		HRESULT hr = info_queue->GetMessageW(i, nullptr, &size);
+		HRESULT hr = m_info_queue->GetMessageW(i, nullptr, &size);
 
 		if (hr != S_FALSE)
 		{
@@ -3862,7 +3864,7 @@ void Direct3DDevice8::print_info_queue() const
 
 		auto pMessage = reinterpret_cast<D3D11_MESSAGE*>(new uint8_t[size]);
 
-		hr = info_queue->GetMessageW(i, pMessage, &size);
+		hr = m_info_queue->GetMessageW(i, pMessage, &size);
 
 		if (hr == S_OK && pMessage->pDescription)
 		{
@@ -3874,25 +3876,25 @@ void Direct3DDevice8::print_info_queue() const
 		++i;
 	} while (true);
 
-	info_queue->ClearStoredMessages();
+	m_info_queue->ClearStoredMessages();
 #endif
 }
 
 bool Direct3DDevice8::update_input_layout()
 {
-	auto key = fvf_sanitize(shader_flags & ShaderFlags::fvf_mask);
+	auto key = fvf_sanitize(m_shader_flags & ShaderFlags::fvf_mask);
 	DWORD fvf = key;
-	FVF.clear();
+	m_fvf_flags.clear();
 
-	auto it = fvf_layouts.find(key);
+	auto it = m_fvf_layouts.find(key);
 
-	if (it != fvf_layouts.end())
+	if (it != m_fvf_layouts.end())
 	{
-		context->IASetInputLayout(it->second.Get());
+		m_context->IASetInputLayout(it->second.Get());
 		return true;
 	}
 
-	if (!FVF.data())
+	if (!m_fvf_flags.data())
 	{
 		return true;
 	}
@@ -4084,22 +4086,22 @@ bool Direct3DDevice8::update_input_layout()
 		return false;
 	}
 
-	VertexShader vs = get_vertex_shader(shader_flags);
+	VertexShader vs = get_vertex_shader(m_shader_flags);
 
 	ComPtr<ID3D11InputLayout> layout;
 
-	HRESULT hr = device->CreateInputLayout(elements, static_cast<UINT>(i),
-	                                       vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
+	HRESULT hr = m_device->CreateInputLayout(elements, static_cast<UINT>(i),
+	                                         vs.blob->GetBufferPointer(), vs.blob->GetBufferSize(), &layout);
 
 	if (FAILED(hr))
 	{
 		return false;
 	}
 
-	fvf_layouts[key] = layout;
-	context->IASetInputLayout(layout.Get());
+	m_fvf_layouts[key] = layout;
+	m_context->IASetInputLayout(layout.Get());
 
-	const std::string str = std::format("Created input layout #{}\n", fvf_layouts.size());
+	const std::string str = std::format("Created input layout #{}\n", m_fvf_layouts.size());
 	OutputDebugStringA(str.c_str());
 
 	return true;
@@ -4107,91 +4109,91 @@ bool Direct3DDevice8::update_input_layout()
 
 void Direct3DDevice8::commit_uber_shader_flags()
 {
-	if (!uber_shader_flags.dirty())
+	if (!m_uber_shader_flags.dirty())
 	{
 		return;
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(uber_shader_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	m_context->Map(m_uber_shader_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-	uber_shader_flags.write(writer);
-	context->Unmap(uber_shader_cbuffer.Get(), 0);
-	uber_shader_flags.clear();
+	m_uber_shader_flags.write(writer);
+	m_context->Unmap(m_uber_shader_cbuffer.Get(), 0);
+	m_uber_shader_flags.clear();
 }
 
 void Direct3DDevice8::commit_per_pixel()
 {
-	if (!per_pixel.dirty())
+	if (!m_per_pixel.dirty())
 	{
 		return;
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_pixel_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	m_context->Map(m_per_pixel_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-	per_pixel.write(writer);
-	context->Unmap(per_pixel_cbuffer.Get(), 0);
-	per_pixel.clear();
+	m_per_pixel.write(writer);
+	m_context->Unmap(m_per_pixel_cbuffer.Get(), 0);
+	m_per_pixel.clear();
 }
 
 void Direct3DDevice8::commit_per_model()
 {
-	if (!per_model.dirty())
+	if (!m_per_model.dirty())
 	{
 		return;
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_model_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	m_context->Map(m_per_model_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
 
-	per_model.write(writer);
-	per_model.clear();
+	m_per_model.write(writer);
+	m_per_model.clear();
 
-	context->Unmap(per_model_cbuffer.Get(), 0);
+	m_context->Unmap(m_per_model_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::commit_per_scene()
 {
-	per_scene.screen_dimensions = { viewport.Width, viewport.Height };
+	m_per_scene.screen_dimensions = { m_viewport.Width, m_viewport.Height };
 
-	if (!per_scene.dirty())
+	if (!m_per_scene.dirty())
 	{
 		return;
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_scene_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	m_context->Map(m_per_scene_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-	per_scene.write(writer);
-	per_scene.clear();
-	context->Unmap(per_scene_cbuffer.Get(), 0);
+	m_per_scene.write(writer);
+	m_per_scene.clear();
+	m_context->Unmap(m_per_scene_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::commit_per_texture()
 {
-	if (!per_texture.dirty())
+	if (!m_per_texture.dirty())
 	{
 		return;
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mapped {};
-	context->Map(per_texture_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+	m_context->Map(m_per_texture_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
 	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
-	per_texture.write(writer);
-	per_texture.clear();
-	context->Unmap(per_texture_cbuffer.Get(), 0);
+	m_per_texture.write(writer);
+	m_per_texture.clear();
+	m_context->Unmap(m_per_texture_cbuffer.Get(), 0);
 }
 
 void Direct3DDevice8::update_sampler()
 {
-	for (auto& setting_it : sampler_setting_values)
+	for (auto& setting_it : m_sampler_setting_values)
 	{
 		auto& setting = setting_it.second;
 
@@ -4202,11 +4204,11 @@ void Direct3DDevice8::update_sampler()
 
 		setting.clear();
 
-		const auto it = sampler_states.find(setting);
+		const auto it = m_sampler_states.find(setting);
 
-		if (it != sampler_states.end())
+		if (it != m_sampler_states.end())
 		{
-			context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
+			m_context->PSSetSamplers(setting_it.first, 1, it->second.GetAddressOf());
 			return;
 		}
 
@@ -4227,15 +4229,15 @@ void Direct3DDevice8::update_sampler()
 		sampler_desc.BorderColor[3] = 1.0f;
 
 		ComPtr<ID3D11SamplerState> sampler_state;
-		HRESULT hr = device->CreateSamplerState(&sampler_desc, &sampler_state);
+		HRESULT hr = m_device->CreateSamplerState(&sampler_desc, &sampler_state);
 
 		if (FAILED(hr))
 		{
 			throw std::runtime_error("CreateSamplerState failed");
 		}
 
-		context->PSSetSamplers(setting_it.first, 1, sampler_state.GetAddressOf());
-		sampler_states[setting] = sampler_state;
+		m_context->PSSetSamplers(setting_it.first, 1, sampler_state.GetAddressOf());
+		m_sampler_states[setting] = sampler_state;
 	}
 }
 
@@ -4261,28 +4263,28 @@ void Direct3DDevice8::get_shaders(ShaderFlags::type flags, VertexShader* vs, Pix
 
 void Direct3DDevice8::update_shaders()
 {
-	if (oit_actually_enabled)
+	if (m_oit_actually_enabled)
 	{
-		shader_flags |= ShaderFlags::rs_oit;
+		m_shader_flags |= ShaderFlags::rs_oit;
 	}
 
-	shader_flags &= ~ShaderFlags::stage_count_mask;
-	shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
+	m_shader_flags &= ~ShaderFlags::stage_count_mask;
+	m_shader_flags |= (static_cast<ShaderFlags::type>(count_texture_stages()) << ShaderFlags::stage_count_shift) & ShaderFlags::stage_count_mask;
 
-	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(shader_flags);
+	const ShaderFlags::type sanitized_flags = ShaderFlags::sanitize(m_shader_flags);
 
-	uber_shader_flags.rs_lighting        = (sanitized_flags & ShaderFlags::rs_lighting) != 0;
-	uber_shader_flags.rs_specular        = (sanitized_flags & ShaderFlags::rs_specular) != 0;
-	uber_shader_flags.rs_alpha           = (sanitized_flags & ShaderFlags::rs_alpha) != 0;
-	uber_shader_flags.rs_alpha_test      = (sanitized_flags & ShaderFlags::rs_alpha_test) != 0;
-	uber_shader_flags.rs_fog             = (sanitized_flags & ShaderFlags::rs_fog) != 0;
-	uber_shader_flags.rs_oit             = (sanitized_flags & ShaderFlags::rs_oit) != 0;
-	uber_shader_flags.rs_alpha_test_mode = (sanitized_flags & ShaderFlags::rs_alpha_test_mode_mask) >> ShaderFlags::rs_alpha_test_mode_shift;
-	uber_shader_flags.rs_fog_mode        = (sanitized_flags & ShaderFlags::rs_fog_mode_mask) >> ShaderFlags::rs_fog_mode_shift;
+	m_uber_shader_flags.rs_lighting        = (sanitized_flags & ShaderFlags::rs_lighting) != 0;
+	m_uber_shader_flags.rs_specular        = (sanitized_flags & ShaderFlags::rs_specular) != 0;
+	m_uber_shader_flags.rs_alpha           = (sanitized_flags & ShaderFlags::rs_alpha) != 0;
+	m_uber_shader_flags.rs_alpha_test      = (sanitized_flags & ShaderFlags::rs_alpha_test) != 0;
+	m_uber_shader_flags.rs_fog             = (sanitized_flags & ShaderFlags::rs_fog) != 0;
+	m_uber_shader_flags.rs_oit             = (sanitized_flags & ShaderFlags::rs_oit) != 0;
+	m_uber_shader_flags.rs_alpha_test_mode = (sanitized_flags & ShaderFlags::rs_alpha_test_mode_mask) >> ShaderFlags::rs_alpha_test_mode_shift;
+	m_uber_shader_flags.rs_fog_mode        = (sanitized_flags & ShaderFlags::rs_fog_mode_mask) >> ShaderFlags::rs_fog_mode_shift;
 
 	commit_uber_shader_flags();
 
-	if (ShaderFlags::sanitize(last_shader_flags) == sanitized_flags)
+	if (ShaderFlags::sanitize(m_last_shader_flags) == sanitized_flags)
 	{
 		return;
 	}
@@ -4290,43 +4292,43 @@ void Direct3DDevice8::update_shaders()
 	VertexShader vs;
 	PixelShader ps;
 
-	get_shaders(shader_flags, &vs, &ps);
+	get_shaders(m_shader_flags, &vs, &ps);
 
-	if (vs != current_vs)
+	if (vs != m_current_vs)
 	{
-		context->VSSetShader(vs.shader.Get(), nullptr, 0);
-		current_vs = vs;
+		m_context->VSSetShader(vs.shader.Get(), nullptr, 0);
+		m_current_vs = vs;
 	}
 
-	if (ps != current_ps)
+	if (ps != m_current_ps)
 	{
-		context->PSSetShader(ps.shader.Get(), nullptr, 0);
-		current_ps = ps;
+		m_context->PSSetShader(ps.shader.Get(), nullptr, 0);
+		m_current_ps = ps;
 	}
 
-	last_shader_flags = shader_flags;
+	m_last_shader_flags = m_shader_flags;
 }
 
 void Direct3DDevice8::update_blend()
 {
-	if (!blend_flags.dirty())
+	if (!m_blend_flags.dirty())
 	{
 		return;
 	}
 
-	blend_flags.clear();
+	m_blend_flags.clear();
 
-	const auto it = blend_states.find(blend_flags.data());
+	const auto it = m_blend_states.find(m_blend_flags.data());
 
-	if (it != blend_states.end())
+	if (it != m_blend_states.end())
 	{
-		context->OMSetBlendState(it->second.Get(), nullptr, 0xFFFFFFFF);
+		m_context->OMSetBlendState(it->second.Get(), nullptr, 0xFFFFFFFF);
 		return;
 	}
 
 	D3D11_BLEND_DESC desc {};
 
-	const auto flags = blend_flags.data();
+	const auto flags = m_blend_flags.data();
 
 	for (auto& rt : desc.RenderTarget)
 	{
@@ -4341,51 +4343,51 @@ void Direct3DDevice8::update_blend()
 	}
 
 	ComPtr<ID3D11BlendState> blend_state;
-	HRESULT hr = device->CreateBlendState(&desc, &blend_state);
+	HRESULT hr = m_device->CreateBlendState(&desc, &blend_state);
 
 	if (FAILED(hr))
 	{
 		throw std::runtime_error("CreateBlendState failed");
 	}
 
-	blend_states[flags] = blend_state;
-	context->OMSetBlendState(blend_state.Get(), nullptr, 0xFFFFFFFF);
+	m_blend_states[flags] = blend_state;
+	m_context->OMSetBlendState(blend_state.Get(), nullptr, 0xFFFFFFFF);
 }
 
 void Direct3DDevice8::update_depth()
 {
-	auto& stencilref = render_state_values[D3DRS_STENCILREF];
+	auto& stencilref = m_render_state_values[D3DRS_STENCILREF];
 
-	if (!depthstencil_flags.dirty() && !stencilref.dirty())
+	if (!m_depth_stencil_flags.dirty() && !stencilref.dirty())
 	{
 		return;
 	}
 
-	depthstencil_flags.clear();
+	m_depth_stencil_flags.clear();
 	stencilref.clear();
 
-	const auto it = depth_states.find(depthstencil_flags);
+	const auto it = m_depth_states.find(m_depth_stencil_flags);
 
-	if (it != depth_states.end())
+	if (it != m_depth_states.end())
 	{
-		context->OMSetDepthStencilState(it->second.Get(), stencilref.data());
+		m_context->OMSetDepthStencilState(it->second.Get(), stencilref.data());
 		return;
 	}
 
 	D3D11_DEPTH_STENCIL_DESC depth_desc {};
 
-	const auto& flags = depthstencil_flags.flags.data();
+	const auto& flags = m_depth_stencil_flags.flags.data();
 
 	depth_desc.DepthEnable    = !!(flags & DepthStencilFlags::depth_test_enabled);
 	depth_desc.DepthWriteMask = (flags & DepthStencilFlags::depth_write_enabled) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 	depth_desc.StencilEnable  = !!(flags & DepthStencilFlags::stencil_enabled);
 
-	const auto& depth_flags = depthstencil_flags.depth_flags.data();
+	const auto& depth_flags = m_depth_stencil_flags.depth_flags.data();
 	depth_desc.DepthFunc = static_cast<D3D11_COMPARISON_FUNC>(depth_flags & DepthFlags::comparison_mask);
 
 	if (depth_desc.StencilEnable)
 	{
-		const auto& stencil_flags = depthstencil_flags.stencil_flags.data();
+		const auto& stencil_flags = m_depth_stencil_flags.stencil_flags.data();
 		D3D11_DEPTH_STENCILOP_DESC stencil_desc;
 
 		stencil_desc.StencilFailOp      = static_cast<D3D11_STENCIL_OP>((stencil_flags >> StencilFlags::fail_shift) & StencilFlags::op_mask);
@@ -4417,45 +4419,45 @@ void Direct3DDevice8::update_depth()
 	}
 
 	ComPtr<ID3D11DepthStencilState> depth_state;
-	if (FAILED(device->CreateDepthStencilState(&depth_desc, &depth_state)))
+	if (FAILED(m_device->CreateDepthStencilState(&depth_desc, &depth_state)))
 	{
 		throw std::runtime_error("Failed to create depth stencil!");
 	}
 
-	context->OMSetDepthStencilState(depth_state.Get(), stencilref.data());
-	depth_states[depthstencil_flags] = std::move(depth_state);
+	m_context->OMSetDepthStencilState(depth_state.Get(), stencilref.data());
+	m_depth_states[m_depth_stencil_flags] = std::move(depth_state);
 }
 
 void Direct3DDevice8::update_rasterizers()
 {
-	if (!raster_flags.dirty())
+	if (!m_raster_flags.dirty())
 	{
 		return;
 	}
 
-	raster_flags.clear();
-	const auto it = raster_states.find(raster_flags);
+	m_raster_flags.clear();
+	const auto it = m_raster_states.find(m_raster_flags);
 
-	if (it != raster_states.end())
+	if (it != m_raster_states.end())
 	{
-		context->RSSetState(it->second.Get());
+		m_context->RSSetState(it->second.Get());
 		return;
 	}
 
 	D3D11_RASTERIZER_DESC raster {};
 
-	raster.FillMode        = static_cast<D3D11_FILL_MODE>((raster_flags.data() >> 2) & 3);
-	raster.CullMode        = static_cast<D3D11_CULL_MODE>(raster_flags.data() & 3);
+	raster.FillMode        = static_cast<D3D11_FILL_MODE>((m_raster_flags.data() >> 2) & 3);
+	raster.CullMode        = static_cast<D3D11_CULL_MODE>(m_raster_flags.data() & 3);
 	raster.DepthClipEnable = TRUE;
 
 	ComPtr<ID3D11RasterizerState> raster_state;
-	if (FAILED(device->CreateRasterizerState(&raster, &raster_state)))
+	if (FAILED(m_device->CreateRasterizerState(&raster, &raster_state)))
 	{
 		throw std::runtime_error("failed to create rasterizer state");
 	}
 
-	context->RSSetState(raster_state.Get());
-	raster_states.emplace(raster_flags, std::move(raster_state));
+	m_context->RSSetState(raster_state.Get());
+	m_raster_states.emplace(m_raster_flags, std::move(raster_state));
 }
 
 bool Direct3DDevice8::update()
@@ -4480,67 +4482,67 @@ bool Direct3DDevice8::update()
 
 bool Direct3DDevice8::skip_draw() const
 {
-	return !current_ps.has_value() || !current_vs.has_value();
+	return !m_current_ps.has_value() || !m_current_vs.has_value();
 }
 
 void Direct3DDevice8::free_shaders()
 {
-	thread_pool.wait();
+	m_thread_pool.wait();
 
-	last_shader_flags = ShaderFlags::mask;
+	m_last_shader_flags = ShaderFlags::mask;
 
-	current_vs = {};
-	current_ps = {};
+	m_current_vs = {};
+	m_current_ps = {};
 
-	vertex_shaders.clear();
-	pixel_shaders.clear();
-	uber_vertex_shaders.clear();
-	uber_pixel_shaders.clear();
+	m_vertex_shaders.clear();
+	m_pixel_shaders.clear();
+	m_uber_vertex_shaders.clear();
+	m_uber_pixel_shaders.clear();
 
-	for (auto& future : compiling_vertex_shaders | std::views::values)
+	for (auto& future : m_compiling_vertex_shaders | std::views::values)
 	{
 		future.wait();
 	}
 
-	for (auto& future : compiling_pixel_shaders | std::views::values)
+	for (auto& future : m_compiling_pixel_shaders | std::views::values)
 	{
 		future.wait();
 	}
 
-	compiling_vertex_shaders.clear();
-	compiling_pixel_shaders.clear();
+	m_compiling_vertex_shaders.clear();
+	m_compiling_pixel_shaders.clear();
 
-	shader_includer.clear_shader_source_cache();
+	m_shader_includer.clear_shader_source_cache();
 
-	fvf_layouts.clear();
+	m_fvf_layouts.clear();
 
-	for (auto& value : render_state_values)
+	for (auto& value : m_render_state_values)
 	{
 		value.mark();
 	}
 
-	depthstencil_flags.mark();
-	blend_flags.mark();
+	m_depth_stencil_flags.mark();
+	m_blend_flags.mark();
 
-	for (auto& pair : sampler_setting_values)
+	for (auto& pair : m_sampler_setting_values)
 	{
 		pair.second.mark();
 	}
 
-	uber_shader_flags.mark();
-	per_model.mark();
-	per_pixel.mark();
-	per_scene.mark();
-	per_texture.mark();
+	m_uber_shader_flags.mark();
+	m_per_model.mark();
+	m_per_pixel.mark();
+	m_per_scene.mark();
+	m_per_texture.mark();
 
-	composite_vs = {};
-	composite_ps = {};
+	m_oit_composite_vs = {};
+	m_oit_composite_ps = {};
 }
 
 void Direct3DDevice8::oit_load_shaders()
 {
 	D3D_SHADER_MACRO preproc[] = {
-		{ "OIT_MAX_FRAGMENTS", fragments_str.c_str() },
+		{ "OIT_MAX_FRAGMENTS", m_oit_fragments_str.c_str() },
 		{}
 	};
 
@@ -4561,10 +4563,10 @@ void Direct3DDevice8::oit_load_shaders()
 			}
 
 			const std::string shader_path_string = shader_path.string(); // unfortunately a necessary evil :(
-			const auto shader_source = shader_includer.get_shader_source(shader_path);
+			const auto shader_source = m_shader_includer.get_shader_source(shader_path);
 
 			// first, compile the vertex shader (vs_main)
-			HRESULT hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
+			HRESULT hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &m_shader_includer, "vs_main", "vs_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -4572,17 +4574,17 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error(str);
 			}
 
-			hr = device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_vs.shader);
+			hr = m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_oit_composite_vs.shader);
 
 			if (FAILED(hr))
 			{
 				throw std::runtime_error("composite vertex shader creation failed");
 			}
 
-			composite_vs.blob = std::exchange(blob, nullptr);
+			m_oit_composite_vs.blob = std::exchange(blob, nullptr);
 
 			// second, compile the pixel shader (ps_main)
-			hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
+			hr = D3DCompile(shader_source.data(), shader_source.size(), shader_path_string.c_str(), &preproc[0], &m_shader_includer, "ps_main", "ps_5_0", 0, 0, &blob, &errors);
 
 			if (FAILED(hr))
 			{
@@ -4590,14 +4592,14 @@ void Direct3DDevice8::oit_load_shaders()
 				throw std::runtime_error(str);
 			}
 
-			hr = device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &composite_ps.shader);
+			hr = m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_oit_composite_ps.shader);
 
 			if (FAILED(hr))
 			{
 				throw std::runtime_error("composite pixel shader creation failed");
 			}
 
-			composite_ps.blob = std::exchange(blob, nullptr);
+			m_oit_composite_ps.blob = std::exchange(blob, nullptr);
 			break;
 		}
 		catch (std::exception& ex)
@@ -4611,83 +4613,83 @@ void Direct3DDevice8::oit_load_shaders()
 
 void Direct3DDevice8::oit_release()
 {
-	static std::array<ID3D11UnorderedAccessView*, 5> null = {};
+	const std::array<ID3D11UnorderedAccessView*, 5> null {};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr,
-	                                                   1, static_cast<UINT>(null.size()), &null[0], nullptr);
+	m_context->OMSetRenderTargetsAndUnorderedAccessViews(1, m_render_target_view.GetAddressOf(), nullptr,
+	                                                     1, static_cast<UINT>(null.size()), &null[0], nullptr);
 
-	frag_list_head      = nullptr;
-	frag_list_head_srv  = nullptr;
-	frag_list_head_uav  = nullptr;
-	frag_list_count     = nullptr;
-	frag_list_count_srv = nullptr;
-	frag_list_count_uav = nullptr;
-	frag_list_nodes     = nullptr;
-	frag_list_nodes_srv = nullptr;
-	frag_list_nodes_uav = nullptr;
+	m_oit_frag_list_head      = nullptr;
+	m_oit_frag_list_head_srv  = nullptr;
+	m_oit_frag_list_head_uav  = nullptr;
+	m_oit_frag_list_count     = nullptr;
+	m_oit_frag_list_count_srv = nullptr;
+	m_oit_frag_list_count_uav = nullptr;
+	m_oit_frag_list_nodes     = nullptr;
+	m_oit_frag_list_nodes_srv = nullptr;
+	m_oit_frag_list_nodes_uav = nullptr;
 }
 
 void Direct3DDevice8::oit_write()
 {
 	// Unbinds the shader resource views for our fragment list and list head.
 	// UAVs cannot be bound as standard resource views and UAVs simultaneously.
-	std::array<ID3D11ShaderResourceView*, 5> srvs = {};
-	context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
+	const std::array<ID3D11ShaderResourceView*, 5> srvs {};
+	m_context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
 
-	std::array uavs = {
-		frag_list_head_uav.Get(),
-		frag_list_count_uav.Get(),
-		frag_list_nodes_uav.Get()
+	const std::array uavs = {
+		m_oit_frag_list_head_uav.Get(),
+		m_oit_frag_list_count_uav.Get(),
+		m_oit_frag_list_nodes_uav.Get()
 	};
 
-	// This is used to set the hidden counter of frag_list_nodes to 0.
-	// It only works on frag_list_nodes, but the number of elements here
+	// This is used to set the hidden counter of m_oit_frag_list_nodes to 0.
+	// It only works on m_oit_frag_list_nodes, but the number of elements here
 	// must match the number of UAVs given.
-	static const uint32_t zero[3] = { 0, 0, 0 };
+	const uint32_t zero[3] = { 0, 0, 0 };
 
 	// Binds our fragment list & list head UAVs for read/write operations.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, oit_actually_enabled ? composite_view.GetAddressOf() : render_target_view.GetAddressOf(),
-	                                                   current_depth_stencil->depth_stencil.Get(), 1, static_cast<UINT>(uavs.size()), &uavs[0], &zero[0]);
+	m_context->OMSetRenderTargetsAndUnorderedAccessViews(1, m_oit_actually_enabled ? m_oit_composite_view.GetAddressOf() : m_render_target_view.GetAddressOf(),
+	                                                     m_current_depth_stencil->get_native_depth_stencil(), 1, static_cast<UINT>(uavs.size()), &uavs[0], &zero[0]);
 
 	// Resets the list head indices to OIT_FRAGMENT_LIST_NULL.
 	// 4 elements are required as this can be used to clear a texture
 	// with 4 color channels, even though our list head only has one.
-	static const UINT clear_head[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-	context->ClearUnorderedAccessViewUint(frag_list_head_uav.Get(), &clear_head[0]);
+	const UINT clear_head[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+	m_context->ClearUnorderedAccessViewUint(m_oit_frag_list_head_uav.Get(), &clear_head[0]);
 
-	static const UINT clear_count[] = { 0, 0, 0, 0 };
-	context->ClearUnorderedAccessViewUint(frag_list_count_uav.Get(), &clear_count[0]);
+	const UINT clear_count[] = { 0, 0, 0, 0 };
+	m_context->ClearUnorderedAccessViewUint(m_oit_frag_list_count_uav.Get(), &clear_count[0]);
 }
 
 void Direct3DDevice8::oit_read() const
 {
-	ID3D11UnorderedAccessView* uavs[3] = {};
+	const std::array<ID3D11UnorderedAccessView*, 3> uavs {};
 
 	// Unbinds our UAVs.
-	context->OMSetRenderTargetsAndUnorderedAccessViews(1, render_target_view.GetAddressOf(), nullptr, 1, 3, &uavs[0], nullptr);
+	m_context->OMSetRenderTargetsAndUnorderedAccessViews(1, m_render_target_view.GetAddressOf(), nullptr, 1, static_cast<UINT>(uavs.size()), &uavs[0], nullptr);
 
-	const std::array srvs = {
-		frag_list_head_srv.Get(),
-		frag_list_count_srv.Get(),
-		frag_list_nodes_srv.Get(),
-		composite_srv.Get(),
-		current_depth_stencil->depth_srv.Get()
+	const std::array srvs {
+		m_oit_frag_list_head_srv.Get(),
+		m_oit_frag_list_count_srv.Get(),
+		m_oit_frag_list_nodes_srv.Get(),
+		m_oit_composite_srv.Get(),
+		m_current_depth_stencil->get_native_depth_srv()
 	};
 
 	// Binds the shader resource views of our UAV buffers as read-only.
-	context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
+	m_context->PSSetShaderResources(0, static_cast<UINT>(srvs.size()), &srvs[0]);
 }
 
 void Direct3DDevice8::oit_init()
 {
-	frag_list_head_init();
-	frag_list_count_init();
-	frag_list_nodes_init();
+	oit_frag_list_head_init();
+	oit_frag_list_count_init();
+	oit_frag_list_nodes_init();
 
 	oit_write();
 }
 
-void Direct3DDevice8::frag_list_head_init()
+void Direct3DDevice8::oit_frag_list_head_init()
 {
 	D3D11_TEXTURE2D_DESC desc_2d = {};
 
@@ -4695,13 +4697,13 @@ void Direct3DDevice8::frag_list_head_init()
 	desc_2d.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	desc_2d.Usage              = D3D11_USAGE_DEFAULT;
 	desc_2d.Format             = DXGI_FORMAT_R32_UINT;
-	desc_2d.Width              = static_cast<UINT>(viewport.Width);
-	desc_2d.Height             = static_cast<UINT>(viewport.Height);
+	desc_2d.Width              = static_cast<UINT>(m_viewport.Width);
+	desc_2d.Height             = static_cast<UINT>(m_viewport.Height);
 	desc_2d.MipLevels          = 1;
 	desc_2d.SampleDesc.Count   = 1;
 	desc_2d.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc_2d, nullptr, &frag_list_head)))
+	if (FAILED(m_device->CreateTexture2D(&desc_2d, nullptr, &m_oit_frag_list_head)))
 	{
 		throw;
 	}
@@ -4713,7 +4715,7 @@ void Direct3DDevice8::frag_list_head_init()
 	desc_rv.Texture2D.MipLevels       = 1;
 	desc_rv.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_head.Get(), &desc_rv, &frag_list_head_srv)))
+	if (FAILED(m_device->CreateShaderResourceView(m_oit_frag_list_head.Get(), &desc_rv, &m_oit_frag_list_head_srv)))
 	{
 		throw;
 	}
@@ -4723,16 +4725,16 @@ void Direct3DDevice8::frag_list_head_init()
 	desc_uav.Format              = desc_2d.Format;
 	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
 	desc_uav.Buffer.FirstElement = 0;
-	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height);
 	desc_uav.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_head.Get(), &desc_uav, &frag_list_head_uav)))
+	if (FAILED(m_device->CreateUnorderedAccessView(m_oit_frag_list_head.Get(), &desc_uav, &m_oit_frag_list_head_uav)))
 	{
 		throw;
 	}
 }
 
-void Direct3DDevice8::frag_list_count_init()
+void Direct3DDevice8::oit_frag_list_count_init()
 {
 	D3D11_TEXTURE2D_DESC desc_2d = {};
 
@@ -4740,13 +4742,13 @@ void Direct3DDevice8::frag_list_count_init()
 	desc_2d.BindFlags          = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	desc_2d.Usage              = D3D11_USAGE_DEFAULT;
 	desc_2d.Format             = DXGI_FORMAT_R32_UINT;
-	desc_2d.Width              = static_cast<UINT>(viewport.Width);
-	desc_2d.Height             = static_cast<UINT>(viewport.Height);
+	desc_2d.Width              = static_cast<UINT>(m_viewport.Width);
+	desc_2d.Height             = static_cast<UINT>(m_viewport.Height);
 	desc_2d.MipLevels          = 1;
 	desc_2d.SampleDesc.Count   = 1;
 	desc_2d.SampleDesc.Quality = 0;
 
-	if (FAILED(device->CreateTexture2D(&desc_2d, nullptr, &frag_list_count)))
+	if (FAILED(m_device->CreateTexture2D(&desc_2d, nullptr, &m_oit_frag_list_count)))
 	{
 		throw;
 	}
@@ -4758,7 +4760,7 @@ void Direct3DDevice8::frag_list_count_init()
 	desc_rv.Texture2D.MipLevels       = 1;
 	desc_rv.Texture2D.MostDetailedMip = 0;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_count.Get(), &desc_rv, &frag_list_count_srv)))
+	if (FAILED(m_device->CreateShaderResourceView(m_oit_frag_list_count.Get(), &desc_rv, &m_oit_frag_list_count_srv)))
 	{
 		throw;
 	}
@@ -4768,30 +4770,30 @@ void Direct3DDevice8::frag_list_count_init()
 	desc_uav.Format              = desc_2d.Format;
 	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_TEXTURE2D;
 	desc_uav.Buffer.FirstElement = 0;
-	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height);
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height);
 	desc_uav.Buffer.Flags        = 0;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_count.Get(), &desc_uav, &frag_list_count_uav)))
+	if (FAILED(m_device->CreateUnorderedAccessView(m_oit_frag_list_count.Get(), &desc_uav, &m_oit_frag_list_count_uav)))
 	{
 		throw;
 	}
 }
 
-void Direct3DDevice8::frag_list_nodes_init()
+void Direct3DDevice8::oit_frag_list_nodes_init()
 {
-	// see OitNode in the shader code
+	// see OITNode in the shader code
 	constexpr UINT oit_node_size_bytes = 16;
 
 	D3D11_BUFFER_DESC desc_buf = {};
 
-	per_scene.oit_buffer_length = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	m_per_scene.oit_buffer_length = static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height) * globals::max_fragments;
 
 	desc_buf.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	desc_buf.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	desc_buf.ByteWidth           = oit_node_size_bytes * static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_buf.ByteWidth           = oit_node_size_bytes * static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height) * globals::max_fragments;
 	desc_buf.StructureByteStride = oit_node_size_bytes;
 
-	if (FAILED(device->CreateBuffer(&desc_buf, nullptr, &frag_list_nodes)))
+	if (FAILED(m_device->CreateBuffer(&desc_buf, nullptr, &m_oit_frag_list_nodes)))
 	{
 		throw;
 	}
@@ -4800,9 +4802,9 @@ void Direct3DDevice8::frag_list_nodes_init()
 
 	desc_rv.Format             = DXGI_FORMAT_UNKNOWN;
 	desc_rv.ViewDimension      = D3D11_SRV_DIMENSION_BUFFER;
-	desc_rv.Buffer.NumElements = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_rv.Buffer.NumElements = static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height) * globals::max_fragments;
 
-	if (FAILED(device->CreateShaderResourceView(frag_list_nodes.Get(), &desc_rv, &frag_list_nodes_srv)))
+	if (FAILED(m_device->CreateShaderResourceView(m_oit_frag_list_nodes.Get(), &desc_rv, &m_oit_frag_list_nodes_srv)))
 	{
 		throw;
 	}
@@ -4812,10 +4814,10 @@ void Direct3DDevice8::frag_list_nodes_init()
 	desc_uav.Format              = DXGI_FORMAT_UNKNOWN;
 	desc_uav.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
 	desc_uav.Buffer.FirstElement = 0;
-	desc_uav.Buffer.NumElements  = static_cast<UINT>(viewport.Width) * static_cast<UINT>(viewport.Height) * globals::max_fragments;
+	desc_uav.Buffer.NumElements  = static_cast<UINT>(m_viewport.Width) * static_cast<UINT>(m_viewport.Height) * globals::max_fragments;
 	desc_uav.Buffer.Flags        = D3D11_BUFFER_UAV_FLAG_COUNTER;
 
-	if (FAILED(device->CreateUnorderedAccessView(frag_list_nodes.Get(), &desc_uav, &frag_list_nodes_uav)))
+	if (FAILED(m_device->CreateUnorderedAccessView(m_oit_frag_list_nodes.Get(), &desc_uav, &m_oit_frag_list_nodes_uav)))
 	{
 		throw;
 	}
@@ -4826,12 +4828,12 @@ ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_vertex_buffer(
 	ComPtr<Direct3DVertexBuffer8> up_buffer;
 	const size_t rounded = round_pow2(target_size);
 
-	for (auto it = up_vertex_buffers.begin(); it != up_vertex_buffers.end(); ++it)
+	for (auto it = m_up_vertex_buffers.begin(); it != m_up_vertex_buffers.end(); ++it)
 	{
-		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
+		if ((*it)->get_d3d8_desc().Size >= rounded && (*it)->get_d3d8_desc().Size < 2 * rounded)
 		{
 			up_buffer = std::move(*it);
-			up_vertex_buffers.erase(it);
+			m_up_vertex_buffers.erase(it);
 			return up_buffer;
 		}
 	}
@@ -4839,7 +4841,7 @@ ComPtr<Direct3DVertexBuffer8> Direct3DDevice8::get_user_primitive_vertex_buffer(
 #if _DEBUG
 	{
 		const std::string str = std::format("creating new UP vertex buffer. count: {}; target size: {}; rounded size: {}\n",
-		                                    up_vertex_buffers.size() + 1, target_size, rounded);
+		                                    m_up_vertex_buffers.size() + 1, target_size, rounded);
 
 		OutputDebugStringA(str.c_str());
 	}
@@ -4854,17 +4856,17 @@ ComPtr<Direct3DIndexBuffer8> Direct3DDevice8::get_user_primitive_index_buffer(si
 	ComPtr<Direct3DIndexBuffer8> up_buffer;
 	const size_t rounded = round_pow2(target_size);
 
-	for (auto it = up_index_buffers.begin(); it != up_index_buffers.end(); ++it)
+	for (auto it = m_up_index_buffers.begin(); it != m_up_index_buffers.end(); ++it)
 	{
-		if ((*it)->desc8.Format != format)
+		if ((*it)->get_d3d8_desc().Format != format)
 		{
 			continue;
 		}
 
-		if ((*it)->desc8.Size >= rounded && (*it)->desc8.Size < 2 * rounded)
+		if ((*it)->get_d3d8_desc().Size >= rounded && (*it)->get_d3d8_desc().Size < 2 * rounded)
 		{
 			up_buffer = std::move(*it);
-			up_index_buffers.erase(it);
+			m_up_index_buffers.erase(it);
 			return up_buffer;
 		}
 	}
@@ -4872,7 +4874,7 @@ ComPtr<Direct3DIndexBuffer8> Direct3DDevice8::get_user_primitive_index_buffer(si
 #if _DEBUG
 	{
 		const std::string str = std::format("creating new UP index buffer. count: {}; target size: {}; rounded size: {}\n",
-		                                    up_index_buffers.size() + 1, target_size, rounded);
+		                                    m_up_index_buffers.size() + 1, target_size, rounded);
 
 		OutputDebugStringA(str.c_str());
 	}

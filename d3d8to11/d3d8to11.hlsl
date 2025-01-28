@@ -881,7 +881,7 @@ void do_oit(inout float4 result, in VS_OUTPUT input, bool standard_blending)
 		uint old_index;
 		InterlockedExchange(frag_list_head[input.position.xy], new_index, old_index);
 
-		OitNode n;
+		OITNode n;
 
 		n.depth = input.depth.x / input.depth.y;
 		n.color = float4_to_unorm(result);

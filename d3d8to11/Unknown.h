@@ -3,9 +3,11 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+#include <Unknwn.h>
+
 class Unknown : public IUnknown
 {
-	volatile ULONG ref_count = 0;
+	volatile ULONG m_ref_count = 0;
 
 public:
 	Unknown() = default;

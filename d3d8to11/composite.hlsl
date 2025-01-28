@@ -135,7 +135,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	while (index != OIT_FRAGMENT_LIST_NULL && count < OIT_MAX_FRAGMENTS)
 	{
-		const OitNode node_i = frag_list_nodes[index];
+		const OITNode node_i = frag_list_nodes[index];
 
 		if (node_i.depth > opaque_depth)
 		{
@@ -154,7 +154,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 		int j = count;
 
 	#ifndef OIT_DISABLE_SORT
-		OitNode node_j = frag_list_nodes[indices[j - 1]];
+		OITNode node_j = frag_list_nodes[indices[j - 1]];
 
 		uint draw_call_i = (node_i.flags >> 16) & 0xFFFF;
 		uint draw_call_j = (node_j.flags >> 16) & 0xFFFF;
@@ -193,7 +193,7 @@ float4 ps_main(VertexOutput input) : SV_TARGET
 
 	for (int i = count - 1; i >= 0; i--)
 	{
-		const OitNode fragment = frag_list_nodes[indices[i]];
+		const OITNode fragment = frag_list_nodes[indices[i]];
 		uint blend_flags = fragment.flags;
 
 		uint blend_op          = (blend_flags >> 8) & 0xF;

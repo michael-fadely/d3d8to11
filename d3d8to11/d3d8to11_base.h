@@ -1,6 +1,8 @@
 #pragma once
 
 #include <d3d11_1.h>
+
+#include <array>
 #include <vector>
 
 #include "Unknown.h"
@@ -9,11 +11,16 @@
 class Direct3DDevice8;
 class __declspec(uuid("1DD9E8DA-1C77-4D40-B0CF-98FEFDFF9512")) Direct3D8;
 
+// the destructor cannot be virtual because that would change the layout of the vtable
+// ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
 class Direct3D8 : public Unknown
 {
 public:
-	Direct3D8(const Direct3D8&)            = delete;
-	Direct3D8& operator=(const Direct3D8&) = delete;
+	Direct3D8(const Direct3D8&)     = delete;
+	Direct3D8(Direct3D8&&) noexcept = delete;
+
+	Direct3D8& operator=(const Direct3D8&)     = delete;
+	Direct3D8& operator=(Direct3D8&&) noexcept = delete;
 
 	Direct3D8() = default;
 	~Direct3D8() = default;
@@ -39,8 +46,8 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE CreateDevice(UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS8* pPresentationParameters, Direct3DDevice8** ppReturnedDeviceInterface);
 
 private:
-	static const UINT max_adapters                = 8;
-	UINT current_adapter_count                    = 0;
-	UINT current_adapter_mode_count[max_adapters] = {};
-	std::vector<DXGI_MODE_DESC> current_adapter_modes[max_adapters];
+	static constexpr UINT MAX_ADAPTERS = 8;
+	UINT m_current_adapter_count = 0;
+	std::array<UINT, MAX_ADAPTERS> m_current_adapter_mode_count {};
+	std::array<std::vector<DXGI_MODE_DESC>, MAX_ADAPTERS> m_current_adapter_modes;
 };

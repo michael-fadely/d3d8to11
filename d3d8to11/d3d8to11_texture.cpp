@@ -8,51 +8,76 @@
 #include "d3d8to11.hpp"
 #include "not_implemented.h"
 
-using namespace d3d8to11;
+#include "d3d8to11_texture.h"
 
 // TODO: let d3d do the memory management work if possible
 
+struct TextureFlags
+{
+	using type = uint8_t;
+
+	static constexpr type render_target_shift    = 0;
+	static constexpr type depth_stencil_shift    = 1;
+	static constexpr type block_compressed_shift = 2;
+
+	enum T : type
+	{
+		none,
+		render_target    = 1 << render_target_shift,
+		depth_stencil    = 1 << depth_stencil_shift,
+		block_compressed = 1 << block_compressed_shift
+	};
+
+	static constexpr type renderable_mask = render_target | depth_stencil;
+};
+
 void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 {
-	const auto& device  = device8->device;
+	ID3D11Device* device = m_device8->get_native_device();
 
-	block_compressed = is_block_compressed(to_dxgi(format_));
+	m_flags = 0;
+
+	if (d3d8to11::is_block_compressed(d3d8to11::to_dxgi(m_format)))
+	{
+		m_flags |= TextureFlags::block_compressed;
+	}
 
 	if (view_of != nullptr)
 	{
-		view_of->GetDesc(&desc);
-		texture = view_of;
+		view_of->GetDesc(&m_desc);
+		m_texture = view_of;
 
-		is_render_target = !!(desc.BindFlags & D3D11_BIND_RENDER_TARGET);
-		is_depth_stencil = !!(desc.BindFlags & D3D11_BIND_DEPTH_STENCIL);
+		m_flags |= static_cast<TextureFlags::type>(!!(m_desc.BindFlags & D3D11_BIND_RENDER_TARGET)) << TextureFlags::render_target_shift;
+		m_flags |= static_cast<TextureFlags::type>(!!(m_desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)) << TextureFlags::depth_stencil_shift;
 	}
 	else
 	{
-		uint32_t usage      = D3D11_USAGE_DEFAULT;
-		uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE;
+		static_assert(TextureFlags::render_target == D3DUSAGE_RENDERTARGET);
+		static_assert(TextureFlags::depth_stencil == D3DUSAGE_DEPTHSTENCIL);
 
-		is_render_target = !!(usage_ & D3DUSAGE_RENDERTARGET);
-		is_depth_stencil = !!(usage_ & D3DUSAGE_DEPTHSTENCIL);
+		// these D3DUSAGE values happen to line up!
+		m_flags |= static_cast<TextureFlags::type>(m_usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL));
 
-		if (!levels_)
+		if (!m_level_count)
 		{
-			++levels_;
+			++m_level_count;
 
-			if (!is_render_target && !is_depth_stencil)
+			//if (!m_is_render_target && !m_is_depth_stencil)
+			if (!(m_flags & TextureFlags::renderable_mask))
 			{
-				auto width  = width_;
-				auto height = height_;
+				auto width  = m_width;
+				auto height = m_height;
 
 				while (width != 1 && height != 1)
 				{
-					++levels_;
+					++m_level_count;
 					width  = std::max(1u, width / 2);
 					height = std::max(1u, height / 2);
 				}
 			}
 		}
 
-		auto format = to_dxgi(format_);
+		auto format = d3d8to11::to_dxgi(m_format);
 
 		if (!IsWindows8OrGreater())
 		{
@@ -70,52 +95,56 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 			}
 		}
 
+		const D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
+
 		/*if (Usage & D3DUSAGE_DYNAMIC)
 		{
 			usage = D3D11_USAGE_DYNAMIC;
 		}*/
 
-		if (is_render_target)
+		uint32_t bind_flags = D3D11_BIND_SHADER_RESOURCE;
+
+		if (m_flags & TextureFlags::render_target)
 		{
 			bind_flags |= D3D11_BIND_RENDER_TARGET;
 		}
 
-		if (is_depth_stencil)
+		if (m_flags & TextureFlags::depth_stencil)
 		{
 			bind_flags |= D3D11_BIND_DEPTH_STENCIL;
-			format = to_typeless(format);
+			format = d3d8to11::to_typeless(format);
 		}
 
-		desc.ArraySize  = 1;
-		desc.BindFlags  = bind_flags;
-		desc.Usage      = static_cast<D3D11_USAGE>(usage);
-		desc.Format     = format;
-		desc.Width      = width_;
-		desc.Height     = height_;
-		desc.MipLevels  = levels_;
-		desc.SampleDesc = { 1, 0 };
+		m_desc.ArraySize  = 1;
+		m_desc.BindFlags  = bind_flags;
+		m_desc.Usage      = usage;
+		m_desc.Format     = format;
+		m_desc.Width      = m_width;
+		m_desc.Height     = m_height;
+		m_desc.MipLevels  = m_level_count;
+		m_desc.SampleDesc = { 1, 0 };
 
-		const auto hr = device->CreateTexture2D(&desc, nullptr, &texture);
+		const auto hr = device->CreateTexture2D(&m_desc, nullptr, &m_texture);
 
 		if (FAILED(hr))
 		{
 			const std::string message = std::format("CreateTexture2D failed with error {:X}: format: {} width: {} height: {} levels: {}",
-			                                        static_cast<uint32_t>(hr), static_cast<uint32_t>(desc.Format), desc.Width, desc.Height, desc.MipLevels);
+			                                        static_cast<uint32_t>(hr), static_cast<uint32_t>(m_desc.Format), m_desc.Width, m_desc.Height, m_desc.MipLevels);
 
 			throw std::runtime_error(message);
 		}
 
 		auto srv_format = format;
 
-		if (is_depth_stencil)
+		if (m_flags & TextureFlags::depth_stencil)
 		{
 			// create a shader resource view with a readable pixel format
-			srv_format = typeless_to_float(format);
+			srv_format = d3d8to11::typeless_to_float(format);
 
 			// if float didn't work, it's probably int we want
 			if (srv_format == DXGI_FORMAT_UNKNOWN)
 			{
-				srv_format = typeless_to_unorm(format);
+				srv_format = d3d8to11::typeless_to_unorm(format);
 			}
 		}
 
@@ -123,42 +152,42 @@ void Direct3DTexture8::create_native(ID3D11Texture2D* view_of)
 
 		srv_desc.Format              = srv_format;
 		srv_desc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Texture2D.MipLevels = levels_;
+		srv_desc.Texture2D.MipLevels = m_level_count;
 
-		if (FAILED(device->CreateShaderResourceView(texture.Get(), &srv_desc, &srv)))
+		if (FAILED(device->CreateShaderResourceView(m_texture.Get(), &srv_desc, &m_srv)))
 		{
 			throw std::runtime_error("CreateShaderResourceView failed");
 		}
 	}
 
-	surfaces.clear();
-	surfaces.resize(levels_);
-	surfaces.shrink_to_fit();
+	m_surfaces.clear();
+	m_surfaces.resize(m_level_count);
+	m_surfaces.shrink_to_fit();
 
 	UINT level = 0;
 	size_t total_size = 0;
 
-	for (auto& it : surfaces)
+	for (auto& it : m_surfaces)
 	{
-		it = new Direct3DSurface8(device8, this, level++);
+		it = new Direct3DSurface8(m_device8, this, level++);
 		it->create_native();
-		total_size += it->desc8.Size;
+		total_size += it->get_d3d8_desc().Size;
 	}
 
-	texture_buffer.resize(total_size);
-	texture_buffer.shrink_to_fit();
+	m_texture_buffer.resize(total_size);
+	m_texture_buffer.shrink_to_fit();
 }
 
 // IDirect3DTexture8
-Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* device_, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
-	: device8(device_)
+Direct3DTexture8::Direct3DTexture8(Direct3DDevice8* Device, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool)
+	: m_device8(Device),
+	  m_width(Width),
+	  m_height(Height),
+	  m_level_count(Levels),
+	  m_usage(Usage),
+	  m_format(Format),
+	  m_pool(Pool)
 {
-	this->width_  = Width;
-	this->height_ = Height;
-	this->levels_ = Levels;
-	this->usage_  = Usage;
-	this->format_ = Format;
-	this->pool_   = Pool;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::QueryInterface(REFIID riid, void** ppvObj)
@@ -207,8 +236,8 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetDevice(Direct3DDevice8** ppDevice
 		return D3DERR_INVALIDCALL;
 	}
 
-	device8->AddRef();
-	*ppDevice = device8;
+	m_device8->AddRef();
+	*ppDevice = m_device8;
 	return D3D_OK;
 }
 
@@ -261,7 +290,7 @@ DWORD STDMETHODCALLTYPE Direct3DTexture8::GetLOD()
 
 DWORD STDMETHODCALLTYPE Direct3DTexture8::GetLevelCount()
 {
-	return desc.MipLevels;
+	return m_desc.MipLevels;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_DESC8* pDesc)
@@ -271,16 +300,16 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetLevelDesc(UINT Level, D3DSURFACE_
 		return D3DERR_INVALIDCALL;
 	}
 
-	const D3DSURFACE_DESC8& surface_desc8 = surfaces[Level]->desc8;
+	const D3DSURFACE_DESC8& surface_desc8 = m_surfaces[Level]->get_d3d8_desc();
 
 	const auto width  = surface_desc8.Width;
 	const auto height = surface_desc8.Height;
 
-	pDesc->Format          = format_;
+	pDesc->Format          = m_format;
 	pDesc->Type            = GetType();
-	pDesc->Usage           = usage_;
-	pDesc->Pool            = pool_;
-	pDesc->Size            = calc_texture_size(width, height, 1, format_);
+	pDesc->Usage           = m_usage;
+	pDesc->Pool            = m_pool;
+	pDesc->Size            = calc_texture_size(width, height, 1, m_format);
 	pDesc->MultiSampleType = D3DMULTISAMPLE_NONE;
 	pDesc->Width           = width;
 	pDesc->Height          = height;
@@ -297,12 +326,12 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::GetSurfaceLevel(UINT Level, Direct3D
 
 	*ppSurfaceLevel = nullptr;
 
-	if (Level >= desc.MipLevels)
+	if (Level >= m_desc.MipLevels)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	*ppSurfaceLevel = surfaces[Level].Get();
+	*ppSurfaceLevel = m_surfaces[Level].Get();
 	(*ppSurfaceLevel)->AddRef();
 
 	return D3D_OK;
@@ -315,84 +344,85 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT*
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (Level >= desc.MipLevels)
+	if (Level >= m_desc.MipLevels)
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	if (locked_rects.find(Level) != locked_rects.end())
+	if (m_locked_rects.contains(Level))
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
-	const D3DSURFACE_DESC8& surface_desc8 = surfaces[Level]->desc8;
+	const D3DSURFACE_DESC8& surface_desc8 = m_surfaces[Level]->get_d3d8_desc();
 	const auto width = surface_desc8.Width;
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
-	get_level_offset(Level, level_offset, level_size);
+	get_level_offset(Level, &level_offset, &level_size);
 
 	D3DLOCKED_RECT rect;
-	rect.Pitch = calc_texture_size(width, 1, 1, format_);
-	rect.pBits = &texture_buffer[level_offset];
+	rect.Pitch = calc_texture_size(width, 1, 1, m_format);
+	rect.pBits = &m_texture_buffer[level_offset];
 
-	locked_rects[Level] = rect;
+	m_locked_rects[Level] = rect;
 	*pLockedRect = rect;
 	return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Direct3DTexture8::UnlockRect(UINT Level)
 {
-	const auto it = locked_rects.find(Level);
+	const auto it = m_locked_rects.find(Level);
 
-	if (it == locked_rects.end())
+	if (it == m_locked_rects.end())
 	{
 		return D3DERR_INVALIDCALL;
 	}
 
 	// HACK: fixes Phantasy Star Online: Blue Burst
 	// TODO: instead of this, make sure render target data is accessible by the CPU, even if that means we need a staging texture
-	if (!is_render_target && !is_depth_stencil)
+	//if (!m_is_render_target && !m_is_depth_stencil)
+	if (!(m_flags & TextureFlags::renderable_mask))
 	{
-		const auto& context = device8->context;
+		ID3D11DeviceContext* context = m_device8->get_native_context();
 
 		// TODO: make this behavior configurable [safe mipmaps]
 		if (!Level)
 		{
 			if (should_convert())
 			{
-				for (UINT i = 0; i < levels_; ++i)
+				for (UINT i = 0; i < m_level_count; ++i)
 				{
 					convert(i);
 				}
 			}
 			else
 			{
-				for (UINT i = 0; i < levels_; ++i)
+				for (UINT i = 0; i < m_level_count; ++i)
 				{
-					const auto desc8 = surfaces[i]->desc8;
+					const auto desc8 = m_surfaces[i]->get_d3d8_desc();
 					const auto width = desc8.Width;
 
 					size_t level_offset = 0;
 					size_t level_size = 0;
-					get_level_offset(i, level_offset, level_size);
+					get_level_offset(i, &level_offset, &level_size);
 
 					D3DLOCKED_RECT rect;
-					rect.Pitch = calc_texture_size(width, 1, 1, format_);
-					rect.pBits = &texture_buffer[level_offset];
+					rect.Pitch = calc_texture_size(width, 1, 1, m_format);
+					rect.pBits = &m_texture_buffer[level_offset];
 
-					context->UpdateSubresource(texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
+					context->UpdateSubresource(m_texture.Get(), i, nullptr, rect.pBits, rect.Pitch, 0);
 				}
 			}
 		}
 		else if (!convert(Level))
 		{
 			const auto& rect = it->second;
-			context->UpdateSubresource(texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
+			context->UpdateSubresource(m_texture.Get(), Level, nullptr, rect.pBits, rect.Pitch, 0);
 		}
 	}
 	
-	locked_rects.erase(it);
+	m_locked_rects.erase(it);
 	return D3D_OK;
 }
 
@@ -401,14 +431,29 @@ HRESULT STDMETHODCALLTYPE Direct3DTexture8::AddDirtyRect(const RECT* pDirtyRect)
 	NOT_IMPLEMENTED_RETURN;
 }
 
-void Direct3DTexture8::get_level_offset(UINT level, size_t& offset, size_t& size) const
+bool Direct3DTexture8::is_render_target() const
 {
-	size = surfaces[level]->desc8.Size;
-	offset = 0;
+	return !!(m_flags & TextureFlags::render_target);
+}
+
+bool Direct3DTexture8::is_depth_stencil() const
+{
+	return !!(m_flags & TextureFlags::depth_stencil);
+}
+
+bool Direct3DTexture8::is_block_compressed() const
+{
+	return !!(m_flags & TextureFlags::block_compressed);
+}
+
+void Direct3DTexture8::get_level_offset(UINT level, size_t* offset, size_t* size) const
+{
+	*size = m_surfaces[level]->get_d3d8_desc().Size;
+	*offset = 0;
 
 	for (UINT i = 0; i < level; ++i)
 	{
-		offset += surfaces[i]->desc8.Size;
+		*offset += m_surfaces[i]->get_d3d8_desc().Size;
 	}
 }
 
@@ -424,11 +469,11 @@ bool Direct3DTexture8::convert(UINT level)
 
 	size_t level_offset = 0;
 	size_t level_size = 0;
-	get_level_offset(level, level_offset, level_size);
+	get_level_offset(level, &level_offset, &level_size);
 
-	uint8_t* buffer = &texture_buffer[level_offset];
+	uint8_t* buffer = &m_texture_buffer[level_offset];
 	
-	const DXGI_FORMAT format = to_dxgi(format_);
+	const DXGI_FORMAT format = d3d8to11::to_dxgi(m_format);
 
 	std::vector<uint32_t> rgba;
 
@@ -525,7 +570,7 @@ bool Direct3DTexture8::convert(UINT level)
 			return false;
 	}
 
-	device8->context->UpdateSubresource(texture.Get(), level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
+	m_device8->get_native_context()->UpdateSubresource(m_texture.Get(), level, nullptr, rgba.data(), 4 * level_desc.Width, 0);
 	return true;
 }
 
@@ -536,7 +581,7 @@ bool Direct3DTexture8::should_convert() const
 		return false;
 	}
 
-	const DXGI_FORMAT format = to_dxgi(format_);
+	const DXGI_FORMAT format = d3d8to11::to_dxgi(m_format);
 
 	switch (format)
 	{
