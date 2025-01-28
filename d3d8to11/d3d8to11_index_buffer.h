@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "d3d8to11_resource.h"
 
 class Direct3DDevice8;
