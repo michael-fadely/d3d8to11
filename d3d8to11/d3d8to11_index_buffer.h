@@ -35,7 +35,6 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetDesc(D3DINDEXBUFFER_DESC* pDesc);
 
 	ComPtr<ID3D11Buffer> buffer_resource;
-	D3D11_MAPPED_SUBRESOURCE mapped {};
 	D3DINDEXBUFFER_DESC desc8 {};
 
 private:
