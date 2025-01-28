@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "d3d8types.h" // for D3DFVF
+
 struct ShaderFlags
 {
 	using type = uint64_t;
@@ -26,7 +28,6 @@ struct ShaderFlags
 		fvf_mask                = fvf_position | fvf_fields | fvf_texcount | fvf_lastbeta | fvf_texfmt,
 		rs_mask                 = rs_lighting | rs_specular | rs_alpha | rs_alpha_test | rs_fog | rs_oit | rs_fog_mode_mask | rs_alpha_test_mode_mask,
 		mask                    = rs_mask | fvf_mask | stage_count_mask,
-		count
 	};
 
 	static constexpr type stage_count_shift        = 32;
