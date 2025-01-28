@@ -57,9 +57,6 @@
     <ClInclude Include="d3d8to11_index_buffer.h">
       <Filter>d3d8wrapper</Filter>
     </ClInclude>
-    <ClInclude Include="dirty_t.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="alignment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
