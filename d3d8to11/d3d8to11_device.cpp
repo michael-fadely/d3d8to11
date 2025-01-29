@@ -858,14 +858,7 @@ void Direct3DDevice8::create_native()
 		}
 		else
 		{
-			auto file_flags = std::ios::binary | std::ios::in | std::ios::out;
-
-			if (!exists)
-			{
-				file_flags |= std::ios::trunc;
-			}
-
-			permutation_file.open(permutation_file_path, file_flags);
+			permutation_file.open(permutation_file_path, std::ios::binary | std::ios::in | std::ios::out);
 
 			if (!permutation_file.is_open())
 			{
@@ -884,16 +877,14 @@ void Direct3DDevice8::create_native()
 			while (permutation_file.is_open() && !permutation_file.eof())
 			{
 				ShaderFlags::type flags = 0;
-
-				auto start = permutation_file.tellg();
 				permutation_file.read(reinterpret_cast<char*>(&flags), sizeof(flags));
-				auto end = permutation_file.tellg();
 
-				if (end - start != sizeof(flags))
+				if (permutation_file.gcount() != sizeof(flags))
 				{
 					break;
 				}
 
+				// TODO: if there are duplicate entries (particularly after sanitizing), rewrite the permutation file
 				temp_permutation_flags.insert(flags);
 			}
 
@@ -996,8 +987,11 @@ void Direct3DDevice8::create_native()
 
 		if (permutation_file.is_open())
 		{
-			permutation_file.seekg(0, std::ios_base::end);
-			permutation_file.seekp(0, std::ios_base::end);
+			// make sure the next write position is aligned sizeof(ShaderFlags::type)
+			// so that we don't write any malformed flags.
+			const auto position = align_down(permutation_file.tellg(), sizeof(ShaderFlags::type));
+			permutation_file.seekp(position);
+
 			m_permutation_cache_file = std::move(permutation_file);
 			m_permutation_flags = std::move(temp_permutation_flags);
 		}
