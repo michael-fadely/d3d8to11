@@ -338,7 +338,7 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		const std::string message = std::format("\n" __FUNCTION__ "\n{}\n", str);
+		const std::string message = std::format("\n" __FUNCTION__ "\nerror compiling shader 0x{:016X}:\n{}\n", flags, str);
 		OutputDebugStringA(message.c_str());
 
 		if (FAILED(hr))
@@ -386,7 +386,7 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 	if (errors != nullptr)
 	{
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		const std::string message = std::format("\n" __FUNCTION__ "\n{}\n", str);
+		const std::string message = std::format("\n" __FUNCTION__ "\nerror compiling shader 0x{:016X}:\n{}\n", flags, str);
 		OutputDebugStringA(message.c_str());
 
 		if (FAILED(hr))
