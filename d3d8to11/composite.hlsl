@@ -21,11 +21,6 @@ cbuffer PerSceneBuffer : register(b1)
 	uint   oit_buffer_length;
 }
 
-/*
-	This shader draws a full screen triangle onto
-	which it composites the stored alpha fragments.
-*/
-
 struct VertexOutput
 {
 	float4 position : SV_POSITION;
