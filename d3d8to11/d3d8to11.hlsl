@@ -70,7 +70,7 @@ struct Light
 
 struct TextureStage
 {
-	bool   bound;                  // indicates if the texture is bound
+	bool   bound;
 	matrix transform;              // texture coordinate transformation
 	uint   color_op;               // D3DTOP
 	uint   color_arg1;             // D3DTA
