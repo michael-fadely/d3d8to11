@@ -337,11 +337,13 @@ VertexShader Direct3DDevice8::compile_vertex_shader(ShaderFlags::type flags, boo
 
 	if (errors != nullptr)
 	{
+		const bool failed = FAILED(hr);
+
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		const std::string message = std::format("\n" __FUNCTION__ "\nerror compiling shader 0x{:016X}:\n{}\n", flags, str);
+		const std::string message = std::format("\n" __FUNCTION__ "\n{} while compiling shader 0x{:016X}:\n{}\n", failed ? "error" : "warning", flags, str);
 		OutputDebugStringA(message.c_str());
 
-		if (FAILED(hr))
+		if (failed)
 		{
 			throw std::runtime_error(str);
 		}
@@ -385,11 +387,13 @@ PixelShader Direct3DDevice8::compile_pixel_shader(ShaderFlags::type flags, bool 
 
 	if (errors != nullptr)
 	{
+		const bool failed = FAILED(hr);
+
 		const std::string str(static_cast<char*>(errors->GetBufferPointer()), 0, errors->GetBufferSize());
-		const std::string message = std::format("\n" __FUNCTION__ "\nerror compiling shader 0x{:016X}:\n{}\n", flags, str);
+		const std::string message = std::format("\n" __FUNCTION__ "\n{} while compiling shader 0x{:016X}:\n{}\n", failed ? "error" : "warning", flags, str);
 		OutputDebugStringA(message.c_str());
 
-		if (FAILED(hr))
+		if (failed)
 		{
 			throw std::runtime_error(str);
 		}
