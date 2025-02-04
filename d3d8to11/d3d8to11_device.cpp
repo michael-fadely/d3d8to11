@@ -4116,7 +4116,7 @@ void Direct3DDevice8::commit_uber_shader_flags()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	m_context->Map(m_uber_shader_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	auto writer = CBufferWriter(static_cast<uint8_t*>(mapped.pData));
 	m_uber_shader_flags.write(writer);
 	m_context->Unmap(m_uber_shader_cbuffer.Get(), 0);
 	m_uber_shader_flags.clear();
@@ -4132,7 +4132,7 @@ void Direct3DDevice8::commit_per_pixel()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	m_context->Map(m_per_pixel_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	auto writer = CBufferWriter(static_cast<uint8_t*>(mapped.pData));
 	m_per_pixel.write(writer);
 	m_context->Unmap(m_per_pixel_cbuffer.Get(), 0);
 	m_per_pixel.clear();
@@ -4148,7 +4148,7 @@ void Direct3DDevice8::commit_per_model()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	m_context->Map(m_per_model_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	auto writer = CBufferWriter(static_cast<uint8_t*>(mapped.pData));
 
 	m_per_model.write(writer);
 	m_per_model.clear();
@@ -4168,7 +4168,7 @@ void Direct3DDevice8::commit_per_scene()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	m_context->Map(m_per_scene_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	auto writer = CBufferWriter(static_cast<uint8_t*>(mapped.pData));
 	m_per_scene.write(writer);
 	m_per_scene.clear();
 	m_context->Unmap(m_per_scene_cbuffer.Get(), 0);
@@ -4184,7 +4184,7 @@ void Direct3DDevice8::commit_per_texture()
 	D3D11_MAPPED_SUBRESOURCE mapped {};
 	m_context->Map(m_per_texture_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
-	auto writer = CBufferWriter(reinterpret_cast<uint8_t*>(mapped.pData));
+	auto writer = CBufferWriter(static_cast<uint8_t*>(mapped.pData));
 	m_per_texture.write(writer);
 	m_per_texture.clear();
 	m_context->Unmap(m_per_texture_cbuffer.Get(), 0);
