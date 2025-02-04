@@ -3675,6 +3675,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Di
 	if (it == m_stream_sources.end())
 	{
 		m_stream_sources[StreamNumber] = pair;
+		// TODO: just use ComPtr in StreamPair
 		safe_addref(pStreamData);
 	}
 	else
@@ -3684,11 +3685,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::SetStreamSource(UINT StreamNumber, Di
 			return D3D_OK;
 		}
 
-		safe_release(&it->second.buffer);
-
-		it->second = pair;
-
+		// TODO: just use ComPtr in StreamPair
 		safe_addref(pStreamData);
+
+		safe_release(&it->second.buffer);
+		it->second = pair;
 	}
 
 	if (pStreamData == nullptr)
