@@ -113,7 +113,7 @@ auto ThreadPool::enqueue(Func func, Args&&... args)
 
 // TODO: move is_future_ready somewhere else
 template <typename T>
-static bool is_future_ready(std::future<T>& future)
+static bool is_future_ready(const std::future<T>& future)
 {
 	return future.wait_for(std::chrono::milliseconds::zero()) == std::future_status::ready;
 }
