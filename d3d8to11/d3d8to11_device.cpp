@@ -3103,35 +3103,29 @@ bool Direct3DDevice8::set_primitive_type(D3DPRIMITIVETYPE primitive_type) const
 	return false;
 }
 
-bool Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE primitive_type, uint32_t& count)
+uint32_t Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE type, UINT count)
 {
-	switch (primitive_type)
+	switch (type)
 	{
 		case D3DPT_TRIANGLELIST:
-			count *= 3;
-			break;
+			return count * 3;
 
 		case D3DPT_TRIANGLESTRIP:
 		case D3DPT_TRIANGLEFAN:
-			count += 2;
-			break;
+			return count + 2;
 
 		case D3DPT_POINTLIST:
-			break;
+			return count;
 
 		case D3DPT_LINELIST:
-			count *= 2;
-			break;
+			return count * 2;
 
 		case D3DPT_LINESTRIP:
-			++count;
-			break;
+			return count + 1;
 
 		default:
-			return false;
+			return 0;
 	}
-
-	return true;
 }
 
 void Direct3DDevice8::oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE)
@@ -3167,9 +3161,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		ComPtr<Direct3DIndexBuffer8> last_index_buffer;
 		UINT last_index_base = 0;
 		GetIndices(&last_index_buffer, &last_index_base);
-
-		uint32_t fan_vertex_count = PrimitiveCount;
-		primitive_vertex_count(PrimitiveType, fan_vertex_count);
 
 		const size_t tri_list_index_count = 3 * PrimitiveCount;
 		const size_t tri_list_index_buffer_size = tri_list_index_count * 4;
@@ -3231,9 +3222,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 		return D3D_OK;
 	}
 
-	uint32_t count = PrimitiveCount;
+	const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
 
-	if (!primitive_vertex_count(PrimitiveType, count))
+	if (!vertex_count)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -3242,7 +3233,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
-	m_context->Draw(count, StartVertex);
+	m_context->Draw(vertex_count, StartVertex);
 	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
@@ -3251,6 +3242,11 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 
 HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveType, UINT MinIndex, UINT NumVertices, UINT StartIndex, UINT PrimitiveCount)
 {
+	if (PrimitiveType == D3DPT_POINTLIST)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
 	if (!m_current_index_buffer)
 	{
 		return D3DERR_INVALIDCALL;
@@ -3286,14 +3282,13 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 		return D3D_OK;
 	}
 
-	auto count = PrimitiveCount;
-	primitive_vertex_count(PrimitiveType, count);
+	const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
 
 	DWORD ZWRITEENABLE, ZENABLE;
 	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
-	m_context->DrawIndexed(count, StartIndex, m_current_base_vertex_index);
+	m_context->DrawIndexed(vertex_count, StartIndex, m_current_base_vertex_index);
 	run_draw_epilogues(__FUNCTION__);
 
 	oit_zwrite_restore(ZWRITEENABLE, ZENABLE);
@@ -3315,8 +3310,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		UINT last_index_base = 0;
 		GetIndices(&last_index_buffer, &last_index_base);
 
-		uint32_t vertex_count = 0;
-		primitive_vertex_count(PrimitiveType, vertex_count);
+		const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
 
 		m_trifan_index_buffer.resize(vertex_count);
 
@@ -3344,9 +3338,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3DERR_INVALIDCALL;
 	}
 
-	uint32_t count = PrimitiveCount;
+	const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
 
-	if (!primitive_vertex_count(PrimitiveType, count))
+	if (!vertex_count)
 	{
 		return D3DERR_INVALIDCALL;
 	}
@@ -3363,9 +3357,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 		return D3D_OK;
 	}
 
-	const auto size = count * VertexStreamZeroStride;
+	const auto vertex_buffer_size = vertex_count * VertexStreamZeroStride;
 
-	auto up_vertex_buffer = get_user_primitive_vertex_buffer(size);
+	auto up_vertex_buffer = get_user_primitive_vertex_buffer(vertex_buffer_size);
 
 	if (up_vertex_buffer == nullptr)
 	{
@@ -3373,9 +3367,9 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE Prim
 	}
 
 	BYTE* ptr;
-	up_vertex_buffer->Lock(0, size, &ptr, D3DLOCK_DISCARD);
+	up_vertex_buffer->Lock(0, vertex_buffer_size, &ptr, D3DLOCK_DISCARD);
 
-	memcpy(ptr, pVertexStreamZeroData, size);
+	memcpy(ptr, pVertexStreamZeroData, vertex_buffer_size);
 
 	up_vertex_buffer->Unlock();
 
@@ -3410,6 +3404,15 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 
 	ComPtr<Direct3DIndexBuffer8> up_index_buffer;
 	const size_t index_size = IndexDataFormat == D3DFMT_INDEX16 ? sizeof(uint16_t) : sizeof(uint32_t);
+
+	const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
+
+	if (!vertex_count)
+	{
+		return D3DERR_INVALIDCALL;
+	}
+
+	const auto vertex_buffer_size = vertex_count * VertexStreamZeroStride;
 
 	// convert triangle fan to triangle list before rendering since D3D11 can't render fans
 	if (PrimitiveType == D3DPT_TRIANGLEFAN)
@@ -3466,12 +3469,10 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		up_index_buffer->Unlock();
 
 		PrimitiveType = D3DPT_TRIANGLELIST;
+		NumVertexIndices = static_cast<UINT>(tri_list_index_count);
 	}
 	else
 	{
-		uint32_t vertex_count = PrimitiveCount;
-		primitive_vertex_count(PrimitiveType, vertex_count);
-
 		const size_t index_buffer_size = index_size * vertex_count;
 
 		up_index_buffer = get_user_primitive_index_buffer(index_buffer_size, IndexDataFormat);
@@ -3489,13 +3490,6 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		return D3DERR_INVALIDCALL;
 	}
 
-	uint32_t count = PrimitiveCount;
-
-	if (!primitive_vertex_count(PrimitiveType, count))
-	{
-		return D3DERR_INVALIDCALL;
-	}
-
 	draw_call_increment();
 	if (!update())
 	{
@@ -3508,9 +3502,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 		return D3D_OK;
 	}
 
-	const auto size = count * VertexStreamZeroStride;
-
-	ComPtr<Direct3DVertexBuffer8> up_vertex_buffer = get_user_primitive_vertex_buffer(size);
+	ComPtr<Direct3DVertexBuffer8> up_vertex_buffer = get_user_primitive_vertex_buffer(vertex_buffer_size);
 
 	if (up_vertex_buffer == nullptr)
 	{
@@ -3518,17 +3510,17 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETY
 	}
 
 	BYTE* ptr;
-	up_vertex_buffer->Lock(0, size, &ptr, D3DLOCK_DISCARD);
+	up_vertex_buffer->Lock(0, vertex_buffer_size, &ptr, D3DLOCK_DISCARD);
 
-	memcpy(ptr, pVertexStreamZeroData, size);
+	memcpy(ptr, pVertexStreamZeroData, vertex_buffer_size);
 
 	up_vertex_buffer->Unlock();
 
 	SetStreamSource(0, up_vertex_buffer.Get(), VertexStreamZeroStride);
-	SetIndices(up_index_buffer.Get(), MinVertexIndex);
+	SetIndices(up_index_buffer.Get(), 0);
 
 	run_draw_prologues(__FUNCTION__);
-	const auto result = DrawPrimitive(PrimitiveType, 0, PrimitiveCount);
+	const auto result = DrawIndexedPrimitive(PrimitiveType, MinVertexIndex, NumVertexIndices, 0, PrimitiveCount);
 	run_draw_epilogues(__FUNCTION__);
 
 	SetIndices(nullptr, 0);
