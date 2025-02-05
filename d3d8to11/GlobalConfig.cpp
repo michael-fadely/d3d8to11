@@ -13,12 +13,12 @@ using d3d8to11::tstring;
 
 namespace
 {
-const std::string default_config_dir(".d3d8to11");
+const std::string DEFAULT_CONFIG_DIR(".d3d8to11");
 
-constexpr LPCTSTR config_dir_env_name = TEXT("D3D8TO11_CONFIG_DIR"); // all-encompassing fallback if other things aren't set
-constexpr LPCTSTR config_file_path_env_name = TEXT("D3D8TO11_CONFIG_FILE_PATH");
-constexpr LPCTSTR shader_cache_dir_env_name = TEXT("D3D8TO11_SHADER_CACHE_DIR");
-constexpr LPCTSTR shader_source_dir_env_name = TEXT("D3D8TO11_SHADER_SOURCE_DIR");
+constexpr LPCTSTR CONFIG_DIR_ENV_NAME = TEXT("D3D8TO11_CONFIG_DIR"); // all-encompassing fallback if other things aren't set
+constexpr LPCTSTR CONFIG_FILE_PATH_ENV_NAME = TEXT("D3D8TO11_CONFIG_FILE_PATH");
+constexpr LPCTSTR SHADER_CACHE_DIR_ENV_NAME = TEXT("D3D8TO11_SHADER_CACHE_DIR");
+constexpr LPCTSTR SHADER_SOURCE_DIR_ENV_NAME = TEXT("D3D8TO11_SHADER_SOURCE_DIR");
 
 tstring read_environment_variable(LPCTSTR variable_name)
 {
@@ -141,7 +141,7 @@ void GlobalConfig::set_paths()
 	};
 
 	{
-		std::filesystem::path env_config_dir = maybe_extended_length_or_empty(read_environment_variable(config_dir_env_name));
+		std::filesystem::path env_config_dir = maybe_extended_length_or_empty(read_environment_variable(CONFIG_DIR_ENV_NAME));
 
 		if (!env_config_dir.empty() && std::filesystem::exists(env_config_dir))
 		{
@@ -151,7 +151,7 @@ void GlobalConfig::set_paths()
 		else
 		{
 			// TODO: logging: say we're using the default dir (working dir/.d3d8to11)
-			m_config_dir = default_config_dir;
+			m_config_dir = DEFAULT_CONFIG_DIR;
 
 			// TODO: logging: say we're *creating* the default dir
 			if (!std::filesystem::exists(m_config_dir))
@@ -162,7 +162,7 @@ void GlobalConfig::set_paths()
 	}
 
 	{
-		std::filesystem::path env_config_file_path = maybe_extended_length_or_empty(read_environment_variable(config_file_path_env_name));
+		std::filesystem::path env_config_file_path = maybe_extended_length_or_empty(read_environment_variable(CONFIG_FILE_PATH_ENV_NAME));
 
 		if (!env_config_file_path.empty() && std::filesystem::exists(env_config_file_path.parent_path()))
 		{
@@ -177,7 +177,7 @@ void GlobalConfig::set_paths()
 	}
 
 	{
-		std::filesystem::path env_shader_cache_dir = maybe_extended_length_or_empty(read_environment_variable(shader_cache_dir_env_name));
+		std::filesystem::path env_shader_cache_dir = maybe_extended_length_or_empty(read_environment_variable(SHADER_CACHE_DIR_ENV_NAME));
 
 		if (!env_shader_cache_dir.empty() && std::filesystem::exists(env_shader_cache_dir))
 		{
@@ -200,7 +200,7 @@ void GlobalConfig::set_paths()
 	m_shader_cache_variants_file_path = maybe_extended_length_or_empty(m_shader_cache_dir / "permutations.bin");
 
 	{
-		std::filesystem::path env_shader_source_dir = maybe_extended_length_or_empty(read_environment_variable(shader_source_dir_env_name));
+		std::filesystem::path env_shader_source_dir = maybe_extended_length_or_empty(read_environment_variable(SHADER_SOURCE_DIR_ENV_NAME));
 
 		if (!env_shader_source_dir.empty() && std::filesystem::exists(env_shader_source_dir))
 		{

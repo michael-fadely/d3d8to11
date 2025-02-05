@@ -515,5 +515,5 @@ struct D3DPRESENT_PARAMETERS8
 	UINT FullScreen_RefreshRateInHz, FullScreen_PresentationInterval;
 };
 
-UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format);
+UINT calc_texture_size(UINT width, UINT height, UINT depth, D3DFORMAT format);
 bool supports_palettes();

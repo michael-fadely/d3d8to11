@@ -15,9 +15,9 @@ inline uint32_t blocks_size_in_bytes(uint32_t w, uint32_t h, uint32_t block_size
 	return w_ * h_ * block_size;
 }
 
-UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
+UINT calc_texture_size(UINT width, UINT height, UINT depth, D3DFORMAT format)
 {
-	switch (static_cast<DWORD>(Format))
+	switch (static_cast<DWORD>(format))
 	{
 		default:
 		case D3DFMT_UNKNOWN:
@@ -27,7 +27,7 @@ UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
 		case D3DFMT_P8:
 		case D3DFMT_L8:
 		case D3DFMT_A4L4:
-			return Width * Height * Depth;
+			return width * height * depth;
 		case D3DFMT_R5G6B5:
 		case D3DFMT_X1R5G5B5:
 		case D3DFMT_A1R5G5B5:
@@ -43,9 +43,9 @@ UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
 		case D3DFMT_D16:
 		case D3DFMT_UYVY:
 		case D3DFMT_YUY2:
-			return Width * 2 * Height * Depth;
+			return width * 2 * height * depth;
 		case D3DFMT_R8G8B8:
-			return Width * 3 * Height * Depth;
+			return width * 3 * height * depth;
 		case D3DFMT_A8R8G8B8:
 		case D3DFMT_X8R8G8B8:
 		case D3DFMT_A2B10G10R10:
@@ -59,16 +59,16 @@ UINT calc_texture_size(UINT Width, UINT Height, UINT Depth, D3DFORMAT Format)
 		case D3DFMT_D24S8:
 		case D3DFMT_D24X8:
 		case D3DFMT_D24X4S4:
-			return Width * 4 * Height * Depth;
+			return width * 4 * height * depth;
 		case D3DFMT_DXT1:
-			assert(Depth <= 1);
-			return blocks_size_in_bytes(Width, Height, 8);
+			assert(depth <= 1);
+			return blocks_size_in_bytes(width, height, 8);
 		case D3DFMT_DXT2:
 		case D3DFMT_DXT3:
 		case D3DFMT_DXT4:
 		case D3DFMT_DXT5:
-			assert(Depth <= 1);
-			return blocks_size_in_bytes(Width, Height, 16);
+			assert(depth <= 1);
+			return blocks_size_in_bytes(width, height, 16);
 	}
 }
 

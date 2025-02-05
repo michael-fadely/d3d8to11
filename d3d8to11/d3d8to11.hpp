@@ -45,8 +45,8 @@ namespace d3d8to11
 	D3D11_FILTER to_d3d11(D3DTEXTUREFILTERTYPE min, D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
 	bool is_block_compressed(DXGI_FORMAT value);
 	uint32_t fvf_sanitize(uint32_t value);
-	bool are_lock_flags_valid(DWORD Usage, DWORD Flags);
-	D3D11_MAP d3dlock_to_map_type(DWORD Flags);
+	bool are_lock_flags_valid(DWORD usage, DWORD flags);
+	D3D11_MAP d3dlock_to_map_type(DWORD flags);
 }
 
 // TODO: Direct3DSwapChain8

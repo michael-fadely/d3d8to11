@@ -975,14 +975,14 @@ namespace d3d8to11
 		return value;
 	}
 
-	bool are_lock_flags_valid(DWORD Usage, DWORD Flags)
+	bool are_lock_flags_valid(DWORD usage, DWORD flags)
 	{
-		if ((Flags & (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE)) == (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE))
+		if ((flags & (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE)) == (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE))
 		{
 			return false;
 		}
 
-		if ((Flags & D3DLOCK_READONLY) && ((Flags & D3DLOCK_DISCARD) || (Usage & D3DUSAGE_WRITEONLY)))
+		if ((flags & D3DLOCK_READONLY) && ((flags & D3DLOCK_DISCARD) || (usage & D3DUSAGE_WRITEONLY)))
 		{
 			return false;
 		}
@@ -990,19 +990,19 @@ namespace d3d8to11
 		return true;
 	}
 
-	D3D11_MAP d3dlock_to_map_type(DWORD Flags)
+	D3D11_MAP d3dlock_to_map_type(DWORD flags)
 	{
 		uint32_t map = D3D11_MAP_WRITE_DISCARD;
 
-		if (Flags & D3DLOCK_READONLY)
+		if (flags & D3DLOCK_READONLY)
 		{
 			map = D3D11_MAP_READ;
 		}
-		else if (Flags & D3DLOCK_DISCARD)
+		else if (flags & D3DLOCK_DISCARD)
 		{
 			map = D3D11_MAP_WRITE_DISCARD;
 		}
-		else if (Flags & D3DLOCK_NOOVERWRITE)
+		else if (flags & D3DLOCK_NOOVERWRITE)
 		{
 			map = D3D11_MAP_WRITE_NO_OVERWRITE;
 		}
