@@ -435,6 +435,10 @@ HRESULT STDMETHODCALLTYPE Direct3D8::GetDeviceCaps(UINT Adapter, D3DDEVTYPE Devi
 	                                  D3DVTXPCAPS_POSITIONALLIGHTS |
 	                                  D3DVTXPCAPS_TEXGEN;
 	pCaps->MaxActiveLights          = LIGHT_COUNT;
+	pCaps->MaxPrimitiveCount        = 16777215; // taken from real device report
+	pCaps->MaxVertexIndex           = 16777215; // taken from real device report
+	pCaps->MaxStreams               = 16; // taken from real device report
+	pCaps->MaxStreamStride          = 255; // taken from real device report;
 	pCaps->MaxTextureBlendStages    = TEXTURE_STAGE_MAX;
 	pCaps->MaxSimultaneousTextures  = TEXTURE_STAGE_MAX;
 
