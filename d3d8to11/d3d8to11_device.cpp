@@ -568,12 +568,12 @@ void Direct3DDevice8::create_depth_stencil()
 	m_depth_stencil->GetSurfaceLevel(0, &m_current_depth_stencil);
 }
 
-void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
+void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC* tex_desc)
 {
-	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
-	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	tex_desc->Usage     = D3D11_USAGE_DEFAULT;
+	tex_desc->BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	HRESULT hr = m_device->CreateTexture2D(&tex_desc, nullptr, &m_oit_composite_texture);
+	HRESULT hr = m_device->CreateTexture2D(tex_desc, nullptr, &m_oit_composite_texture);
 
 	if (FAILED(hr))
 	{
@@ -582,7 +582,7 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 
 	D3D11_RENDER_TARGET_VIEW_DESC view_desc {};
 
-	view_desc.Format             = tex_desc.Format;
+	view_desc.Format             = tex_desc->Format;
 	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 	view_desc.Texture2D.MipSlice = 0;
 
@@ -598,7 +598,7 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-	srv_desc.Format                    = tex_desc.Format;
+	srv_desc.Format                    = tex_desc->Format;
 	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;
@@ -613,16 +613,16 @@ void Direct3DDevice8::create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc)
 	std::string composite_srv_name = "m_oit_composite_srv";
 	m_oit_composite_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(composite_srv_name.size()), composite_srv_name.data());
 
-	m_oit_composite_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	m_oit_composite_wrapper = new Direct3DTexture8(this, tex_desc->Width, tex_desc->Height, tex_desc->MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	m_oit_composite_wrapper->create_native(m_oit_composite_texture.Get());
 }
 
-void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
+void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC* tex_desc)
 {
-	tex_desc.Usage     = D3D11_USAGE_DEFAULT;
-	tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	tex_desc->Usage     = D3D11_USAGE_DEFAULT;
+	tex_desc->BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	HRESULT hr = m_device->CreateTexture2D(&tex_desc, nullptr, &m_render_target_texture);
+	HRESULT hr = m_device->CreateTexture2D(tex_desc, nullptr, &m_render_target_texture);
 
 	if (FAILED(hr))
 	{
@@ -631,7 +631,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 
 	D3D11_RENDER_TARGET_VIEW_DESC view_desc {};
 
-	view_desc.Format             = tex_desc.Format;
+	view_desc.Format             = tex_desc->Format;
 	view_desc.ViewDimension      = D3D11_RTV_DIMENSION_TEXTURE2D;
 	view_desc.Texture2D.MipSlice = 0;
 
@@ -647,7 +647,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc {};
 
-	srv_desc.Format                    = tex_desc.Format;
+	srv_desc.Format                    = tex_desc->Format;
 	srv_desc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	srv_desc.Texture2D.MipLevels       = 1;
@@ -662,7 +662,7 @@ void Direct3DDevice8::create_render_target(D3D11_TEXTURE2D_DESC& tex_desc)
 	std::string render_target_srv_name = "m_render_target_srv";
 	m_render_target_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(render_target_srv_name.size()), render_target_srv_name.data());
 
-	m_render_target_wrapper = new Direct3DTexture8(this, tex_desc.Width, tex_desc.Height, tex_desc.MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
+	m_render_target_wrapper = new Direct3DTexture8(this, tex_desc->Width, tex_desc->Height, tex_desc->MipLevels, D3DUSAGE_RENDERTARGET, m_present_params.BackBufferFormat, D3DPOOL_DEFAULT);
 	m_render_target_wrapper->create_native(m_render_target_texture.Get());
 }
 
@@ -686,8 +686,8 @@ void Direct3DDevice8::get_back_buffer()
 	ComPtr<Direct3DSurface8> ds_surface;
 	m_depth_stencil->GetSurfaceLevel(0, &ds_surface);
 
-	create_composite_texture(tex_desc);
-	create_render_target(tex_desc);
+	create_composite_texture(&tex_desc);
+	create_render_target(&tex_desc);
 
 	if (oit_enabled)
 	{
@@ -3128,10 +3128,10 @@ uint32_t Direct3DDevice8::primitive_vertex_count(D3DPRIMITIVETYPE type, UINT cou
 	}
 }
 
-void Direct3DDevice8::oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE)
+void Direct3DDevice8::oit_zwrite_force(DWORD* ZWRITEENABLE, DWORD* ZENABLE)
 {
-	GetRenderState(D3DRS_ZWRITEENABLE, &ZWRITEENABLE);
-	GetRenderState(D3DRS_ZENABLE, &ZENABLE);
+	GetRenderState(D3DRS_ZWRITEENABLE, ZWRITEENABLE);
+	GetRenderState(D3DRS_ZENABLE, ZENABLE);
 
 	if (m_shader_flags & ShaderFlags::rs_alpha && (m_oit_actually_enabled && oit_enabled))
 	{
@@ -3230,7 +3230,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawPrimitive(D3DPRIMITIVETYPE Primit
 	}
 
 	DWORD ZWRITEENABLE, ZENABLE;
-	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
+	oit_zwrite_force(&ZWRITEENABLE, &ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
 	m_context->Draw(vertex_count, StartVertex);
@@ -3285,7 +3285,7 @@ HRESULT STDMETHODCALLTYPE Direct3DDevice8::DrawIndexedPrimitive(D3DPRIMITIVETYPE
 	const uint32_t vertex_count = primitive_vertex_count(PrimitiveType, PrimitiveCount);
 
 	DWORD ZWRITEENABLE, ZENABLE;
-	oit_zwrite_force(ZWRITEENABLE, ZENABLE);
+	oit_zwrite_force(&ZWRITEENABLE, &ZENABLE);
 
 	run_draw_prologues(__FUNCTION__);
 	m_context->DrawIndexed(vertex_count, StartIndex, m_current_base_vertex_index);

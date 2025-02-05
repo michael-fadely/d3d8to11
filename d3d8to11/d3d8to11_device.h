@@ -177,15 +177,15 @@ public:
 	[[nodiscard]] VertexShader get_vertex_shader(ShaderFlags::type flags);
 	[[nodiscard]] PixelShader get_pixel_shader(ShaderFlags::type flags);
 	void create_depth_stencil();
-	void create_composite_texture(D3D11_TEXTURE2D_DESC& tex_desc);
-	void create_render_target(D3D11_TEXTURE2D_DESC& tex_desc);
+	void create_composite_texture(D3D11_TEXTURE2D_DESC* tex_desc);
+	void create_render_target(D3D11_TEXTURE2D_DESC* tex_desc);
 	void get_back_buffer();
 	void create_native();
 	bool set_primitive_type(D3DPRIMITIVETYPE primitive_type) const;
 	static uint32_t primitive_vertex_count(D3DPRIMITIVETYPE type, UINT count);
 	void oit_composite();
 	void oit_start();
-	void oit_zwrite_force(DWORD& ZWRITEENABLE, DWORD& ZENABLE);
+	void oit_zwrite_force(DWORD* ZWRITEENABLE, DWORD* ZENABLE);
 	void oit_zwrite_restore(DWORD ZWRITEENABLE, DWORD ZENABLE);
 	bool update_input_layout();
 	void commit_uber_shader_flags();
