@@ -248,7 +248,7 @@ float calc_fog(float d)
 		fog_coeff = 1.0 / pow(E, d * d * fog_density * fog_density);
 	}
 
-	return clamp(fog_coeff, 0, 1);
+	return saturate(fog_coeff);
 }
 
 float4 white_not_lit(float4 color)
