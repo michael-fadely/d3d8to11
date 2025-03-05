@@ -144,16 +144,16 @@ struct FVFTexCoordOut
 
 struct VS_OUTPUT
 {
-	float4 position   : SV_POSITION;
-	float3 w_position : POSITION;
-	float3 normal     : NORMAL0;
-	float3 w_normal   : NORMAL1;
-	float4 ambient    : COLOR0;
-	float4 diffuse    : COLOR1;
-	float4 specular   : COLOR2;
-	float4 emissive   : COLOR3;
-	float2 depth      : DEPTH;
-	float  fog        : FOG;
+	float4 position       : SV_POSITION;
+	float3 world_position : POSITION;
+	float3 normal         : NORMAL0;
+	float3 world_normal   : NORMAL1;
+	float4 ambient        : COLOR0;
+	float4 diffuse        : COLOR1;
+	float4 specular       : COLOR2;
+	float4 emissive       : COLOR3;
+	float2 depth          : DEPTH;
+	float  fog            : FOG;
 
 	FVFTexCoordOut uv_meta[8] : TEXCOORDMETA;
 	float4 uv[8] : TEXCOORD;
@@ -671,8 +671,8 @@ void get_input_colors(in VS_OUTPUT input, out float4 out_diffuse, out float4 out
 		perform_lighting(input.ambient,
 		                 input.diffuse,
 		                 input.specular,
-		                 input.w_position,
-		                 normalize(input.w_normal),
+		                 input.world_position,
+		                 normalize(input.world_normal),
 		                 out_diffuse,
 		                 out_specular);
 
@@ -1063,12 +1063,12 @@ void transform(in VS_INPUT input, inout VS_OUTPUT result)
 	input.position.w = 1;
 	result.position = mul(world_matrix, input.position);
 
-	result.w_position = result.position.xyz;
+	result.world_position = result.position.xyz;
 
 	result.position = mul(view_matrix, result.position);
 
 	#ifdef RADIAL_FOG
-		result.fog = length(view_position - result.w_position);
+		result.fog = length(view_position - result.world_position);
 	#else
 		result.fog = result.position.z;
 	#endif
@@ -1079,8 +1079,8 @@ void transform(in VS_INPUT input, inout VS_OUTPUT result)
 	result.depth = result.position.zw;
 
 #ifdef FVF_NORMAL
-	result.normal   = input.normal;
-	result.w_normal = normalize(mul((float3x3)world_matrix, input.normal));
+	result.normal       = input.normal;
+	result.world_normal = normalize(mul((float3x3)world_matrix, input.normal));
 #endif
 }
 
@@ -1214,8 +1214,8 @@ VS_OUTPUT fixed_func_vs(in VS_INPUT input)
 		perform_lighting(result.ambient,
 		                 result.diffuse,
 		                 result.specular,
-		                 result.w_position,
-		                 result.w_normal,
+		                 result.world_position,
+		                 result.world_normal,
 		                 diffuse,
 		                 specular);
 
