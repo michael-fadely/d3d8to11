@@ -735,6 +735,16 @@ float4 handle_texture_stages(in VS_OUTPUT input, in float4 diffuse, in float4 sp
 		samples[s] = sample_texture_stage(input, s);
 	}
 
+	// TODO: test texture stage ops thoroughly in native D3D8 and make sure this implementation matches. details below
+	/*
+		Note  You can disable a texture stage--and any subsequent texture blending stages
+		in the cascade--by setting the color operation for that stage to D3DTOP_DISABLE.
+		Disabling the color operation effectively disables the alpha operation as well.
+		Alpha operations cannot be disabled when color operations are enabled. Setting the
+		alpha operation to D3DTOP_DISABLE when color blending is enabled causes undefined
+		behavior.
+	*/
+
 	bool color_done = false;
 	bool alpha_done = false;
 
