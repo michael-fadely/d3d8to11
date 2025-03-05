@@ -448,18 +448,26 @@ float4 get_arg(uint stage_num, uint texture_arg, float4 current, float4 texel, f
 {
 	float4 result = (float4)0;
 
+#ifdef FVF_DIFFUSE
+	const float4 diffuse = in_diffuse;
+#else
+	const float4 diffuse = float4(1, 1, 1, 1);
+#endif
+
+#ifdef FVF_SPECULAR
+	const float4 specular = in_specular;
+#else
+	const float4 specular = float4(1, 1, 1, 1);
+#endif
+
 	switch (texture_arg & TA_SELECTMASK)
 	{
 		case TA_DIFFUSE:
-		#ifdef FVF_DIFFUSE
-			result = in_diffuse;
-		#else
-			result = float4(1, 1, 1, 1);
-		#endif
+			result = diffuse;
 			break;
 
 		case TA_CURRENT:
-			result = !stage_num ? in_diffuse : current;
+			result = !stage_num ? diffuse : current;
 			break;
 
 		case TA_TEXTURE:
@@ -471,11 +479,7 @@ float4 get_arg(uint stage_num, uint texture_arg, float4 current, float4 texel, f
 			break;
 
 		case TA_SPECULAR:
-		#ifdef FVF_SPECULAR
-			result = in_specular;
-		#else
-			result = float4(1, 1, 1, 1);
-		#endif
+			result = specular;
 			break;
 
 		case TA_TEMP:
@@ -483,16 +487,18 @@ float4 get_arg(uint stage_num, uint texture_arg, float4 current, float4 texel, f
 			break;
 	}
 
-	uint modifiers = texture_arg & ~TA_SELECTMASK;
-
-	if (modifiers & TA_COMPLEMENT)
+	switch (texture_arg & ~TA_SELECTMASK)
 	{
-		result = 1.0 - result;
-	}
+		case TA_COMPLEMENT:
+			result = 1.0 - result;
+			break;
 
-	if (modifiers & TA_ALPHAREPLICATE)
-	{
-		result.xyz = result.aaa;
+		case TA_ALPHAREPLICATE:
+			result.xyz = result.aaa;
+			break;
+
+		default:
+			break;
 	}
 
 	return result;
