@@ -660,10 +660,10 @@ float4 fix_coord_components(uint count, float4 coords)
 	return result;
 }
 
-void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specular)
+void get_input_colors(in VS_OUTPUT input, out float4 out_diffuse, out float4 out_specular)
 {
-	diffuse = input.diffuse;
-	specular = input.specular;
+	out_diffuse = input.diffuse;
+	out_specular = input.specular;
 
 #if defined(PIXEL_LIGHTING)
 	if (rs_lighting)
@@ -673,10 +673,10 @@ void get_input_colors(in VS_OUTPUT input, out float4 diffuse, out float4 specula
 		                 input.specular,
 		                 input.w_position,
 		                 normalize(input.w_normal),
-		                 diffuse,
-		                 specular);
+		                 out_diffuse,
+		                 out_specular);
 
-		diffuse = saturate(diffuse + input.emissive);
+		out_diffuse = saturate(out_diffuse + input.emissive);
 	}
 #endif
 }
