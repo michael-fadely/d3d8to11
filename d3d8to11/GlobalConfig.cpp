@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include <string>
-#include <vector>
 
 #include "filesystem.h"
 #include "ini_file.h"
@@ -27,24 +26,22 @@ tstring read_environment_variable(LPCTSTR variable_name)
 		return {};
 	}
 
+	// on "failure", return value is required buffer size *including* null terminator
 	const DWORD buffer_size = GetEnvironmentVariable(variable_name, nullptr, 0);
 
-	if (buffer_size == 0)
+	if (buffer_size <= 1)
 	{
 		return {};
 	}
 
-	// TODO: (carefully) write directly to the result string
-	std::vector<TCHAR> buffer(buffer_size);
-	const DWORD chars_written = GetEnvironmentVariable(variable_name, buffer.data(), buffer_size);
+	tstring result(static_cast<size_t>(buffer_size) - 1, 0);
+	const DWORD chars_written = GetEnvironmentVariable(variable_name, result.data(), buffer_size);
 
-	if (chars_written >= buffer_size)
+	if (!chars_written || chars_written >= buffer_size)
 	{
 		return {};
 	}
 
-	tstring result(buffer.data());
-	buffer = {};
 	return result;
 }
 }
