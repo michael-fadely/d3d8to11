@@ -7,12 +7,14 @@
 // STL
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cstdint>
 #include <deque>
 #include <exception>
 #include <format>
 #include <fstream>
 #include <mutex>
+#include <ranges>
 #include <shared_mutex>
 #include <span>
 #include <stack>
@@ -66,6 +68,7 @@
 #include "Shader.h"
 #include "ShaderFlags.h"
 #include "simple_math.h"
+#include "string_util.h"
 #include "ThreadPool.h"
 #include "tstring.h"
 #include "Unknown.h"

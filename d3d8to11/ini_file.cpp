@@ -1,48 +1,15 @@
 #include "pch.h"
 
 #include <algorithm>
-#include <cctype>
 #include <istream>
-#include <locale>
 #include <ostream>
 #include <ranges>
 #include <string_view>
 #include <utility>
 
+#include "string_util.h"
+
 #include "ini_file.h"
-
-namespace
-{
-// TODO: handle locale differences
-
-void trim_left(std::string& str)
-{
-	str.erase(str.begin(), std::ranges::find_if(str, [](int ch)
-	{
-		return !std::isspace(ch);
-	}));
-}
-
-void trim_right(std::string& str)
-{
-	str.erase(std::ranges::find_if(std::ranges::reverse_view(str), [](int ch)
-	{
-		return !std::isspace(ch);
-	}).base(), str.end());
-}
-
-void trim(std::string& str)
-{
-	trim_left(str);
-	trim_right(str);
-}
-
-bool equals_case_insensitive(const std::string_view& a, const std::string_view& b)
-{
-	auto fn = [](unsigned char ca, unsigned char cb) { return std::tolower(ca) == std::tolower(cb); };
-	return std::ranges::equal(a, b, fn);
-}
-}  // namespace
 
 bool ini_section::contains(const std::string& key) const
 {
@@ -109,7 +76,7 @@ template <>
 bool ini_section::get<bool>(const std::string& key) const
 {
 	const std::string& value = m_pairs.at(key);
-	return equals_case_insensitive(value, "true");
+	return d3d8to11::equals_case_insensitive(value, "true");
 }
 
 template <>
@@ -224,7 +191,7 @@ void ini_file::read(std::istream& stream)
 
 	while (std::getline(stream, line))
 	{
-		trim(line);
+		d3d8to11::trim(line);
 
 		if (line.empty())
 		{
@@ -259,10 +226,10 @@ void ini_file::read(std::istream& stream)
 		}
 
 		std::string key = line.substr(0, assignment);
-		trim(key);
+		d3d8to11::trim(key);
 
 		std::string value = line.substr(assignment + assignment_delim.length());
-		trim(value);
+		d3d8to11::trim(value);
 
 		section_ptr->set(key, value);
 	}

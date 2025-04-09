@@ -342,6 +342,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="ShaderIncluder.h" />
     <ClInclude Include="simple_math.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="string_util.h" />
     <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="tstring.h" />
     <ClInclude Include="Unknown.h" />
@@ -377,6 +378,7 @@ xcopy /C /Y /D "$(ProjectDir)composite.hlsl" "$(OutDir)"</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="string_util.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Unknown.cpp" />
   </ItemGroup>
